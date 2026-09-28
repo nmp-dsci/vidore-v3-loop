@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ViDoRe V3 research and plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* Portfolio "Field Guide" tokens (nmp-dsci.github.io/assets/css/tokens.css), the site palette unchanged:
+   green accent = act on this / recommended / holds; amber = partial, caveat. */
+:root{
+  --bg:#F7F6F2; --panel:#FFFFFF; --band:#EFEEE8;
+  --ink:#1A1D1B; --ink-2:#3B403D; --muted:#4A514D; --faint:#5C635E;
+  --line:#DCDAD2; --line-2:#C7C5BC; --line-3:#8A8880;
+  --accent:#0A6552; --accent-ink:#FFFFFF; --accent-soft:#DFEFE8;
+  --amber:#8A5006; --amber-soft:#F6E6CF;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --serif:'IBM Plex Serif',Georgia,'Times New Roman',serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --t-2:0.8rem; --t-1:0.875rem; --t0:1rem; --t1:1.125rem; --t2:1.406rem; --t3:1.758rem; --t4:2.197rem;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --r:10px; --r-sm:6px;
+  --shadow:0 1px 2px rgb(20 25 22 / .05), 0 12px 28px -18px rgb(20 25 22 / .22);
+  --dur:300ms; --ease:cubic-bezier(.2,.7,.2,1); --focus:var(--accent);
+  --w:1180px; --measure:68ch; --track-label:.08em;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121614; --panel:#191E1B; --band:#161A18;
+  --ink:#E8EBE7; --ink-2:#C9CFC9; --muted:#AEB6B0; --faint:#98A09A;
+  --line:#28302B; --line-2:#3A443E; --line-3:#727E77;
+  --accent:#43C29A; --accent-ink:#0E1512; --accent-soft:#17382C;
+  --amber:#D99A4E; --amber-soft:#3A2A14;
+  --shadow:0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -18px rgb(0 0 0 / .65);
+}}
+:root[data-theme="dark"]{
+  --bg:#121614; --panel:#191E1B; --band:#161A18;
+  --ink:#E8EBE7; --ink-2:#C9CFC9; --muted:#AEB6B0; --faint:#98A09A;
+  --line:#28302B; --line-2:#3A443E; --line-3:#727E77;
+  --accent:#43C29A; --accent-ink:#0E1512; --accent-soft:#17382C;
+  --amber:#D99A4E; --amber-soft:#3A2A14;
+  --shadow:0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -18px rgb(0 0 0 / .65);
+}
+@media (prefers-reduced-motion: reduce){ :root{ --dur:0.01ms; } }
+
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--t0)/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:.15em}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+code,pre,.mono{font-family:var(--mono);font-size:var(--t-1)}
+p code,li code,td code,dd code,figcaption code{overflow-wrap:anywhere}
+h1,h2,h3,h4{margin:0;text-wrap:balance}
+h1{font:400 var(--t4)/1.15 var(--serif);overflow-wrap:anywhere;max-width:30ch}
+h1 em{font-style:italic;color:var(--accent)}
+h2{font:600 var(--t2)/1.25 var(--sans)}
+h3{font:600 var(--t1)/1.3 var(--sans);margin-top:var(--s5)}
+p{margin:var(--s3) 0 0;max-width:var(--measure);text-wrap:pretty;color:var(--ink-2)}
+.lead{font:400 var(--t1)/1.55 var(--serif);color:var(--ink-2);max-width:var(--measure)}
+.label{font:500 var(--t-2)/1.4 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
+.muted{color:var(--muted)} .small{font-size:var(--t-1)}
+header.top{position:sticky;top:0;z-index:9;background:var(--panel);border-bottom:1px solid var(--line)}
+header.top .in{max-width:var(--w);margin:0 auto;padding:var(--s3) var(--s4);display:flex;gap:var(--s4);align-items:baseline;flex-wrap:wrap}
+header.top .in b{font:500 var(--t0)/1 var(--serif);color:var(--ink)}
+header.top .in .label{margin-left:auto}
+.wrap{max-width:var(--w);margin:0 auto;padding-inline:var(--s4)}
+section{scroll-margin-top:64px;padding-block:var(--s7)}
+section.band{background:var(--band)}
+.hero{padding-block:var(--s7) var(--s6)}
+.toc{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s5)}
+.toc a{font:500 var(--t-2)/1 var(--mono);text-decoration:none;color:var(--ink-2);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:var(--s2) var(--s3);min-height:30px;display:inline-flex;align-items:center}
+.toc a:hover{border-color:var(--accent);color:var(--accent)}
+.chip{font:500 var(--t-2)/1 var(--mono);padding:var(--s1) var(--s2);border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap;display:inline-block}
+.chip.ok{border-color:var(--accent);color:var(--accent)}
+.chip.warn{border-color:var(--amber);color:var(--amber)}
+.chip.no{border-color:var(--line-3);color:var(--muted)}
+.tw{overflow-x:auto;margin-top:var(--s3);border-radius:var(--r);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:var(--t-1)}
+thead th{font:500 var(--t-2)/1.3 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint);text-align:left;padding:var(--s3) var(--s4);border-bottom:1px solid var(--line-2);white-space:nowrap;vertical-align:bottom}
+td{padding:var(--s3) var(--s4);border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td.sub{color:var(--ink);font-weight:500}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td .path{display:block;font:400 var(--t-2)/1.4 var(--mono);color:var(--faint);margin-top:var(--s1);overflow-wrap:anywhere}
+td.wrapc{min-width:24ch;max-width:52ch;white-space:normal}
+td.best{color:var(--ink);font-weight:600}
+tr.pro td{background:var(--accent-soft)}
+tr.pro td.sub{color:var(--ink)}
+tr.grp td{background:var(--band);font:500 var(--t-2)/1.3 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
+.v-ok{color:var(--accent);font-weight:500} .v-warn{color:var(--amber);font-weight:500} .v-no{color:var(--muted);font-weight:500}
+.fig-title{display:block;margin-top:var(--s5)}
+p.cap{font-size:var(--t-1);color:var(--muted);max-width:90ch}
+p.cap .path{display:block;font:400 var(--t-2)/1.4 var(--mono);color:var(--faint);margin-top:var(--s1);overflow-wrap:anywhere}
+.note{background:var(--panel);border-left:3px solid var(--amber);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:var(--s3) var(--s4);margin-top:var(--s4);max-width:90ch;box-shadow:var(--shadow)}
+.note.acc{border-left-color:var(--accent)}
+.note .label{display:block;margin-bottom:var(--s1)}
+.note p{margin-top:var(--s2);max-width:none}
+.insight{font:400 var(--t1)/1.5 var(--serif);color:var(--ink);margin-top:var(--s4);max-width:var(--measure)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--s4);margin-top:var(--s5)}
+.card{background:var(--panel);border-radius:var(--r);padding:var(--s5);box-shadow:var(--shadow);min-width:0}
+#s1 .cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.card h3{margin-top:0}
+.card p{max-width:none}
+.card .n{font:400 var(--t3)/1.1 var(--serif);color:var(--ink);display:block;margin-top:var(--s2)}
+.card .n small{font:400 var(--t-1)/1.3 var(--sans);color:var(--muted)}
+ul.bl{list-style:none;padding:0;margin:var(--s4) 0 0;display:grid;gap:var(--s3);max-width:90ch}
+ul.bl li{position:relative;padding-left:1.5rem;color:var(--ink-2)}
+ul.bl li::before{content:'●';position:absolute;left:0;color:var(--accent)}
+ul.bl.warn li::before{content:'◐';color:var(--amber)}
+ol.steps{margin:var(--s4) 0 0;padding-left:1.6rem;max-width:90ch;display:grid;gap:var(--s2);color:var(--ink-2)}
+ol.steps li::marker{font-family:var(--mono);color:var(--accent)}
+.dia{width:100%;height:auto;display:block;color:var(--ink)}
+.figbox{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s4);margin-top:var(--s3);overflow-x:auto}
+.figbox svg{min-width:640px}
+.dia .nd{fill:var(--panel);stroke:var(--line-2);stroke-width:1.5}
+.dia .nd.hi{fill:var(--accent-soft);stroke:var(--accent)}
+.dia .nd.ext{fill:none;stroke:var(--line-3);stroke-dasharray:5 4}
+.dia .nd.band{fill:var(--band);stroke:none}
+.dia .ed{stroke:var(--line-3);stroke-width:1.5;fill:none}
+.dia .ed.hi{stroke:var(--accent)}
+.dia .ed.dash{stroke-dasharray:5 4}
+.dia .tx{fill:var(--ink);font:500 14px var(--sans)}
+.dia .tx.s{fill:var(--muted);font:400 13px var(--sans)}
+.dia .tx.k{fill:var(--faint);font:500 13px var(--mono)}
+.dia .tx.n{fill:var(--ink);font:500 13px var(--mono)}
+.dia .tx.acc{fill:var(--accent)}
+.dia .bar{fill:var(--line-2)}
+.dia .bar.hi{fill:var(--accent)}
+.dia .bar.mid{fill:var(--line-3)}
+.dia .gl{stroke:var(--line);stroke-width:1}
+.dia .ax{stroke:var(--line-3);stroke-width:1}
+.dia marker path{fill:var(--line-3)}
+.dia marker.hi path{fill:var(--accent)}
+
+/* demo cards */
+.demo{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:var(--s5);background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s5);margin-top:var(--s5)}
+.demo .pages{display:grid;gap:var(--s3);align-content:start;min-width:0}
+.demo figure{margin:0;min-width:0}
+.demo img{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff}
+.demo figcaption{font:400 var(--t-2)/1.4 var(--mono);color:var(--faint);margin-top:var(--s1);overflow-wrap:anywhere}
+.demo .body{min-width:0}
+.demo .body h3{margin-top:0;display:flex;flex-wrap:wrap;gap:var(--s2);align-items:baseline}
+.demo .body h3 > span{min-width:0}
+.q{font:400 var(--t1)/1.45 var(--serif);color:var(--ink);margin-top:var(--s3);max-width:none}
+.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--s2) var(--s4);margin-top:var(--s4);font-size:var(--t-1)}
+.kv dt{font:500 var(--t-2)/1.6 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
+.kv dd{margin:0;color:var(--ink-2);min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s2)}
+
+/* decisions */
+form.q{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--s5);margin-top:var(--s4);min-width:0;max-width:880px;border-left:3px solid var(--accent)}
+form.q h3{margin-top:0}
+form.q p{max-width:none}
+form.q label.opt{display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s3);border:1px solid var(--line-2);border-radius:var(--r-sm);margin-top:var(--s3);cursor:pointer;min-width:0}
+form.q label.opt:hover{border-color:var(--line-3);background:var(--band)}
+form.q label.opt input{margin-top:.3em;flex:none;width:18px;height:18px}
+form.q label.opt .t{min-width:0}
+form.q label.opt .t b{display:block;font-weight:600;color:var(--ink)}
+form.q label.opt .t span{font-size:var(--t-1);color:var(--muted)}
+form.q .actions{margin-top:var(--s4);display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
+form.q .ack{font-size:var(--t-1);color:var(--accent)}
+button.btn{font:500 var(--t-1)/1 var(--sans);background:var(--accent);color:var(--accent-ink);border:0;border-radius:var(--r-sm);padding:var(--s3) var(--s4);cursor:pointer;min-height:38px}
+button.link{font:500 var(--t-1)/1 var(--sans);background:none;border:0;color:var(--accent);text-decoration:underline;text-underline-offset:.15em;cursor:pointer;min-height:38px;padding:0 var(--s2)}
+textarea.free{width:100%;margin-top:var(--s3);font:400 var(--t-1)/1.5 var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:var(--s3);min-height:64px;resize:vertical}
+.copyall{margin-top:var(--s5);display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
+.copyall textarea{width:100%;font:400 var(--t-1)/1.5 var(--mono);margin-top:var(--s2)}
+footer{max-width:var(--w);margin:0 auto;padding:var(--s6) var(--s4);color:var(--faint);font-size:var(--t-1);border-top:1px solid var(--line)}
+footer code{overflow-wrap:anywhere}
+@media (max-width:900px){ .demo{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:640px){ h1{font-size:var(--t3)} section{padding-block:var(--s6)} .kv{grid-template-columns:minmax(0,1fr)} }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="in">
+  <b>vidore-v3-loop</b><span class="muted small">s00 · research + build plan · English, one dataset at a time</span><span class="label">2026-09-28 · for review</span>
+</div></header>
+
+<div class="wrap hero">
+<p class="label">Plan · s00 · what ViDoRe V3 is, who is winning, and what we build first</p>
+<h1>ViDoRe V3's best English system is a retriever plus an LLM that <em>re-reads the pages</em> — we start there, on bank annual reports</h1>
+<p class="lead">ViDoRe V3 asks enterprise questions of real PDFs where the answer often sits in a table, chart or diagram. On English queries the top published pipeline, an 8B visual retriever with Claude Opus 4.5 as an agentic reranker, reaches 74.6 NDCG@10. Its retriever alone scores 69.1. Even when handed the right pages, the best generator answers 72.6% correctly. I recommend starting with <code>finance_en</code>: six US bank 10-Ks, 309 English questions, 173 of them over tables.</p>
+<nav class="toc" aria-label="sections">
+  <a href="#s1">1 · bottom line</a><a href="#s2">2 · what is scored</a><a href="#s3">3 · five datasets</a><a href="#s4">4 · demo questions</a><a href="#s5">5 · scoreboard</a><a href="#s6">6 · winning systems</a><a href="#s7">7 · the build</a><a href="#s8">8 · risks</a><a href="#q">decisions</a>
+</nav>
+</div>
+
+<!-- ============================================================ 1 -->
+<section id="s1" class="band"><div class="wrap">
+<h2>1 · Bottom line — retrieval is movable, answers cap near 73%</h2>
+<div class="cards">
+  <div class="card" id="f-retrieval"><span class="label">retrieval · English, 5 public sets</span><span class="n">74.6 <small>NDCG@10</small></span><p>NeMo Retriever's agentic pipeline, against 69.1 for the same retriever alone. The gain costs about 136 s per query, against 0.67 s (NVIDIA's figures, all 8 sets).</p></div>
+  <div class="card" id="f-answer"><span class="label">answer · 8 public sets</span><span class="n">66.7% <small>correct</small></span><p>The best answers with retrieval (ColEmbed-3B-v2 pages, GPT-5.2). With the true pages the best is 72.6% (Gemini 3 Pro on page images).</p></div>
+  <div class="card" id="f-visual"><span class="label">page as image vs as text</span><span class="n">67.5 vs 57.7</span><p>A visual retriever against the best text embedder, English queries. OCR text plus a strong reranker overtakes it (70.9).</p></div>
+  <div class="card" id="f-ground"><span class="label">grounding · bbox F1</span><span class="n">0.089 <small>vs 0.602 human</small></span><p>No model can yet point at the evidence on the page. The whole field leaves this score on the table.</p></div>
+  <div class="card" id="f-labels"><span class="label">reference answers · my hand check</span><span class="n">2 of 5 <small>off</small></span><p>Two of the five demo references in §4 misread their table or chart. The judge scores against them, so we audit before we trust a failure.</p></div>
+</div>
+<p class="insight">The commercial prize is the answer and its evidence, not the ranking. So the loop should be gated on answer accuracy, with NDCG@10 reported so we can compare with the board.</p>
+</div></section>
+
+<!-- ============================================================ 2 -->
+<section id="s2"><div class="wrap">
+<h2>2 · What is scored — three layers, one leaderboard</h2>
+<p>Every query comes with human-graded relevant pages, human bounding boxes on those pages, and a reference answer. That lets the benchmark score three separate things. Only the first has a public leaderboard.</p>
+<span class="label fig-title">Fig 1 · one query through the three scored layers</span>
+<div class="figbox">
+<svg class="dia" viewBox="0 0 1000 230" role="img" aria-label="A question flows to page retrieval scored by NDCG@10, to an answer scored by an LLM judge against the reference, to grounding scored by bounding-box F1 against human boxes.">
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <g id="n-q"><title>The question: English, one of 7 types, as a question, instruction or keyword</title>
+    <rect class="nd" x="10" y="40" width="170" height="92" rx="10"/>
+    <text class="tx" x="26" y="70">question</text>
+    <text class="tx s" x="26" y="94">7 types · 3 formats</text>
+    <text class="tx s" x="26" y="114">1,489 English</text>
+  </g>
+  <path class="ed" d="M180,86 L238,86" marker-end="url(#ar1)"/>
+  <g id="n-ret"><title>Retrieve and rank pages from one corpus; scored by NDCG@10 against graded qrels</title>
+    <rect class="nd hi" x="240" y="40" width="220" height="92" rx="10"/>
+    <text class="tx" x="256" y="70">retrieve pages</text>
+    <text class="tx s" x="256" y="94">1,110–5,244 pages / corpus</text>
+    <text class="tx s" x="256" y="114">grade 2 full · 1 partial</text>
+  </g>
+  <path class="ed" d="M460,86 L518,86" marker-end="url(#ar1)"/>
+  <g id="n-ans"><title>Generate an answer from the retrieved pages; judged correct or not against the reference answer</title>
+    <rect class="nd" x="520" y="40" width="210" height="92" rx="10"/>
+    <text class="tx" x="536" y="70">answer</text>
+    <text class="tx s" x="536" y="94">from page images / text</text>
+    <text class="tx s" x="536" y="114">vs reference answer</text>
+  </g>
+  <path class="ed" d="M730,86 L788,86" marker-end="url(#ar1)"/>
+  <g id="n-gnd"><title>Point at the evidence: bounding boxes on the page, scored by pixel F1 against human boxes</title>
+    <rect class="nd" x="790" y="40" width="200" height="92" rx="10"/>
+    <text class="tx" x="806" y="70">ground</text>
+    <text class="tx s" x="806" y="94">boxes on the page</text>
+    <text class="tx s" x="806" y="114">vs human boxes</text>
+  </g>
+  <g id="m-ret"><title>Metric: NDCG@10 — public MTEB and pipeline leaderboards</title>
+    <text class="tx k" x="256" y="168">NDCG@10</text><text class="tx s tx acc" x="256" y="190">leaderboards: MTEB, pipeline</text></g>
+  <g id="m-ans"><title>Metric: % correct by an LLM judge (GPT-5.2 in the paper); no leaderboard</title>
+    <text class="tx k" x="536" y="168">% correct (LLM judge)</text><text class="tx s" x="536" y="190">paper only, no board</text></g>
+  <g id="m-gnd"><title>Metric: bounding-box IoU / F1 (Dice); human agreement 0.602</title>
+    <text class="tx k" x="806" y="168">bbox F1</text><text class="tx s" x="806" y="190">paper only · human 0.602</text></g>
+</svg>
+</div>
+<p class="cap">Takeaway: the board ranks retrievers only. Answer accuracy and grounding are ours to measure, which is where a commercial system is judged.<span class="path">arXiv 2601.08620 §4–6 · huggingface.co/blog/QuentinJG/introducing-vidore-v3 · docs/research/README.md</span></p>
+
+<div class="tw" style="margin-top:var(--s5)"><table>
+<thead><tr><th>query type</th><th>what it asks</th><th class="num">retrieval NDCG@10</th></tr></thead>
+<tbody>
+<tr><td class="sub">boolean</td><td>yes / no</td><td class="num">70.3</td></tr>
+<tr><td class="sub">numerical</td><td>a value read or calculated</td><td class="num">65.8</td></tr>
+<tr><td class="sub">extractive</td><td>cite a fact</td><td class="num">65.4</td></tr>
+<tr><td class="sub">compare-contrast</td><td>similarities, differences</td><td class="num">59.9</td></tr>
+<tr><td class="sub">enumerative</td><td>list every item</td><td class="num">59.7</td></tr>
+<tr><td class="sub">multi-hop</td><td>join facts across pages</td><td class="num">53.9</td></tr>
+<tr><td class="sub">open-ended</td><td>synthesise</td><td class="num">48.1</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: difficulty rises with the number of pages an answer needs, about 2.4 points lost per extra relevant page. Content type matters less: text 59.3, chart 56.3, infographic 55.2, table 53.9, image 49.3. ColEmbed-3B-v2, all six languages.<span class="path">arXiv 2601.08620 Fig 5, Tables 13 and 15</span></p>
+</div></section>
+
+<!-- ============================================================ 3 -->
+<section id="s3" class="band"><div class="wrap">
+<h2>3 · Five English datasets — finance first, textbooks last</h2>
+<p>The five English corpora differ in document type, in how visual they are, and in whether retrieval matters at all. "Answerable blind" is the share of queries at least one of six LLMs answered correctly with no documents. A high share means the dataset tests model memory, not the system.</p>
+<div class="tw"><table>
+<thead><tr><th>dataset</th><th>documents</th><th class="num">pages</th><th class="num">EN queries</th><th>visual content in EN queries</th><th class="num">answerable blind</th><th class="num">best NDCG@10 (EN)</th><th>commercial read (my judgement)</th></tr></thead>
+<tbody>
+<tr class="pro" id="d-finance_en"><td class="sub">finance_en<span class="path">recommended first</span></td><td class="wrapc">2024 10-K annual reports of 6 US banks (JPMorgan, Wells Fargo, Citi, Goldman, BofA, Morgan Stanley)</td><td class="num">2,942</td><td class="num">309</td><td class="wrapc">table 173 · chart 20 · infographic 4</td><td class="num">31.7%</td><td class="num">73.7 · 75.9 agentic</td><td class="wrapc"><span class="v-ok">high</span> — equity and credit research, bank benchmarking; tables are the commonest commercial evidence</td></tr>
+<tr id="d-pharmaceuticals"><td class="sub">pharmaceuticals</td><td class="wrapc">52 FDA / CDER slide decks, 2017–2021</td><td class="num">2,313</td><td class="num">364</td><td class="wrapc">infographic 97 · table 88 · chart 71 · image 47</td><td class="num">57.1%</td><td class="num">71.1 · 74.8 agentic</td><td class="wrapc"><span class="v-ok">high</span> — regulatory intelligence; the most chart- and infographic-heavy set</td></tr>
+<tr id="d-industrial"><td class="sub">industrial</td><td class="wrapc">27 US Air Force technical orders (maintenance manuals, 1999–2025)</td><td class="num">5,244</td><td class="num">283</td><td class="wrapc">table 88 · infographic 54 · image 21 · chart 2</td><td class="num">38.9%</td><td class="num">61.9 · 63.4 agentic</td><td class="wrapc"><span class="v-ok">high</span> — maintenance copilots; the largest and hardest corpus</td></tr>
+<tr id="d-hr"><td class="sub">hr</td><td class="wrapc">14 European Commission labour and employment reports, 2024</td><td class="num">1,110</td><td class="num">318</td><td class="wrapc">table 112 · chart 104 · infographic 33</td><td class="num">36.5%</td><td class="num">72.8 · 74.5 agentic</td><td class="wrapc"><span class="v-warn">medium</span> — policy and labour-market analysis; public sector</td></tr>
+<tr id="d-computer_science"><td class="sub">computer_science</td><td class="wrapc">2 OpenStax textbooks (intro CS, Python)</td><td class="num">1,360</td><td class="num">215</td><td class="wrapc">table 77 · infographic 47 · chart 10</td><td class="num">86.5%</td><td class="num">82.4 · 84.5 agentic</td><td class="wrapc"><span class="v-no">low</span> — academic, and most questions are answerable from memory; use it as the smoke set</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: in finance only 31.7% of questions can be answered without the documents, so the system has to earn every point. In computer science 86.5% can, so a high score there proves little. A query can carry several content types, so the visual counts overlap. The first NDCG@10 figure is the best single retriever, the second the agentic pipeline.<span class="path">content counts: data/cache via <code>vidoreloop stats</code> (English rows) · answerable blind: arXiv 2601.08620 Table 22 · NDCG: docs/research/mteb_vidore3_scores_2026-09-28.json, vidore-benchmark results/metrics</span></p>
+</div></section>
+
+<!-- ============================================================ 4 -->
+<section id="s4"><div class="wrap">
+<h2>4 · Demo questions — one per dataset, two references wrong</h2>
+<p>For each dataset, one human-written English question whose evidence sits in a table, chart or diagram. The green box is the annotator's bounding box. I checked every reference answer against its page by hand.</p>
+
+<article class="demo" id="demo-finance_en">
+  <div class="pages">
+    <figure><img src="assets/finance_en_q181_c2037.jpg" alt="Morgan Stanley 2024 10-K page 119, Note 12 Deposits table boxed" loading="lazy"><figcaption>morgan_stanley_2024 p.119 · grade 2 (full answer) · corpus 2037</figcaption></figure>
+  </div>
+  <div class="body">
+    <h3><span>finance_en · query 181</span><span class="chip ok">reference holds</span></h3>
+    <p class="q">“What were Morgan Stanley's total deposit amounts and the value of uninsured deposits in 2024?”</p>
+    <dl class="kv">
+      <dt>reference</dt><dd>Total deposits $376,007 million; uninsured $77,656 million.</dd>
+      <dt>on the page</dt><dd>Note 12 table: “Total deposits 376,007”; “Deposits not subject to FDIC insurance 77,656”. <span class="v-ok">Matches.</span></dd>
+      <dt>what it takes</dt><dd>Find one small table among the 2,942 pages of six banks' 10-Ks, and know that “uninsured” means “not subject to FDIC insurance”.</dd>
+      <dt>why it pays</dt><dd>Deposit mix and uninsured share were the bank-run signal of 2023; analysts pull this for every bank each quarter.</dd>
+    </dl>
+    <div class="chips"><span class="chip">extractive</span><span class="chip">numerical</span><span class="chip">table + text</span><span class="chip">2 relevant pages</span></div>
+  </div>
+</article>
+
+<article class="demo" id="demo-pharmaceuticals">
+  <div class="pages">
+    <figure><img src="assets/pharmaceuticals_q313_c1773.jpg" alt="FDA slide: CDER PDUFA formal meeting requests by fiscal year, bar chart 2003 to 2019" loading="lazy"><figcaption>CDER_New_Drugs_Program_2019_Update p.23 · grade 2 · corpus 1773</figcaption></figure>
+  </div>
+  <div class="body">
+    <h3><span>pharmaceuticals · query 313</span><span class="chip warn">reference off</span></h3>
+    <p class="q">“What is the difference between the number of formal meeting requests in the year 2018 and 2010?”</p>
+    <dl class="kv">
+      <dt>reference</dt><dd>1,109 (the annotator read FY2010 as 2,070).</dd>
+      <dt>on the page</dt><dd>FY2018 bar 3,179; FY2010 bar 2,008. The difference is <b>1,171</b>. No bar reads 2,070; FY2012 reads 2,073. <span class="v-warn">The reference is wrong by 62.</span></dd>
+      <dt>the text path</dt><dd>The dataset's OCR markdown lists the 17 bar labels out of year order (“3450 3179 3053 … 2008 2010 1969 1464”). A text-only system cannot tell which value belongs to 2010.</dd>
+      <dt>why it pays</dt><dd>Reading the numbers off regulator charts is routine competitive-intelligence work.</dd>
+    </dl>
+    <div class="chips"><span class="chip">numerical</span><span class="chip">chart only</span><span class="chip">1 relevant page</span></div>
+  </div>
+</article>
+
+<article class="demo" id="demo-industrial">
+  <div class="pages">
+    <figure><img src="assets/industrial_q224_c4253.jpg" alt="Air Force technical order page 25-21: torque wrench diagram with numbered parts and steps a to e" loading="lazy"><figcaption>TO_32-1-101 p.25-21 · grade 2 · corpus 4253</figcaption></figure>
+  </div>
+  <div class="body">
+    <h3><span>industrial · query 224</span><span class="chip ok">reference holds</span></h3>
+    <p class="q">“Provide Step A for using a torque wrench.”</p>
+    <dl class="kv">
+      <dt>reference</dt><dd>Select the proper size socket wrench (1) and attach it to the torque wrench square drive (2).</dd>
+      <dt>on the page</dt><dd>Step a, word for word; the (1) and (2) point into the diagram above it. <span class="v-ok">Matches.</span></dd>
+      <dt>what it takes</dt><dd>Find the right procedure among 5,244 manual pages. Many sections share the same words, and a later section covers the <i>power</i> torque wrench.</dd>
+      <dt>why it pays</dt><dd>Technicians searching manuals is the classic maintenance-copilot use case, where a wrong step is a safety issue.</dd>
+    </dl>
+    <div class="chips"><span class="chip">extractive</span><span class="chip">instruction</span><span class="chip">infographic + text</span><span class="chip">1 relevant page</span></div>
+  </div>
+</article>
+
+<article class="demo" id="demo-hr">
+  <div class="pages">
+    <figure><img src="assets/hr_q189_c331.jpg" alt="EU labour mobility report page 103, Table 16 government healthcare spending as percent of GDP 2015 to 2022" loading="lazy"><figcaption>annual_report_on_intra-eu_labour_mobility p.103 · grade 2 · corpus 331</figcaption></figure>
+  </div>
+  <div class="body">
+    <h3><span>hr · query 189</span><span class="chip warn">reference off</span></h3>
+    <p class="q">“What was the average government spending on healthcare as a percentage of GDP in 2019 for Germany, France, Italy, Spain, and Ireland?”</p>
+    <dl class="kv">
+      <dt>reference</dt><dd>6.56% (merged answer); 6.58% (the human's raw answer).</dd>
+      <dt>on the page</dt><dd>Table 16, 2019 column: 7.3, 8.0, 6.8, 6.1, 4.8. The mean is 33.0 ÷ 5 = <b>6.60%</b>. <span class="v-warn">Both references are off, and they disagree with each other.</span></dd>
+      <dt>what it takes</dt><dd>Pick 5 of 9 rows and 1 of 8 columns, then calculate. That is a lookup plus arithmetic, which code does better than a language model.</dd>
+      <dt>why it pays</dt><dd>“Filter a table, then aggregate” is the commonest analyst question over reports.</dd>
+    </dl>
+    <div class="chips"><span class="chip">extractive</span><span class="chip">numerical</span><span class="chip">table + text</span><span class="chip">1 relevant page</span></div>
+  </div>
+</article>
+
+<article class="demo" id="demo-computer_science">
+  <div class="pages">
+    <figure><img src="assets/computer_science_q145_c1060.jpg" alt="Intro to Computer Science textbook page 59, Table 2.5 roles and responsibilities, back-office row boxed" loading="lazy"><figcaption>Introduction_to_Computer_Science p.59 · grade 2 · corpus 1060</figcaption></figure>
+  </div>
+  <div class="body">
+    <h3><span>computer_science · query 145</span><span class="chip ok">reference holds</span></h3>
+    <p class="q">“Who handles trade confirmation and reconciliation in a financial trading business model?”</p>
+    <dl class="kv">
+      <dt>reference</dt><dd>The back-office operations team.</dd>
+      <dt>on the page</dt><dd>Table 2.5, row “Back-office operations”: “Handle trade confirmation and reconciliation”. <span class="v-ok">Matches.</span></dd>
+      <dt>what it takes</dt><dd>Little. Most models know this without the book, which is why 86.5% of this set is answerable blind.</dd>
+      <dt>why it pays</dt><dd>Little commercially. It is a cheap sanity check for the pipeline.</dd>
+    </dl>
+    <div class="chips"><span class="chip">extractive</span><span class="chip">table</span><span class="chip">2 relevant pages</span></div>
+  </div>
+</article>
+<p class="cap">Takeaway: two of five references misread the evidence. A judge scoring against them would fail a correct system, so every failure the loop learns from gets a reference check first. Five questions is not a rate; the audit in §7 measures one.<span class="path">docs/research/demo_questions.json (<code>_checks</code>) · page images: HF parquet at the pinned revisions, boxes drawn from qrels</span></p>
+</div></section>
+
+<!-- ============================================================ 5 -->
+<section id="s5" class="band"><div class="wrap">
+<h2>5 · Scoreboard — open late-interaction models own the top fifteen</h2>
+<p>There are two retrieval boards, and neither scores answers. The MTEB board ranks single models over all 10 datasets and 6 query languages. The ViDoRe pipeline board, launched in February 2026, ranks whole retrieval pipelines on English queries over the 8 public sets. The figure below uses English queries on the 5 public English sets, where the two boards agree: nemotron-colembed-vl-8b-v2 scores 69.1 on both.</p>
+<span class="label fig-title">Fig 2 · retrieval NDCG@10, English queries, mean of 5 public English datasets</span>
+<div class="figbox">
+<svg class="dia" viewBox="0 0 1000 380" role="img" aria-label="Horizontal bar chart of English NDCG@10: NeMo agentic pipeline 74.6, EVIE-8B 71.7, jina-v4 text plus zerank-2 70.9, nemotron-colembed-vl-8b-v2 69.1, llama-nemotron-colembed-vl-3b-v2 67.5, jina-v4 visual plus reranker-m0 67.4, qwen3-embedding-8b text 57.7, mxbai-edge-colbert-32m 55.6.">
+  <!-- scale: x = 330 + v * 8 (0..80 → 330..970) -->
+  <g id="axis"><title>axis 0 to 80</title>
+    <line class="gl" x1="330" y1="20" x2="330" y2="330"/><line class="gl" x1="490" y1="20" x2="490" y2="330"/><line class="gl" x1="650" y1="20" x2="650" y2="330"/><line class="gl" x1="810" y1="20" x2="810" y2="330"/><line class="gl" x1="970" y1="20" x2="970" y2="330"/>
+    <text class="tx k" x="330" y="354" text-anchor="middle">0</text><text class="tx k" x="490" y="354" text-anchor="middle">20</text><text class="tx k" x="650" y="354" text-anchor="middle">40</text><text class="tx k" x="810" y="354" text-anchor="middle">60</text><text class="tx k" x="970" y="354" text-anchor="middle">80</text>
+  </g>
+  <g id="b1"><title>NeMo Retriever agentic: nemotron-colembed-vl-8b-v2 + Claude Opus 4.5 agent and reranker — 74.6 (pipeline board), ≈136 s/query (NVIDIA blog, all 8 sets)</title>
+    <text class="tx" x="320" y="44" text-anchor="end">NeMo agentic (+ Opus 4.5)</text><rect class="bar hi" x="330" y="28" width="596.8" height="24" rx="3"/><text class="tx n" x="934" y="45">74.6</text></g>
+  <g id="b2"><title>tencent/EVIE-8B, single late-interaction model — 71.7 (MTEB, English subset)</title>
+    <text class="tx" x="320" y="82" text-anchor="end">EVIE-8B (single model)</text><rect class="bar mid" x="330" y="66" width="573.6" height="24" rx="3"/><text class="tx n" x="911" y="83">71.7</text></g>
+  <g id="b3"><title>jina-embeddings-v4 over NeMo OCR text + zerank-2 reranker — 70.9 (pipeline board), ~9.8 s/query</title>
+    <text class="tx" x="320" y="120" text-anchor="end">jina-v4 text + zerank-2</text><rect class="bar mid" x="330" y="104" width="567.2" height="24" rx="3"/><text class="tx n" x="905" y="121">70.9</text></g>
+  <g id="b4"><title>nvidia/nemotron-colembed-vl-8b-v2 alone — 69.1 (both boards), ≈0.67 s/query</title>
+    <text class="tx" x="320" y="158" text-anchor="end">nemotron-colembed-vl-8b-v2</text><rect class="bar mid" x="330" y="142" width="552.8" height="24" rx="3"/><text class="tx n" x="891" y="159">69.1</text></g>
+  <g id="b5"><title>llama-nemotron-colembed-vl-3b-v2 (the paper's ColEmbed-3B-v2) — 67.5</title>
+    <text class="tx" x="320" y="196" text-anchor="end">ColEmbed-3B-v2 (paper best)</text><rect class="bar" x="330" y="180" width="540" height="24" rx="3"/><text class="tx n" x="878" y="197">67.5</text></g>
+  <g id="b6"><title>jina-v4 visual + jina-reranker-m0 — 67.4</title>
+    <text class="tx" x="320" y="234" text-anchor="end">jina-v4 visual + reranker-m0</text><rect class="bar" x="330" y="218" width="539.2" height="24" rx="3"/><text class="tx n" x="877" y="235">67.4</text></g>
+  <g id="b7"><title>qwen3-embedding-8b over OCR text — 57.7</title>
+    <text class="tx" x="320" y="272" text-anchor="end">qwen3-embedding-8b (text)</text><rect class="bar" x="330" y="256" width="461.6" height="24" rx="3"/><text class="tx n" x="799" y="273">57.7</text></g>
+  <g id="b8"><title>mxbai-edge-colbert-32m, a 32M text ColBERT — 55.6</title>
+    <text class="tx" x="320" y="310" text-anchor="end">mxbai-edge-colbert-32m (text)</text><rect class="bar" x="330" y="294" width="444.8" height="24" rx="3"/><text class="tx n" x="783" y="311">55.6</text></g>
+</svg>
+</div>
+<p class="cap">Takeaway: an LLM reading the candidate pages adds 5.5 points over its own retriever, the largest single jump on the board. It costs about 200 times the latency: 136 s against 0.67 s per query.<span class="path">pipeline board: github.com/illuin-tech/vidore-benchmark results/metrics (last entry 2026-03-13) · EVIE-8B: docs/research/mteb_vidore3_scores_2026-09-28.json</span></p>
+
+<h3>Per English dataset — where the room is</h3>
+<div class="tw"><table>
+<thead><tr><th>system (English queries)</th><th>type</th><th class="num">finance_en</th><th class="num">pharma</th><th class="num">industrial</th><th class="num">hr</th><th class="num">comp sci</th><th class="num">mean</th></tr></thead>
+<tbody>
+<tr class="grp"><td colspan="8">pipelines · ViDoRe pipeline board</td></tr>
+<tr class="pro"><td class="sub">NeMo agentic (colembed-vl-8b-v2 + Opus 4.5)</td><td>visual LI + LLM agent</td><td class="num best">75.9</td><td class="num best">74.8</td><td class="num best">63.4</td><td class="num best">74.5</td><td class="num best">84.5</td><td class="num best">74.6</td></tr>
+<tr><td class="sub">jina-v4 text (NeMo OCR) + zerank-2</td><td>text + reranker</td><td class="num">74.2</td><td class="num">68.6</td><td class="num">58.9</td><td class="num">69.1</td><td class="num">83.5</td><td class="num">70.9</td></tr>
+<tr><td class="sub">nemotron-embed-vl-1b + rerank-vl-1b</td><td>visual dense + VL reranker</td><td class="num">71.8</td><td class="num">68.5</td><td class="num">56.5</td><td class="num">65.7</td><td class="num">78.0</td><td class="num">68.1</td></tr>
+<tr class="grp"><td colspan="8">single models · MTEB, English subset</td></tr>
+<tr><td class="sub">tencent/EVIE-8B <span class="path">Apache-2.0 · 2026-09-04</span></td><td>visual LI</td><td class="num">73.7</td><td class="num">71.1</td><td class="num">61.1</td><td class="num">70.2</td><td class="num">82.4</td><td class="num">71.7</td></tr>
+<tr><td class="sub">webAI-ColVec1-9b</td><td>visual LI</td><td class="num">72.4</td><td class="num">69.2</td><td class="num">61.9</td><td class="num">72.8</td><td class="num">81.3</td><td class="num">71.5</td></tr>
+<tr><td class="sub">tencent/EVIE-4.5B <span class="path">Apache-2.0</span></td><td>visual LI</td><td class="num">72.3</td><td class="num">70.5</td><td class="num">61.2</td><td class="num">69.4</td><td class="num">82.3</td><td class="num">71.1</td></tr>
+<tr><td class="sub">TomoroAI colqwen3-embed-4b <span class="path">Apache-2.0</span></td><td>visual LI</td><td class="num">69.7</td><td class="num">67.8</td><td class="num">58.8</td><td class="num">64.1</td><td class="num">77.0</td><td class="num">67.5</td></tr>
+<tr><td class="sub">Qwen3-VL-Embedding-8B</td><td>visual dense (1 vector)</td><td class="num" colspan="5" style="text-align:center">per-dataset not extracted</td><td class="num">65.1</td></tr>
+<tr><td class="sub">colqwen2.5-v0.2</td><td>visual LI</td><td class="num" colspan="5" style="text-align:center">per-dataset not extracted</td><td class="num">61.2</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: industrial is the hardest English set for everyone (best 63.4), and on finance a text-plus-reranker pipeline sits only 1.7 points behind the agentic one (74.2 against 75.9). LI means late interaction: many vectors per page, ColBERT-style. No closed API embedder (Voyage, Cohere, Gemini, OpenAI) has published ViDoRe V3 numbers.<span class="path">docs/research/mteb_vidore3_scores_2026-09-28.json · vidore-benchmark results/metrics</span></p>
+
+<h3>Answers — the paper's end-to-end table, the only one there is</h3>
+<div class="tw"><table>
+<thead><tr><th>pages given</th><th>as</th><th>generator</th><th class="num">finance_en</th><th class="num">pharma</th><th class="num">industrial</th><th class="num">hr</th><th class="num">comp sci</th><th class="num">hard qs</th><th class="num">all 8 sets</th></tr></thead>
+<tbody>
+<tr class="grp"><td colspan="10">oracle: the human-marked pages (a ceiling for the generator)</td></tr>
+<tr><td class="sub">oracle</td><td>image</td><td>Gemini 3 Pro</td><td class="num">70.6</td><td class="num">76.1</td><td class="num">68.2</td><td class="num">71.1</td><td class="num">86.5</td><td class="num best">64.7</td><td class="num best">72.6</td></tr>
+<tr><td class="sub">oracle</td><td>text</td><td>Gemini 3 Pro</td><td class="num">70.2</td><td class="num">71.4</td><td class="num">66.4</td><td class="num">72.3</td><td class="num">80.9</td><td class="num">62.3</td><td class="num">70.6</td></tr>
+<tr class="grp"><td colspan="10">retrieved: top-5 pages</td></tr>
+<tr class="pro"><td class="sub">ColEmbed-3B-v2</td><td>image</td><td>GPT-5.2</td><td class="num">59.5</td><td class="num">68.1</td><td class="num">61.5</td><td class="num">66.0</td><td class="num">86.5</td><td class="num">54.1</td><td class="num best">66.7</td></tr>
+<tr><td class="sub">hybrid: visual + text retrievers</td><td>image + text</td><td>Gemini 3 Pro</td><td class="num">65.0</td><td class="num">65.9</td><td class="num">59.4</td><td class="num">64.8</td><td class="num">85.1</td><td class="num best">54.7</td><td class="num">65.7</td></tr>
+<tr><td class="sub">ColEmbed-3B-v2</td><td>image</td><td>Gemini 3 Pro</td><td class="num">67.3</td><td class="num">62.9</td><td class="num">57.2</td><td class="num">65.4</td><td class="num">83.3</td><td class="num">54.5</td><td class="num">64.5</td></tr>
+<tr><td class="sub">jina-v4 text + zerank-2</td><td>text</td><td>Gemini 3 Pro</td><td class="num">66.0</td><td class="num">59.9</td><td class="num">60.4</td><td class="num">63.2</td><td class="num">80.9</td><td class="num">52.1</td><td class="num">64.9</td></tr>
+<tr class="grp"><td colspan="10">no documents at all</td></tr>
+<tr><td class="sub">none</td><td>—</td><td>GPT-5</td><td class="num">25.2</td><td class="num">50.8</td><td class="num">32.2</td><td class="num">29.9</td><td class="num">76.3</td><td class="num">—</td><td class="num">—</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: on finance, retrieval costs 3–11 points of accuracy against the oracle. Hard questions top out at 54.7% with retrieval and 64.7% even with the true pages. Page images beat OCR text by 2 points at the oracle. Judge: GPT-5.2, % judged correct; judge σ 0.22 pp over 5 runs, Krippendorff α 0.91.<span class="path">arXiv 2601.08620 v2 Table 3 and Table 22 (no-context row)</span></p>
+
+<div class="note"><span class="label">grounding · the open frontier</span>
+<p>Asked to box the evidence, Qwen3-VL scores 0.089 F1 and Gemini 3 Pro 0.065, against 0.602 agreement between human annotators. On finance_en the models reach 0.050 and 0.036 against a human 0.569. The models mostly fail by leaving about 27% of annotated pages unboxed. No leaderboard scores this. A system that cites a box you can check is the commercial product. <span class="muted small">(arXiv 2601.08620 Tables 20–21)</span></p></div>
+</div></section>
+
+<!-- ============================================================ 6 -->
+<section id="s6"><div class="wrap">
+<h2>6 · Winning systems — two channels, a reranker, then an LLM</h2>
+<p>I read the write-ups behind every top entry: model cards, tech reports, the one agentic submission and its code. Almost no retriever author publishes an answer system. The one agentic system scored on V3 answers is an IBM research agent.</p>
+<div class="tw"><table>
+<thead><tr><th>system</th><th>how a page is represented</th><th>stages</th><th class="num">EN NDCG@10</th><th>cost</th><th>lesson for us</th></tr></thead>
+<tbody>
+<tr class="pro" id="sys-nemo"><td class="sub">NeMo Retriever agentic <span class="path">NVIDIA · 2026-03 · retrieval-bench/pipelines/agentic.py</span></td><td class="wrapc">image multi-vectors for search; the agent reads each page's <b>markdown</b>, not its image</td><td class="wrapc">ReAct agent (Opus 4.5) with <code>think</code>, <code>retrieve(query, k)</code> and <code>final_results</code>. It rewrites and splits queries, draws on a 500-candidate pool, averages 9.2 retrieve calls, and falls back to RRF over every call</td><td class="num best">74.6</td><td class="wrapc">≈136 s and ≈760k input tokens per query (all 8 sets, A100)</td><td class="wrapc">the agent is a listwise text reranker plus query rewriter. With gpt-oss-120b in its place, the gain drops to about 60% of Opus's</td></tr>
+<tr id="sys-zerank"><td class="sub">jina-v4 text + zerank-2 <span class="path">ILLUIN reference pipeline</span></td><td class="wrapc">the dataset's OCR markdown</td><td class="wrapc">dense text retrieval → zerank-2, a 4B cross-encoder trained on LLM-ensemble preferences</td><td class="num">70.9</td><td class="wrapc">≈8.8 s per query on an A100</td><td class="wrapc">text plus a strong reranker beats every single visual model. zerank-2 is Apache-2.0, but its hosted API closed on 2026-09-04, so it has to be self-hosted</td></tr>
+<tr id="sys-evie"><td class="sub">tencent EVIE-8B / 4.5B <span class="path">2026-09 · Apache-2.0</span></td><td class="wrapc">page image → ≈750 vectors, compressible to 32 (then 59.6 all-language)</td><td class="wrapc">single stage, MaxSim</td><td class="num">71.7 / 71.1</td><td class="wrapc">4.5B runs on a laptop; indexing speed on Apple silicon unpublished</td><td class="wrapc">best open single model. It is trained on 775k pairs, with mined negatives re-judged so answerable ones become positives</td></tr>
+<tr id="sys-colembed"><td class="sub">nemotron-colembed-vl v2 (3B/4B/8B) <span class="path">NVIDIA · arXiv 2602.03992</span></td><td class="wrapc">≈773 tokens per page, 2560–4096-d</td><td class="wrapc">single stage</td><td class="num">67.5–69.1</td><td class="wrapc">1M pages ≈ 5.9 TB fp16</td><td class="wrapc">the 8B is CC-BY-NC, so avoid it for commercial work. Hard negatives and checkpoint merging drive its score</td></tr>
+<tr id="sys-qwenrr"><td class="sub">Qwen3-VL-Reranker 2B / 8B <span class="path">arXiv 2601.04720 · Apache-2.0</span></td><td class="wrapc">page image</td><td class="wrapc">rerank the top-100 of a visual retriever</td><td class="num">+7.9 / +13.8</td><td class="wrapc">V3 datasets averaged not stated</td><td class="wrapc">"visual rerankers don't help" (paper, jina-m0 +0.2) is about one weak reranker, not the idea</td></tr>
+<tr id="sys-searchwiki"><td class="sub">SearchWiki / WikiResearcher <span class="path">IBM · arXiv 2608.29953</span></td><td class="wrapc">OCR pages compiled offline into a wiki: document overviews, topic pages, page records</td><td class="wrapc">agent with BM25+RRF, grep and <code>read_page</code></td><td class="num">answers 70.9%</td><td class="wrapc">a 27B open model, no training (71.4% after RL)</td><td class="wrapc">the only agent scored on V3 answers: +8.3 over single-turn RAG, +5.5 of it from the wiki structure. Its 3-level judge is not the paper's binary one</td></tr>
+<tr id="sys-crop"><td class="sub">DocLens · AgenticOCR · VRAG-RL <span class="path">not on V3</span></td><td class="wrapc">layout-detected crops</td><td class="wrapc">navigate → crop / zoom → answer → adjudicate</td><td class="num">—</td><td class="wrapc">—</td><td class="wrapc">zooming into the element helps answers (DocLens −4.1 without it); AgenticOCR trains on V3's human boxes</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: every gain above 70 comes from reading the candidates closely: a cross-encoder, an LLM, or an agent. The retriever's job is recall.<span class="path">docs/research/systems.md · NVIDIA blog huggingface.co/blog/nvidia/nemo-retriever-agentic-retrieval · arXiv 2601.08620 Tables 2, 9, 11</span></p>
+
+<h3>The patterns that move the score</h3>
+<ul class="bl">
+  <li><b>Search on both the image and the text, and fuse.</b> Visual late interaction is the best first stage. BM25 on the supplied markdown still scores 53.3 on English queries, not the 20.3 quoted for all languages. Visual and text top-5s fused lift F1@10 to 30.2, against 27.8 visual and 25.0 text.</li>
+  <li><b>Rerank hard; it is the cheapest big lever.</b> zerank-2 adds 13.2 points over its retriever. Qwen3-VL-Reranker-8B adds 13.8. An LLM reading the markdown adds 5.5 on top of a 69.1 retriever.</li>
+  <li><b>For charts, tables and infographics, retrieve on the image and read with image plus text.</b> OCR loses chart evidence (§4, pharmaceuticals), and VLM captions did not help retrieval on V3. Image context beats text by 2.4–2.8 points on hard answers, so the generator gets both.</li>
+  <li><b>Keep the ranked list separate from the answer's citations.</b> Finance queries have 4.7 relevant pages on average. NDCG rewards a full, recall-first top 10; SearchWiki's cited pages alone scored 53.2 NDCG@5.</li>
+  <li><b>Give the generator 4–6 pages, not 10.</b> Several multi-page QA papers peak around 3.5–6 pages. Add a verify-then-retry pass for hard questions, which trail by more than 10 points even with oracle pages.</li>
+  <li><b>Ground on layout elements, not on pixels the model guesses.</b> Recall is what fails, and whole-element boxes score higher than tight ones. So detect the layout offline, have the model cite element ids, and turn the ids into boxes.</li>
+  <li><b>Spend the agent where it pays.</b> Agentic gains concentrate on multi-hop, enumerative and open-ended questions. NVIDIA's 760k tokens per query would be about 235M tokens for finance_en, far beyond a subscription. So cap the steps and route only hard questions to the loop.</li>
+</ul>
+</div></section>
+
+<!-- ============================================================ 7 -->
+<section id="s7" class="band"><div class="wrap">
+<h2>7 · The build — six milestones, retrieval measured before any model call</h2>
+<p>This is the first system, on one dataset, on this laptop (M1 Pro, 32 GB) and the Claude subscription. Every box below is <b>designed, not built</b>. Dashed boxes are optional in v1.</p>
+<span class="label fig-title">Fig 3 · the v1 system: two retrieval channels, a local reranker, a Claude agent, three scored outputs</span>
+<div class="figbox">
+<svg class="dia" viewBox="0 0 1000 470" role="img" aria-label="Architecture: HF pages with image and markdown feed a visual channel and a text channel, fused by RRF into top 50, reranked locally, handed to a Claude agent with search, view_page and final tools, which outputs a ranked top 10 scored by NDCG, an answer scored by a judge, and element citations turned into boxes scored by F1. Failures feed the optimiser loop.">
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <g id="a-src"><title>Input: the HF dataset at its pinned revision — page image + OCR markdown per page; no OCR of our own</title>
+    <rect class="nd" x="10" y="150" width="150" height="96" rx="10"/><text class="tx" x="24" y="180">pages</text><text class="tx s" x="24" y="202">image + markdown</text><text class="tx s" x="24" y="222">pinned revision</text></g>
+  <g id="a-vis"><title>Channel A, visual: EVIE-4.5B (Apache-2.0) or tomoro-colqwen3-4b, multi-vectors precomputed once, brute-force MaxSim</title>
+    <rect class="nd" x="210" y="70" width="190" height="86" rx="10"/><text class="tx" x="224" y="100">A · visual index</text><text class="tx s" x="224" y="122">EVIE-4.5B, MaxSim</text><text class="tx s" x="224" y="142">built once, offline</text></g>
+  <g id="a-txt"><title>Channel B, text: BM25S over markdown with the document title prepended; optionally a small dense text embedder</title>
+    <rect class="nd" x="210" y="240" width="190" height="86" rx="10"/><text class="tx" x="224" y="270">B · text index</text><text class="tx s" x="224" y="292">BM25S on markdown</text><text class="tx s" x="224" y="312">+ title per page</text></g>
+  <path class="ed" d="M160,185 C185,185 185,113 208,113" marker-end="url(#ar3)"/>
+  <path class="ed" d="M160,212 C185,212 185,283 208,283" marker-end="url(#ar3)"/>
+  <g id="a-fuse"><title>Reciprocal rank fusion of both channels to a top-50 candidate pool</title>
+    <rect class="nd" x="440" y="160" width="120" height="76" rx="10"/><text class="tx" x="454" y="192">RRF</text><text class="tx s" x="454" y="214">top 50</text></g>
+  <path class="ed" d="M400,113 C425,113 420,185 438,185" marker-end="url(#ar3)"/>
+  <path class="ed" d="M400,283 C425,283 420,212 438,212" marker-end="url(#ar3)"/>
+  <g id="a-rr"><title>Local reranker: zerank-2 (4B, Apache-2.0) on markdown, or Qwen3-VL-Reranker-2B on images; measured in M2</title>
+    <rect class="nd" x="600" y="160" width="150" height="76" rx="10"/><text class="tx" x="614" y="192">rerank</text><text class="tx s" x="614" y="214">zerank-2, local</text></g>
+  <path class="ed" d="M560,198 L598,198" marker-end="url(#ar3)"/>
+  <g id="a-agent"><title>Claude agent (Agent SDK, subscription): in-process tools search, view_page(id, crop), think, final; capped searches; reads 4–6 pages as image + markdown</title>
+    <rect class="nd hi" x="790" y="120" width="200" height="156" rx="10"/><text class="tx" x="804" y="150">Claude agent</text><text class="tx s" x="804" y="174">search · view_page</text><text class="tx s" x="804" y="194">think · final</text><text class="tx s" x="804" y="218">4–6 pages, image</text><text class="tx s" x="804" y="238">+ markdown</text><text class="tx k" x="804" y="262">Agent SDK</text></g>
+  <path class="ed hi" d="M750,198 L788,198" marker-end="url(#ar3)"/>
+  <g id="o-rank"><title>Output 1: ranked top-10 pages, recall-first — scored by NDCG@10, comparable with the leaderboard</title>
+    <rect class="nd" x="440" y="370" width="170" height="76" rx="10"/><text class="tx" x="454" y="400">ranked top 10</text><text class="tx k" x="454" y="424">NDCG@10</text></g>
+  <g id="o-ans"><title>Output 2: the answer — judged correct/incorrect against the (audited) reference</title>
+    <rect class="nd" x="630" y="370" width="170" height="76" rx="10"/><text class="tx" x="644" y="400">answer</text><text class="tx k" x="644" y="424">% correct</text></g>
+  <g id="o-gnd"><title>Output 3: cited layout-element ids, mapped to boxes by an offline layout detector — scored by bbox F1 (M6, optional in v1)</title>
+    <rect class="nd ext" x="820" y="370" width="170" height="76" rx="10"/><text class="tx" x="834" y="400">element boxes</text><text class="tx k" x="834" y="424">bbox F1</text></g>
+  <path class="ed" d="M840,276 C840,330 525,320 525,368" marker-end="url(#ar3)"/>
+  <path class="ed" d="M880,276 L715,368" marker-end="url(#ar3)"/>
+  <path class="ed dash" d="M930,276 L905,368" marker-end="url(#ar3)"/>
+  <g id="a-loop"><title>The loop: failures on train → one optimiser session edits the agent's prompt and tool policy → challenger → gate on train → test once</title>
+    <rect class="nd band" x="10" y="370" width="390" height="76" rx="10"/><text class="tx" x="24" y="400">loop: failures → optimiser → challenger</text><text class="tx s" x="24" y="424">gate on train · test reported once (as tau2-loop)</text></g>
+  <path class="ed dash" d="M440,408 L402,408" marker-end="url(#ar3)"/>
+  <path class="ed dash" d="M205,368 C205,30 890,30 890,118" marker-end="url(#ar3)"/>
+</svg>
+</div>
+<p class="cap">Takeaway: the ranked list and the answer come from the same run but are scored separately. We get a leaderboard-comparable retrieval number and a commercial answer number from one system.<span class="path">designed here; models and scores from §5–6</span></p>
+
+<div class="tw" style="margin-top:var(--s5)"><table>
+<thead><tr><th>milestone</th><th>what it delivers</th><th>proves</th><th>model calls</th><th>state</th></tr></thead>
+<tbody>
+<tr><td class="sub">M0 scaffold</td><td class="wrapc">pinned registry of the 8 datasets, loader, NDCG@10 and recall matching trec_eval, smoke to the central MLflow, CI</td><td class="wrapc">the repo, the data and the platform hookup</td><td>none</td><td><span class="v-ok">● done</span> <span class="path">05d77a4</span></td></tr>
+<tr><td class="sub">M1 split + reference audit</td><td class="wrapc">finance_en English queries cut 50/50, stratified by query type, seed 300 (155 train / 154 test). A reference audit of 40 train questions: my check, then Claude's, with a <code>disputed</code> flag</td><td class="wrapc">what share of references is wrong. Five hand checks say "some"</td><td>≈40 short checks</td><td><span class="v-warn">◐ next</span></td></tr>
+<tr><td class="sub">M2 retrieval, offline</td><td class="wrapc">BM25S → visual 4B index (throughput measured on MPS) → RRF → local reranker. NDCG@10 on train, with test once</td><td class="wrapc">where we sit against 73.7 (EVIE-8B), 74.2 (text + zerank-2) and 75.9 (agentic)</td><td>none</td><td>designed</td></tr>
+<tr><td class="sub">M3 answers v0 + judge</td><td class="wrapc">Claude answers from the top-5 pages (image + markdown), plus an oracle run and a no-document run. A binary judge on the paper's prompt, calibrated on 40 hand labels</td><td class="wrapc">the answer ceiling, the floor, and how far retrieval costs us. Finance references: oracle 70.6%, blind 25.2%</td><td>≈3 × 155 answers + judging</td><td>designed</td></tr>
+<tr><td class="sub">M4 agent v1</td><td class="wrapc">Agent SDK with in-process tools, at most 5 searches, and a <code>final</code> that returns a ranked 10, the answer and citations</td><td class="wrapc">the agentic gain on our data. Target: beat M2's NDCG and M3's accuracy on train</td><td>155 agent runs per eval</td><td>designed</td></tr>
+<tr><td class="sub">M5 the loop</td><td class="wrapc">tau2-loop's mechanics: one optimiser session per cycle edits the agent's prompt and tool policy. Gate on train (fixed ≥ 1 and broke 0, or a sign test at p &lt; 0.05); test reported once</td><td class="wrapc">that the system improves itself without touching test</td><td>per cycle ≈ 1 eval + 1 optimiser session</td><td>designed</td></tr>
+<tr><td class="sub">M6 grounding</td><td class="wrapc">offline layout detection gives element ids with boxes; the agent cites ids; bbox F1 against the qrels boxes</td><td class="wrapc">evidence a person can check. Reference points: 0.050 model, 0.569 human on finance</td><td>none extra</td><td>designed · optional in v1</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: M1 and M2 cost no subscription at all, and by the end of M2 we know our retrieval number against the board. The next dataset reuses everything but the split.<span class="path">split and loop mechanics after ../tau2-loop/AGENTS.md §2 and §5</span></p>
+
+<div class="note acc"><span class="label">assumption · to measure in M2, not a result</span>
+<p>An estimate from token counts I have not measured: a Claude page image is up to ≈4.8k tokens at the cap. Five pages plus their markdown is roughly 25–40k input tokens per answer, or about 4–6M per 155-question train pass. That is why the agent is capped at 5 searches and reads snippets while searching.</p></div>
+</div></section>
+
+<!-- ============================================================ 8 -->
+<section id="s8"><div class="wrap">
+<h2>8 · Risks — noisy references and an uncomparable judge first</h2>
+<div class="tw"><table>
+<thead><tr><th>risk</th><th>evidence</th><th>what we do</th></tr></thead>
+<tbody>
+<tr><td class="sub">wrong reference answers</td><td class="wrapc">2 of the 5 demo references misread their page (§4). The merged answer and the human's raw answer disagree on HR</td><td class="wrapc">the M1 audit and a <code>disputed</code> flag. Report accuracy two ways, raw and audited. A disputed failure never drives an optimiser edit</td></tr>
+<tr><td class="sub">our answer score is not the paper's</td><td class="wrapc">the paper judges with GPT-5.2 at medium effort; we judge with Claude on the subscription</td><td class="wrapc">label answer accuracy as <code>custom</code>. Use the paper's binary prompt, a judge tier different from the generator, and calibrate it on 40 hand labels. Retrieval NDCG@10 stays directly comparable</td></tr>
+<tr><td class="sub">visual indexing speed on MPS</td><td class="wrapc">no published Apple-silicon throughput; ColQwen breaks on torch 2.6.0 with MPS (reported)</td><td class="wrapc">text channel first (M2 needs no GPU); time 50 pages before committing. Fallback: embed once on a rented GPU, which is a cost decision</td></tr>
+<tr><td class="sub">licences</td><td class="wrapc">the corpora are public domain (SEC, FDA, USAF) or CC-BY-4.0 (EU, OpenStax). Models vary: EVIE Apache-2.0, zerank-2 Apache-2.0; nemotron-8B CC-BY-NC, webAI ColVec non-commercial</td><td class="wrapc">only commercially usable models in the stack; attribute the corpora on every page we publish</td></tr>
+<tr><td class="sub">subscription budget</td><td class="wrapc">NVIDIA's agent spends ≈760k tokens per query</td><td class="wrapc">cap steps; route only hard query types to the agent; cache page tokens; count tokens per run in <code>run.json</code></td></tr>
+<tr><td class="sub">small split, public data</td><td class="wrapc">155 train questions; the 10-Ks are public, and 31.7% of finance questions are answerable blind</td><td class="wrapc">record a no-document baseline for every model we use. Test is run once per challenger and never optimised on</td></tr>
+</tbody></table></div>
+</div></section>
+
+<!-- ============================================================ Q -->
+<section id="q" class="band"><div class="wrap">
+<h2>Decisions — six choices before M1 starts</h2>
+<p>Each has a recommendation, first in its list. Select, add a note if you like, then queue the answer. Nothing is sent until you press Send to Agent.</p>
+
+<form class="q" data-lavish-question="q1-dataset" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q1'); if(!c) return; const n=(f.get('q1-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q1 first dataset: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q1 dataset: '+c, element:event.currentTarget, queueKey:'q1', data:{question:'q1-dataset', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q1 · Which dataset first?</h3>
+  <label class="opt"><input type="radio" name="q1" value="finance_en" checked><span class="t"><b>finance_en (recommended)</b><span>Bank 10-Ks, 309 questions, 173 over tables. Only 31.7% answerable blind, so the system earns its score. Clear numeric answers make judging reliable.</span></span></label>
+  <label class="opt"><input type="radio" name="q1" value="pharmaceuticals"><span class="t"><b>pharmaceuticals</b><span>FDA slides, the most chart- and infographic-heavy set (97 infographic, 71 chart). But 57.1% is answerable blind.</span></span></label>
+  <label class="opt"><input type="radio" name="q1" value="industrial"><span class="t"><b>industrial</b><span>Maintenance manuals, the largest (5,244 pages) and hardest set (best 63.4). The most headroom, and the slowest to index.</span></span></label>
+  <label class="opt"><input type="radio" name="q1" value="hr"><span class="t"><b>hr</b><span>EU reports, 104 chart questions, the smallest corpus (1,110 pages). Medium commercial value.</span></span></label>
+  <textarea class="free" name="q1-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<form class="q" data-lavish-question="q2-retrieval" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q2'); if(!c) return; const n=(f.get('q2-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q2 retrieval stack for v1: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q2 retrieval: '+c, element:event.currentTarget, queueKey:'q2', data:{question:'q2-retrieval', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q2 · How much retrieval in v1?</h3>
+  <label class="opt"><input type="radio" name="q2" value="both channels, text first then visual, local reranker" checked><span class="t"><b>Both channels, text first, then visual, then a local reranker (recommended)</b><span>BM25S is running on day one. The visual 4B index follows once MPS throughput is measured. Reference ≈ 71–74.</span></span></label>
+  <label class="opt"><input type="radio" name="q2" value="text channel + reranker only"><span class="t"><b>Text channel and reranker only</b><span>The 70.9 recipe, no visual model, fastest to the loop. Weaker on chart-only pages (§4 pharma).</span></span></label>
+  <label class="opt"><input type="radio" name="q2" value="both channels, visual index on a rented GPU"><span class="t"><b>Both channels, with the visual index built on a rented GPU</b><span>Removes the MPS unknown, for a small one-off spend. Needs a cloud account decision.</span></span></label>
+  <textarea class="free" name="q2-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<form class="q" data-lavish-question="q3-gate" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q3'); if(!c) return; const n=(f.get('q3-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q3 the loop gates on: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q3 gate: '+c, element:event.currentTarget, queueKey:'q3', data:{question:'q3-gate', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q3 · What does the loop's gate read?</h3>
+  <label class="opt"><input type="radio" name="q3" value="answer accuracy on train (audited), NDCG@10 reported" checked><span class="t"><b>Audited answer accuracy on train, with NDCG@10 reported (recommended)</b><span>Optimise the commercial output; keep the leaderboard number visible.</span></span></label>
+  <label class="opt"><input type="radio" name="q3" value="NDCG@10 on train"><span class="t"><b>NDCG@10 on train</b><span>No judge in the gate at all, so it is deterministic and cheap. But it only optimises the ranking.</span></span></label>
+  <label class="opt"><input type="radio" name="q3" value="answer accuracy, and NDCG@10 may not regress"><span class="t"><b>Answer accuracy, with NDCG@10 not allowed to regress</b><span>Stricter; a challenger that answers better but ranks worse is held.</span></span></label>
+  <textarea class="free" name="q3-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<form class="q" data-lavish-question="q4-models" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q4'); if(!c) return; const n=(f.get('q4-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q4 generator and judge: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q4 models: '+c, element:event.currentTarget, queueKey:'q4', data:{question:'q4-models', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q4 · Generator and judge models?</h3>
+  <label class="opt"><input type="radio" name="q4" value="generator claude-sonnet-5, judge claude-opus-5-5" checked><span class="t"><b>Generator Sonnet 5, judge Opus 5.5 (recommended)</b><span>Judge and generator on different tiers; the judge calibrated on 40 hand labels.</span></span></label>
+  <label class="opt"><input type="radio" name="q4" value="generator claude-opus-5-5, judge claude-sonnet-5"><span class="t"><b>Generator Opus 5.5, judge Sonnet 5</b><span>The strongest answers (NVIDIA's gain was with Opus), and the most subscription spent.</span></span></label>
+  <label class="opt"><input type="radio" name="q4" value="generator claude-haiku-4-5, judge claude-sonnet-5"><span class="t"><b>Generator Haiku 4.5, judge Sonnet 5</b><span>The cheapest loop; it leaves headroom for the optimiser to show.</span></span></label>
+  <textarea class="free" name="q4-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<form class="q" data-lavish-question="q5-split" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q5'); if(!c) return; const n=(f.get('q5-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q5 split: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q5 split: '+c, element:event.currentTarget, queueKey:'q5', data:{question:'q5-split', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q5 · How to split the English questions?</h3>
+  <label class="opt"><input type="radio" name="q5" value="50/50 stratified by query type, seed 300" checked><span class="t"><b>50/50, stratified by query type, seed 300 (recommended)</b><span>As tau2-loop does. 155 / 154 on finance_en; every type on both sides.</span></span></label>
+  <label class="opt"><input type="radio" name="q5" value="70/30 stratified, seed 300"><span class="t"><b>70/30, stratified</b><span>More failures for the optimiser to learn from (216); a noisier test (93).</span></span></label>
+  <label class="opt"><input type="radio" name="q5" value="human-written queries only, 50/50"><span class="t"><b>Human-written questions only, 50/50</b><span>Drops the 94 synthetic finance questions, keeping 215 human ones: cleaner questions, smaller sets.</span></span></label>
+  <textarea class="free" name="q5-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<form class="q" data-lavish-question="q6-go" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q6'); if(!c) return; const n=(f.get('q6-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q6 next step: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q6: '+c, element:event.currentTarget, queueKey:'q6', data:{question:'q6-go', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
+  <h3>Q6 · What happens next?</h3>
+  <label class="opt"><input type="radio" name="q6" value="go: build M1 and M2 (no model spend), then report" checked><span class="t"><b>Go: build M1 and M2, then report back (recommended)</b><span>The split, the reference audit and offline retrieval, with NDCG@10 against the board. No answer generation yet.</span></span></label>
+  <label class="opt"><input type="radio" name="q6" value="revise the plan first"><span class="t"><b>Revise the plan first</b><span>Annotate this page; I will update it and re-serve.</span></span></label>
+  <textarea class="free" name="q6-note" placeholder="Optional note"></textarea>
+  <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
+</form>
+
+<div class="copyall">
+  <button type="button" class="link" onclick="(async (btn) => {
+    const copyRun = btn._lavishCopyRun = (btn._lavishCopyRun || 0) + 1;
+    const qs = [...document.querySelectorAll('[data-lavish-question]')];
+    const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+    btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+    const out = [];
+    for (const q of qs) {
+      const key = q.getAttribute('data-lavish-question')?.trim() || 'Question';
+      const lines = [];
+      for (const el of q.querySelectorAll('input, select, textarea')) {
+        if (el.matches(':disabled')) continue;
+        if (el.closest('[data-lavish-question]') !== q) continue;
+        const isChoice = el.matches('input[type=checkbox], input[type=radio]');
+        if (isChoice && !el.checked) continue;
+        if (el.matches('input[type=button], input[type=submit], input[type=reset], input[type=image], input[type=hidden], input[type=file], input[type=range], input[type=color]')) continue;
+        let vals;
+        if (el instanceof HTMLSelectElement) {
+          vals = [...el.selectedOptions].filter((o) => !o.disabled && !o.closest('optgroup[disabled]')).map((o) => o.value.trim()).filter(Boolean);
+        } else {
+          const v = isChoice && (!el.hasAttribute('value') || !el.value.trim())
+            ? el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.name || ''
+            : el.value.trim();
+          vals = v ? [v] : [];
+        }
+        const label = el.name || el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.getAttribute('placeholder')?.trim() || el.tagName.toLowerCase();
+        for (const v of vals) lines.push('  ' + label + ': ' + v.split('\n').join('\n    '));
+      }
+      if (lines.length) out.push(key + ':\n' + lines.join('\n'));
+    }
+    const text = out.join('\n\n');
+    if (!text) {
+      status.textContent = qs.length ? 'No answers to copy yet.' : 'No questions or answers to copy.';
+      return;
+    }
+    status.textContent = '';
+    try {
+      if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(text);
+      if (copyRun !== btn._lavishCopyRun) return;
+      status.textContent = 'Answers copied.';
+      return;
+    } catch {}
+    if (copyRun !== btn._lavishCopyRun) return;
+    const tmp = document.createElement('textarea');
+    tmp.value = text;
+    tmp.readOnly = true;
+    tmp.setAttribute('aria-hidden', 'true');
+    tmp.style.position = 'fixed';
+    tmp.style.left = '-10000px';
+    document.body.append(tmp);
+    tmp.focus();
+    tmp.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {}
+    tmp.remove();
+    if (ok) {
+      status.textContent = 'Answers copied.';
+      return;
+    }
+    btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+    const man = document.createElement('textarea');
+    man.value = text;
+    man.readOnly = true;
+    man.rows = Math.min(12, Math.max(3, text.split('\n').length));
+    man.setAttribute('aria-label', 'Answers to copy manually');
+    man.dataset.lavishCopyAllManual = '';
+    btn.insertAdjacentElement('afterend', man);
+    man.focus();
+    man.select();
+    status.textContent = 'Clipboard unavailable. Copy the answers below manually.';
+  })(this)">Copy all answers</button>
+  <span data-lavish-copy-all-status role="status" aria-live="polite"></span>
+</div>
+</div></section>
+
+<footer>
+  vidore-v3-loop · <code>.lavish/s00_vidore-v3-research-plan.html</code> · repo <a href="https://github.com/nmp-dsci/vidore-v3-loop">github.com/nmp-dsci/vidore-v3-loop</a> · sources in <code>docs/research/</code> · design: portfolio Field Guide tokens (nmp-dsci.github.io) · page images: SEC (public domain), FDA (public domain), USAF TO (distribution A), European Commission (CC-BY-4.0), OpenStax (CC-BY-4.0), via the ViDoRe V3 datasets
+</footer>
+</body>
+</html>

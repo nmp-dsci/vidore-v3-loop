@@ -1,0 +1,189 @@
+{
+ "finance_en": {
+  "query_id": 181,
+  "query": "What were Morgan Stanley's total deposit amounts and the value of uninsured deposits in 2024?",
+  "answer": "Morgan Stanley's total deposit amount was $376,007 million, and the value of uninsured deposits was $77,656 million in 2024.",
+  "raw_answers": [
+   "Morgan Stanley's total deposit amount was $376,007 million, and the value of uninsured deposits was $77,656 million in 2024."
+  ],
+  "types": [
+   "extractive",
+   "numerical"
+  ],
+  "content": [
+   "Table",
+   "Text"
+  ],
+  "format": "question",
+  "generator": "human",
+  "pages": [
+   {
+    "corpus_id": 2037,
+    "score": 2,
+    "doc_id": "morgan_stanley_2024",
+    "page": 119,
+    "file": "finance_en_q181_c2037.jpg",
+    "nboxes": 1,
+    "size": [
+     1700,
+     2200
+    ]
+   },
+   {
+    "corpus_id": 2225,
+    "score": 1,
+    "doc_id": "morgan_stanley_2024",
+    "page": 48,
+    "file": "finance_en_q181_c2225.jpg",
+    "nboxes": 1,
+    "size": [
+     1700,
+     2200
+    ]
+   }
+  ]
+ },
+ "computer_science": {
+  "query_id": 145,
+  "query": "Who handles trade confirmation and reconciliation in a financial trading business model?",
+  "answer": "The back-office operations team handles trade confirmation and reconciliation in a financial trading business model.",
+  "raw_answers": [
+   "The back-office operation team is responsible for handling trade confirmation and reconciliation in a financial trading business model."
+  ],
+  "types": [
+   "extractive"
+  ],
+  "content": [
+   "Infographic",
+   "Table"
+  ],
+  "format": "question",
+  "generator": "human",
+  "pages": [
+   {
+    "corpus_id": 1060,
+    "score": 2,
+    "doc_id": "Introduction_to_Computer_Science",
+    "page": 68,
+    "file": "computer_science_q145_c1060.jpg",
+    "nboxes": 1,
+    "size": [
+     1700,
+     2200
+    ]
+   },
+   {
+    "corpus_id": 1127,
+    "score": 1,
+    "doc_id": "Introduction_to_Computer_Science",
+    "page": 74,
+    "file": "computer_science_q145_c1127.jpg",
+    "nboxes": 1,
+    "size": [
+     1700,
+     2200
+    ]
+   }
+  ]
+ },
+ "hr": {
+  "query_id": 189,
+  "query": "What was the average government spending on healthcare as a percentage of GDP in 2019 for Germany, France, Italy, Spain, and Ireland?",
+  "answer": "The average government spending on healthcare as a percentage of GDP in 2019 for Germany, France, Italy, Spain, and Ireland was 6.56%.",
+  "raw_answers": [
+   "The average government spending on healthcare as a percentage of GDP in 2019 for Germany, France, Italy, Spain, and Ireland was 6.58%."
+  ],
+  "types": [
+   "extractive",
+   "numerical"
+  ],
+  "content": [
+   "Table",
+   "Text"
+  ],
+  "format": "question",
+  "generator": "human",
+  "pages": [
+   {
+    "corpus_id": 331,
+    "score": 2,
+    "doc_id": "annual_report_on_intra-eu_labour_mobility-KE0125029ENN",
+    "page": 102,
+    "file": "hr_q189_c331.jpg",
+    "nboxes": 1,
+    "size": [
+     1654,
+     2339
+    ]
+   }
+  ]
+ },
+ "industrial": {
+  "query_id": 224,
+  "query": "Provide Step A for using a torque wrench.",
+  "answer": "Select the proper size socket wrench (1) and attach it to the torque wrench square drive (2).",
+  "raw_answers": [
+   "The manual, Step A for using a torque wrench, is to select the proper size socket wrench (1) and attach it to the torque wrench square drive (2)."
+  ],
+  "types": [
+   "extractive"
+  ],
+  "content": [
+   "Infographic",
+   "Text"
+  ],
+  "format": "instruction",
+  "generator": "human",
+  "pages": [
+   {
+    "corpus_id": 4253,
+    "score": 2,
+    "doc_id": "TO_32-1-101",
+    "page": 234,
+    "file": "industrial_q224_c4253.jpg",
+    "nboxes": 1,
+    "size": [
+     1800,
+     2300
+    ]
+   }
+  ]
+ },
+ "pharmaceuticals": {
+  "query_id": 313,
+  "query": "What is the difference between the number of formal meeting requests in the year 2018 and 2010?",
+  "answer": "The difference between the number of formal meeting requests in 2018 and 2010 is 1,109.",
+  "raw_answers": [
+   "Based on the bar chart titled CDER PDUFA Formal Meeting Requests by FY, there was a difference of 1,109 formal meeting requests between the years 2018 and 2010.\nThe chart indicates that in fiscal year 2018, 3,179 formal meeting requests were submitted to CDER. In the fiscal year 2010, there were 2,070 requests. Subtracting the 2010 value from the 2018 value 3,179 - 2,070)results in an increase of 1,109 requests."
+  ],
+  "types": [
+   "numerical"
+  ],
+  "content": [
+   "Chart"
+  ],
+  "format": "question",
+  "generator": "human",
+  "pages": [
+   {
+    "corpus_id": 1773,
+    "score": 2,
+    "doc_id": "CDER_New_Drugs_Program_2019_Update",
+    "page": 23,
+    "file": "pharmaceuticals_q313_c1773.jpg",
+    "nboxes": 1,
+    "size": [
+     2000,
+     1500
+    ]
+   }
+  ]
+ },
+ "_checks": {
+  "hr": "Table 16 (p.103) 2019 values: DE 7.3, FR 8.0, IT 6.8, ES 6.1, IE 4.8 -> mean 6.60. Reference 'answer' says 6.56; the human raw answer says 6.58. Both off.",
+  "pharmaceuticals": "Chart bars: FY2018 3179, FY2010 2008 -> difference 1171. Reference says 1109 (reads FY2010 as 2070; no bar is 2070, FY2012 is 2073). The OCR markdown lists the bar values out of year order.",
+  "finance_en": "Deposits table p.119: total 376,007; not subject to FDIC insurance 77,656. Reference correct.",
+  "computer_science": "Table 2.5 row 'Back-office operations'. Reference correct.",
+  "industrial": "TO 32-1-101 p.25-21 step a. Reference correct."
+ }
+}

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Hugging Face downloads: page images and parquet (~10 GB with every corpus)
+data/cache/
+
+# Scratch working directory for the optimiser
+workspace/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store

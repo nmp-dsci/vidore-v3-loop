@@ -1,0 +1,64 @@
+[project]
+name = "vidore-v3-loop"
+version = "0.1.0"
+description = "A visual-document RAG system for ViDoRe V3 — retrieve the pages, answer the question — with a scored, versioned, self-improving eval loop."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+  # ViDoRe V3 lives on the Hugging Face Hub (vidore/vidore_v3_*), each dataset pinned by revision.
+  "datasets>=3.2",
+  "huggingface-hub>=0.26",
+  "pydantic>=2.9",
+  "typer>=0.15",
+  "rich>=13.9",
+  "mlflow>=3.12,<4",
+  "pyyaml>=6.0",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# MTEB's own ViDoRe(v3) retrieval benchmark: heavy (torch), only for comparing against the board.
+mteb = ["mteb>=2.0"]
+
+[project.scripts]
+vidoreloop = "vidore_loop.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.14.2",
+  "mypy>=1.13",
+  "types-PyYAML",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vidore_loop"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["vidore_loop"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["datasets.*", "mlflow.*", "mteb.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:warnings"

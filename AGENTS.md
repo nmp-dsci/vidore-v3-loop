@@ -36,6 +36,13 @@ src/vidore_loop/
   data/loader.py       load a config at its revision into data/cache/
   eval/metrics.py      NDCG@k, recall@k over graded qrels
   tracking/mlflow_log.py  preflight, required tags, smoke run
+  data/catalog.py      English questions shaped for the viewer; hand checks
+  data/pages.py        page images + OCR text by row group → data/cache/pages/
+  data/leaderboard.py  the boards from docs/research/
+  serving/app.py       FastAPI: /api/datasets, /queries, /pages, /leaderboard; serves frontend/dist
+frontend/              React + Vite viewer (:5175 dev), orange tokens, design lint
+data/audits/           hand checks of reference answers (hand_checks.jsonl)
+docs/research/         the committed sources behind every board number
 tests/                 offline only
 data/splits/           our committed train/test cut (to come)
 ai_specs/              specs the coding agents executed

@@ -39,11 +39,14 @@ Each dataset is pinned to a Hub revision in `src/vidore_loop/data/registry.py`.
 ## Commands
 
 ```
-make setup                          # uv sync
+make setup                          # uv sync + npm ci
 make datasets                       # the table above, from the registry
 make download DATASET=hr            # queries, qrels, metadata → data/cache (add CORPUS=1 for page images)
 make stats DATASET=hr               # queries by language / type / format, qrels grades
 make smoke                          # zero-LLM run logged to the central MLflow
+make pages DATASET=finance_en       # prefetch its page images + OCR text (≈930 MB for finance; lazy otherwise)
+make viewer                         # build the UI and serve it with the API → http://127.0.0.1:8083
+make dev                            # API with reload on :8083; `cd frontend && npm run dev` → :5175
 make test · make lint
 ```
 
@@ -62,5 +65,5 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 |---|---|
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
-| M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | next |
+| M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | built, in review |
 | M2 retrieval pipeline + Search tab · M3 retrieval scored + Runs | designed |

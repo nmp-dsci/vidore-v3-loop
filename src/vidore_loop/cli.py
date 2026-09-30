@@ -72,6 +72,34 @@ def stats(dataset: str = typer.Argument(..., help="a dataset key")) -> None:
 
 
 @app.command()
+def pages(
+    dataset: str = typer.Option(..., help="a dataset key"),
+) -> None:
+    """Prefetch every page image and its OCR text into data/cache/pages/<key>/ (≈10 s per 230 pages)."""
+    from vidore_loop.data import pages as page_store
+
+    written = page_store.prefetch(registry.get(dataset).key)
+    console.print(f"{dataset}: {written} pages written")
+
+
+@app.command()
+def serve(port: int = 8083, host: str = "127.0.0.1", reload: bool = False) -> None:
+    """The viewer's API, and the built frontend when frontend/dist exists."""
+    from pathlib import Path
+
+    import uvicorn
+
+    uvicorn.run(
+        "vidore_loop.serving.app:create_app",
+        factory=True,
+        host=host,
+        port=port,
+        reload=reload,
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
+    )
+
+
+@app.command()
 def smoke() -> None:
     """Zero-LLM proof the project logs to the central MLflow: scores a fixed ranking."""
     from vidore_loop.tracking.mlflow_log import log_smoke

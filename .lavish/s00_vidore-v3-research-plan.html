@@ -8,14 +8,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
-/* Portfolio "Field Guide" tokens (nmp-dsci.github.io/assets/css/tokens.css), the site palette unchanged:
-   green accent = act on this / recommended / holds; amber = partial, caveat. */
+/* Portfolio "Field Guide" tokens (nmp-dsci.github.io/assets/css/tokens.css) with this project's recorded
+   divergences (as tau2-loop's red): --accent is ORANGE, the project colour (act on this / recommended);
+   --ok is the site's green, carrying "passed / holds"; --amber is retuned to olive so "partial" never
+   reads as the orange accent. Contrast: accent 5.55:1 on --bg light, 7.96:1 dark. */
 :root{
   --bg:#F7F6F2; --panel:#FFFFFF; --band:#EFEEE8;
   --ink:#1A1D1B; --ink-2:#3B403D; --muted:#4A514D; --faint:#5C635E;
   --line:#DCDAD2; --line-2:#C7C5BC; --line-3:#8A8880;
-  --accent:#0A6552; --accent-ink:#FFFFFF; --accent-soft:#DFEFE8;
-  --amber:#8A5006; --amber-soft:#F6E6CF;
+  --accent:#A8440B; --accent-ink:#FFFFFF; --accent-soft:#F8E1D2;
+  --amber:#6F5A00; --amber-soft:#F1E9C4;
+  --ok:#0A6552; --ok-soft:#DFEFE8;
   --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
   --serif:'IBM Plex Serif',Georgia,'Times New Roman',serif;
   --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -30,16 +33,18 @@
   --bg:#121614; --panel:#191E1B; --band:#161A18;
   --ink:#E8EBE7; --ink-2:#C9CFC9; --muted:#AEB6B0; --faint:#98A09A;
   --line:#28302B; --line-2:#3A443E; --line-3:#727E77;
-  --accent:#43C29A; --accent-ink:#0E1512; --accent-soft:#17382C;
-  --amber:#D99A4E; --amber-soft:#3A2A14;
+  --accent:#F2945A; --accent-ink:#1A0F08; --accent-soft:#3D2415;
+  --amber:#CDB04A; --amber-soft:#2F2A12;
+  --ok:#43C29A; --ok-soft:#17382C;
   --shadow:0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -18px rgb(0 0 0 / .65);
 }}
 :root[data-theme="dark"]{
   --bg:#121614; --panel:#191E1B; --band:#161A18;
   --ink:#E8EBE7; --ink-2:#C9CFC9; --muted:#AEB6B0; --faint:#98A09A;
   --line:#28302B; --line-2:#3A443E; --line-3:#727E77;
-  --accent:#43C29A; --accent-ink:#0E1512; --accent-soft:#17382C;
-  --amber:#D99A4E; --amber-soft:#3A2A14;
+  --accent:#F2945A; --accent-ink:#1A0F08; --accent-soft:#3D2415;
+  --amber:#CDB04A; --amber-soft:#2F2A12;
+  --ok:#43C29A; --ok-soft:#17382C;
   --shadow:0 1px 2px rgb(0 0 0 / .4), 0 12px 28px -18px rgb(0 0 0 / .65);
 }
 @media (prefers-reduced-motion: reduce){ :root{ --dur:0.01ms; } }
@@ -72,7 +77,7 @@ section.band{background:var(--band)}
 .toc a{font:500 var(--t-2)/1 var(--mono);text-decoration:none;color:var(--ink-2);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:var(--s2) var(--s3);min-height:30px;display:inline-flex;align-items:center}
 .toc a:hover{border-color:var(--accent);color:var(--accent)}
 .chip{font:500 var(--t-2)/1 var(--mono);padding:var(--s1) var(--s2);border-radius:var(--r-sm);background:var(--panel);border:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap;display:inline-block}
-.chip.ok{border-color:var(--accent);color:var(--accent)}
+.chip.ok{border-color:var(--ok);color:var(--ok)}
 .chip.warn{border-color:var(--amber);color:var(--amber)}
 .chip.no{border-color:var(--line-3);color:var(--muted)}
 .tw{overflow-x:auto;margin-top:var(--s3);border-radius:var(--r);background:var(--panel);box-shadow:var(--shadow)}
@@ -88,7 +93,7 @@ td.best{color:var(--ink);font-weight:600}
 tr.pro td{background:var(--accent-soft)}
 tr.pro td.sub{color:var(--ink)}
 tr.grp td{background:var(--band);font:500 var(--t-2)/1.3 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
-.v-ok{color:var(--accent);font-weight:500} .v-warn{color:var(--amber);font-weight:500} .v-no{color:var(--muted);font-weight:500}
+.v-ok{color:var(--ok);font-weight:500} .v-warn{color:var(--amber);font-weight:500} .v-no{color:var(--muted);font-weight:500}
 .fig-title{display:block;margin-top:var(--s5)}
 p.cap{font-size:var(--t-1);color:var(--muted);max-width:90ch}
 p.cap .path{display:block;font:400 var(--t-2)/1.4 var(--mono);color:var(--faint);margin-top:var(--s1);overflow-wrap:anywhere}
@@ -106,7 +111,7 @@ p.cap .path{display:block;font:400 var(--t-2)/1.4 var(--mono);color:var(--faint)
 .card .n small{font:400 var(--t-1)/1.3 var(--sans);color:var(--muted)}
 ul.bl{list-style:none;padding:0;margin:var(--s4) 0 0;display:grid;gap:var(--s3);max-width:90ch}
 ul.bl li{position:relative;padding-left:1.5rem;color:var(--ink-2)}
-ul.bl li::before{content:'●';position:absolute;left:0;color:var(--accent)}
+ul.bl li::before{content:'●';position:absolute;left:0;color:var(--faint)}
 ul.bl.warn li::before{content:'◐';color:var(--amber)}
 ol.steps{margin:var(--s4) 0 0;padding-left:1.6rem;max-width:90ch;display:grid;gap:var(--s2);color:var(--ink-2)}
 ol.steps li::marker{font-family:var(--mono);color:var(--accent)}
@@ -159,7 +164,7 @@ form.q label.opt .t{min-width:0}
 form.q label.opt .t b{display:block;font-weight:600;color:var(--ink)}
 form.q label.opt .t span{font-size:var(--t-1);color:var(--muted)}
 form.q .actions{margin-top:var(--s4);display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
-form.q .ack{font-size:var(--t-1);color:var(--accent)}
+form.q .ack{font-size:var(--t-1);color:var(--ok)}
 button.btn{font:500 var(--t-1)/1 var(--sans);background:var(--accent);color:var(--accent-ink);border:0;border-radius:var(--r-sm);padding:var(--s3) var(--s4);cursor:pointer;min-height:38px}
 button.link{font:500 var(--t-1)/1 var(--sans);background:none;border:0;color:var(--accent);text-decoration:underline;text-underline-offset:.15em;cursor:pointer;min-height:38px;padding:0 var(--s2)}
 textarea.free{width:100%;margin-top:var(--s3);font:400 var(--t-1)/1.5 var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:var(--s3);min-height:64px;resize:vertical}
@@ -167,6 +172,24 @@ textarea.free{width:100%;margin-top:var(--s3);font:400 var(--t-1)/1.5 var(--sans
 .copyall textarea{width:100%;font:400 var(--t-1)/1.5 var(--mono);margin-top:var(--s2)}
 footer{max-width:var(--w);margin:0 auto;padding:var(--s6) var(--s4);color:var(--faint);font-size:var(--t-1);border-top:1px solid var(--line)}
 footer code{overflow-wrap:anywhere}
+/* fig 4 mock of the viewer shell */
+.mock{background:var(--bg);border-radius:var(--r);overflow:hidden;min-width:640px}
+.mock-top{display:flex;align-items:center;gap:var(--s4);padding:var(--s3) var(--s4);background:var(--panel);border-bottom:1px solid var(--line)}
+.mock-brand{font:500 var(--t0)/1 var(--serif);color:var(--accent);white-space:nowrap}
+.mock-nav{display:flex;gap:var(--s1);flex-wrap:wrap;min-width:0}
+.mock-nav span{font:500 var(--t-2)/1 var(--sans);padding:var(--s2) var(--s3);border-radius:var(--r-sm);color:var(--ink-2);white-space:nowrap}
+.mock-nav span.on{background:var(--accent);color:var(--accent-ink)}
+.mock-nav span.off{color:var(--faint);border:1px dashed var(--line-3)}
+.mock-health{margin-left:auto;font:400 var(--t-2)/1 var(--mono);color:var(--faint);white-space:nowrap;display:flex;align-items:center;gap:var(--s1)}
+.mock-health .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.mock-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s4);padding:var(--s4)}
+.mock-list{display:grid;gap:var(--s2);align-content:start;min-width:0}
+.mock-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s3);align-items:center;background:var(--panel);border-radius:var(--r-sm);padding:var(--s2) var(--s3);font-size:var(--t-1);color:var(--ink-2)}
+.mock-row.on{box-shadow:inset 3px 0 0 var(--accent)}
+.mock-row .mono{color:var(--faint);font-size:var(--t-2)}
+.mock-detail{background:var(--panel);border-radius:var(--r-sm);padding:var(--s4);min-width:0}
+.mock-page{margin-top:var(--s3);height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--band);position:relative}
+.mock-box{position:absolute;left:12%;top:38%;width:62%;height:34%;border:2px solid var(--ok);border-radius:2px}
 @media (max-width:900px){ .demo{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:640px){ h1{font-size:var(--t3)} section{padding-block:var(--s6)} .kv{grid-template-columns:minmax(0,1fr)} }
 </style>
@@ -174,7 +197,7 @@ footer code{overflow-wrap:anywhere}
 <body>
 
 <header class="top"><div class="in">
-  <b>vidore-v3-loop</b><span class="muted small">s00 · research + build plan · English, one dataset at a time</span><span class="label">2026-09-28 · for review</span>
+  <b>vidore-v3-loop</b><span class="muted small">s00 · research + build plan · English, one dataset at a time</span><span class="label">2026-09-28 · rev 09-30 · for review</span>
 </div></header>
 
 <div class="wrap hero">
@@ -182,7 +205,7 @@ footer code{overflow-wrap:anywhere}
 <h1>ViDoRe V3's best English system is a retriever plus an LLM that <em>re-reads the pages</em> — we start there, on bank annual reports</h1>
 <p class="lead">ViDoRe V3 asks enterprise questions of real PDFs where the answer often sits in a table, chart or diagram. On English queries the top published pipeline, an 8B visual retriever with Claude Opus 4.5 as an agentic reranker, reaches 74.6 NDCG@10. Its retriever alone scores 69.1. Even when handed the right pages, the best generator answers 72.6% correctly. I recommend starting with <code>finance_en</code>: six US bank 10-Ks, 309 English questions, 173 of them over tables.</p>
 <nav class="toc" aria-label="sections">
-  <a href="#s1">1 · bottom line</a><a href="#s2">2 · what is scored</a><a href="#s3">3 · five datasets</a><a href="#s4">4 · demo questions</a><a href="#s5">5 · scoreboard</a><a href="#s6">6 · winning systems</a><a href="#s7">7 · the build</a><a href="#s8">8 · risks</a><a href="#q">decisions</a>
+  <a href="#s1">1 · bottom line</a><a href="#s2">2 · what is scored</a><a href="#s3">3 · five datasets</a><a href="#s4">4 · demo questions</a><a href="#s5">5 · scoreboard</a><a href="#s6">6 · winning systems</a><a href="#s7">7 · the build</a><a href="#s7ui">7b · the UI</a><a href="#s8">8 · risks</a><a href="#q">decisions</a>
 </nav>
 </div>
 
@@ -470,8 +493,8 @@ footer code{overflow-wrap:anywhere}
 
 <!-- ============================================================ 7 -->
 <section id="s7" class="band"><div class="wrap">
-<h2>7 · The build — six milestones, retrieval measured before any model call</h2>
-<p>This is the first system, on one dataset, on this laptop (M1 Pro, 32 GB) and the Claude subscription. Every box below is <b>designed, not built</b>. Dashed boxes are optional in v1.</p>
+<h2>7 · The build — eight vertical slices, each a backend and its tab</h2>
+<p>This is the first system, on one dataset, on this laptop (M1 Pro, 32 GB) and the Claude subscription. Every box below is <b>designed, not built</b>. Dashed boxes are optional in v1. Each milestone after M0 ships a vertical slice: the backend piece, and the viewer tab that shows it working (§7b).</p>
 <span class="label fig-title">Fig 3 · the v1 system: two retrieval channels, a local reranker, a Claude agent, three scored outputs</span>
 <div class="figbox">
 <svg class="dia" viewBox="0 0 1000 470" role="img" aria-label="Architecture: HF pages with image and markdown feed a visual channel and a text channel, fused by RRF into top 50, reranked locally, handed to a Claude agent with search, view_page and final tools, which outputs a ranked top 10 scored by NDCG, an answer scored by a judge, and element citations turned into boxes scored by F1. Failures feed the optimiser loop.">
@@ -500,7 +523,7 @@ footer code{overflow-wrap:anywhere}
     <rect class="nd" x="440" y="370" width="170" height="76" rx="10"/><text class="tx" x="454" y="400">ranked top 10</text><text class="tx k" x="454" y="424">NDCG@10</text></g>
   <g id="o-ans"><title>Output 2: the answer — judged correct/incorrect against the (audited) reference</title>
     <rect class="nd" x="630" y="370" width="170" height="76" rx="10"/><text class="tx" x="644" y="400">answer</text><text class="tx k" x="644" y="424">% correct</text></g>
-  <g id="o-gnd"><title>Output 3: cited layout-element ids, mapped to boxes by an offline layout detector — scored by bbox F1 (M6, optional in v1)</title>
+  <g id="o-gnd"><title>Output 3: cited layout-element ids, mapped to boxes by an offline layout detector — scored by bbox F1 (M7, optional in v1)</title>
     <rect class="nd ext" x="820" y="370" width="170" height="76" rx="10"/><text class="tx" x="834" y="400">element boxes</text><text class="tx k" x="834" y="424">bbox F1</text></g>
   <path class="ed" d="M840,276 C840,330 525,320 525,368" marker-end="url(#ar3)"/>
   <path class="ed" d="M880,276 L715,368" marker-end="url(#ar3)"/>
@@ -514,20 +537,70 @@ footer code{overflow-wrap:anywhere}
 <p class="cap">Takeaway: the ranked list and the answer come from the same run but are scored separately. We get a leaderboard-comparable retrieval number and a commercial answer number from one system.<span class="path">designed here; models and scores from §5–6</span></p>
 
 <div class="tw" style="margin-top:var(--s5)"><table>
-<thead><tr><th>milestone</th><th>what it delivers</th><th>proves</th><th>model calls</th><th>state</th></tr></thead>
+<thead><tr><th>milestone</th><th>backend</th><th>frontend (viewer tab)</th><th>proves</th><th>model calls</th><th>state</th></tr></thead>
 <tbody>
-<tr><td class="sub">M0 scaffold</td><td class="wrapc">pinned registry of the 8 datasets, loader, NDCG@10 and recall matching trec_eval, smoke to the central MLflow, CI</td><td class="wrapc">the repo, the data and the platform hookup</td><td>none</td><td><span class="v-ok">● done</span> <span class="path">05d77a4</span></td></tr>
-<tr><td class="sub">M1 split + reference audit</td><td class="wrapc">finance_en English queries cut 50/50, stratified by query type, seed 300 (155 train / 154 test). A reference audit of 40 train questions: my check, then Claude's, with a <code>disputed</code> flag</td><td class="wrapc">what share of references is wrong. Five hand checks say "some"</td><td>≈40 short checks</td><td><span class="v-warn">◐ next</span></td></tr>
-<tr><td class="sub">M2 retrieval, offline</td><td class="wrapc">BM25S → visual 4B index (throughput measured on MPS) → RRF → local reranker. NDCG@10 on train, with test once</td><td class="wrapc">where we sit against 73.7 (EVIE-8B), 74.2 (text + zerank-2) and 75.9 (agentic)</td><td>none</td><td>designed</td></tr>
-<tr><td class="sub">M3 answers v0 + judge</td><td class="wrapc">Claude answers from the top-5 pages (image + markdown), plus an oracle run and a no-document run. A binary judge on the paper's prompt, calibrated on 40 hand labels</td><td class="wrapc">the answer ceiling, the floor, and how far retrieval costs us. Finance references: oracle 70.6%, blind 25.2%</td><td>≈3 × 155 answers + judging</td><td>designed</td></tr>
-<tr><td class="sub">M4 agent v1</td><td class="wrapc">Agent SDK with in-process tools, at most 5 searches, and a <code>final</code> that returns a ranked 10, the answer and citations</td><td class="wrapc">the agentic gain on our data. Target: beat M2's NDCG and M3's accuracy on train</td><td>155 agent runs per eval</td><td>designed</td></tr>
-<tr><td class="sub">M5 the loop</td><td class="wrapc">tau2-loop's mechanics: one optimiser session per cycle edits the agent's prompt and tool policy. Gate on train (fixed ≥ 1 and broke 0, or a sign test at p &lt; 0.05); test reported once</td><td class="wrapc">that the system improves itself without touching test</td><td>per cycle ≈ 1 eval + 1 optimiser session</td><td>designed</td></tr>
-<tr><td class="sub">M6 grounding</td><td class="wrapc">offline layout detection gives element ids with boxes; the agent cites ids; bbox F1 against the qrels boxes</td><td class="wrapc">evidence a person can check. Reference points: 0.050 model, 0.569 human on finance</td><td>none extra</td><td>designed · optional in v1</td></tr>
+<tr><td class="sub">M0 scaffold</td><td class="wrapc">pinned registry of the 8 datasets, loader, NDCG@10 and recall matching trec_eval, smoke run to the central MLflow, CI</td><td class="wrapc">—</td><td class="wrapc">the repo, the data and the platform hookup</td><td>none</td><td><span class="v-ok">● done</span> <span class="path">05d77a4</span></td></tr>
+<tr class="pro"><td class="sub">M1 the viewer stands up<span class="path">next</span></td><td class="wrapc">FastAPI app (<code>vidoreloop serve</code>, :8083): <code>/api/health</code>, <code>/api/datasets</code>, <code>/api/datasets/{key}/queries</code>, <code>/api/pages/{key}/{corpus_id}</code> (page image from the pinned parquet cache, qrels boxes as JSON). <code>DESIGN.md</code> with the orange tokens</td><td class="wrapc">React + Vite + TypeScript shell on :5175 in tau2-loop's and DataAgentBench's layout, orange accent, design lint in CI. Tabs: <b>Overview</b>; <b>Datasets &amp; questions</b> (browse the 5 English sets, open a question, see its pages with the human boxes and the reference answer); <b>Leaderboard</b> (§5, from <code>docs/research/</code>)</td><td class="wrapc">anyone can browse the benchmark and the board in two clicks; §3–§5 of this page, served live from the pinned data</td><td>none</td><td><span class="v-warn">◐ next</span></td></tr>
+<tr><td class="sub">M2 retrieval pipeline</td><td class="wrapc">BM25S on markdown → visual 4B index (MPS throughput measured) → RRF → local reranker, behind <code>POST /api/search</code></td><td class="wrapc"><b>Search</b>: type or pick a question, see each stage's ranked pages as thumbnails, with the qrels grade marked on every hit</td><td class="wrapc">the pipeline works end to end, and a person can see why a page ranked where it did</td><td>none</td><td>designed</td></tr>
+<tr><td class="sub">M3 retrieval scored</td><td class="wrapc">finance_en English split 50/50, stratified by query type, seed 300 (155 / 154). Run folders under <code>runs/</code>, NDCG@10 and recall on train, test once, logged to the central MLflow</td><td class="wrapc"><b>Runs</b>: every run with its NDCG@10 and denominator, per query type; drill into one query's ranking against its qrels. Our row appears on <b>Leaderboard</b> beside 73.7, 74.2 and 75.9</td><td class="wrapc">our retrieval number against the board, comparable like for like</td><td>none</td><td>designed</td></tr>
+<tr><td class="sub">M4 answers + judge + audit</td><td class="wrapc">Claude answers from the top-5 pages (image + markdown), plus oracle and no-document runs. Binary judge on the paper's prompt, calibrated on 40 hand labels. Reference audit with a <code>disputed</code> flag</td><td class="wrapc"><b>Review</b>: question, pages, our answer, reference and verdict side by side. A person marks a reference disputed or agrees with the judge, and that writes back</td><td class="wrapc">the answer ceiling, the floor and the retrieval cost. Finance references: oracle 70.6%, blind 25.2%</td><td>≈3 × 155 answers + judging</td><td>designed</td></tr>
+<tr><td class="sub">M5 agent v1</td><td class="wrapc">Agent SDK with in-process tools <code>search</code>, <code>view_page</code>, <code>think</code> and <code>final</code>, capped at 5 searches. The trace is stored per query</td><td class="wrapc"><b>Agent</b>: one question drawn as the agent's steps (each search, the pages it viewed, the final ranked 10, the answer and its citations), as tau2-loop's Agent tab</td><td class="wrapc">the agentic gain on our data, and where the agent's tokens go</td><td>155 agent runs per eval</td><td>designed</td></tr>
+<tr><td class="sub">M6 the loop</td><td class="wrapc">tau2-loop's mechanics: one optimiser session per cycle edits the agent's prompt and tool policy. Gate on train (fixed ≥ 1 and broke 0, or a sign test at p &lt; 0.05); test reported once; a ledger</td><td class="wrapc"><b>Optimise</b>: each cycle as diagnose → propose → outcome, the gate's fixed and broke lists, and the champion history</td><td class="wrapc">that the system improves itself without touching test</td><td>per cycle ≈ 1 eval + 1 optimiser session</td><td>designed</td></tr>
+<tr><td class="sub">M7 grounding</td><td class="wrapc">offline layout detection gives element ids with boxes; the agent cites ids; bbox F1 against the qrels boxes</td><td class="wrapc">on <b>Review</b> and <b>Agent</b>: our boxes over the human boxes on the page, with the F1</td><td class="wrapc">evidence a person can check. Reference points: 0.050 model, 0.569 human on finance</td><td>none extra</td><td>designed · optional in v1</td></tr>
 </tbody></table></div>
-<p class="cap">Takeaway: M1 and M2 cost no subscription at all, and by the end of M2 we know our retrieval number against the board. The next dataset reuses everything but the split.<span class="path">split and loop mechanics after ../tau2-loop/AGENTS.md §2 and §5</span></p>
+<p class="cap">Takeaway: every milestone ends with something you can open in the browser. M1 to M3 cost no subscription at all, and by the end of M3 our retrieval number sits on the Leaderboard tab beside the board's. The next dataset reuses everything but the split.<span class="path">split and loop mechanics after ../tau2-loop/AGENTS.md §2 and §5 · viewer after ../tau2-loop/frontend and ../DataAgentBench/frontend</span></p>
 
 <div class="note acc"><span class="label">assumption · to measure in M2, not a result</span>
 <p>An estimate from token counts I have not measured: a Claude page image is up to ≈4.8k tokens at the cap. Five pages plus their markdown is roughly 25–40k input tokens per answer, or about 4–6M per 155-question train pass. That is why the agent is capped at 5 searches and reads snippets while searching.</p></div>
+</div></section>
+
+<!-- ============================================================ 7b -->
+<section id="s7ui"><div class="wrap">
+<h2>7b · The UI — tau2-loop's viewer, in orange, one tab per slice</h2>
+<p>The viewer uses the same stack and layout as tau2-loop and DataAgentBench, so all three read as one portfolio:</p>
+<ul class="bl">
+  <li><b>Frontend:</b> React 18, Vite, TypeScript and react-router, with a design lint in CI that fails on any hex colour outside the tokens.</li>
+  <li><b>Backend:</b> a FastAPI app that serves both the API and the built frontend. It reads committed files and the pinned data cache, so it runs read-only with no model and no key.</li>
+</ul>
+<p>The one deliberate difference is the project colour. The accent is <b>orange</b>, where tau2-loop is red and DataAgentBench is green.</p>
+<span class="label fig-title">Fig 4 · mock of the M1 shell: the Datasets &amp; questions tab, in this project's tokens</span>
+<div class="figbox" style="padding:0">
+<div class="mock" aria-label="Mock of the vidore-v3-loop viewer shell with an orange brand and tab bar, showing the finance_en question list and one question's evidence page">
+  <div class="mock-top"><span class="mock-brand">vidore-v3-loop</span>
+    <nav class="mock-nav"><span>Overview</span><span class="on">Datasets &amp; questions</span><span>Leaderboard</span><span class="off">Search</span><span class="off">Runs</span><span class="off">Review</span><span class="off">Agent</span><span class="off">Optimise</span></nav>
+    <span class="mock-health"><span class="dot"></span>api ok · finance_en @7f432c1</span></div>
+  <div class="mock-body">
+    <div class="mock-list">
+      <span class="label">finance_en · 309 English questions</span>
+      <div class="mock-row"><span class="mono">q181</span><span>Morgan Stanley total and uninsured deposits, 2024</span><span class="chip">table</span></div>
+      <div class="mock-row on"><span class="mono">q254</span><span>Did digital adoption increase for Bank of America in 2024?</span><span class="chip">table</span></div>
+      <div class="mock-row"><span class="mono">q106</span><span>% of BofA property square footage in the U.S.</span><span class="chip">table</span></div>
+      <div class="mock-row"><span class="mono">q178</span><span>Morgan Stanley asset-management + transactional revenue share</span><span class="chip">table</span></div>
+    </div>
+    <div class="mock-detail">
+      <span class="label">q254 · boolean · human · 1 relevant page</span>
+      <p class="q" style="font-size:var(--t0)">Did digital adoption increase for Bank of America in 2024?</p>
+      <div class="mock-page"><span class="mock-box"></span></div>
+      <p class="small muted" style="margin-top:var(--s2)">reference · “Yes, active digital users increased from 46,265 to 48,150 between 2023 and 2024.” <span class="chip ok">grade 2</span></p>
+    </div>
+  </div>
+</div>
+</div>
+<p class="cap">Takeaway: M1 turns §3 and §4 of this page into a live tab, so every later slice has a place to show its work. Greyed tabs light up as their milestone lands.<span class="path">layout after ../tau2-loop/frontend/src/Shell.tsx and ../DataAgentBench/frontend/src/Shell.tsx · this is a mock, nothing is built</span></p>
+
+<div class="tw" style="margin-top:var(--s5)"><table>
+<thead><tr><th>tab</th><th>address</th><th>what it answers</th><th>lands in</th></tr></thead>
+<tbody>
+<tr><td class="sub">Overview</td><td><code>/</code></td><td class="wrapc">where each English dataset stands: retrieval, answers, grounding, against the board</td><td>M1, filled as scores land</td></tr>
+<tr><td class="sub">Datasets &amp; questions</td><td><code>/datasets/&lt;key&gt;/&lt;query&gt;</code></td><td class="wrapc">what the benchmark asks, and the evidence and reference for one question</td><td>M1</td></tr>
+<tr><td class="sub">Leaderboard</td><td><code>/leaderboard</code></td><td class="wrapc">who else has tried, on which board, and where our row sits</td><td>M1, our row in M3</td></tr>
+<tr><td class="sub">Search</td><td><code>/search?q=&amp;dataset=</code></td><td class="wrapc">what each retrieval stage returns for a question, and why</td><td>M2</td></tr>
+<tr><td class="sub">Runs</td><td><code>/runs/&lt;run&gt;[?vs=&lt;run&gt;]</code></td><td class="wrapc">what we ran, its score with denominators, and one run against another</td><td>M3</td></tr>
+<tr><td class="sub">Review</td><td><code>/review/&lt;run&gt;/&lt;query&gt;</code></td><td class="wrapc">our answer against the reference, the judge's verdict, and a person's audit (this tab writes)</td><td>M4, boxes in M7</td></tr>
+<tr><td class="sub">Agent</td><td><code>/agent/&lt;version&gt;?run=&amp;query=</code></td><td class="wrapc">one question as the agent's steps: searches, pages viewed, final answer</td><td>M5</td></tr>
+<tr><td class="sub">Optimise</td><td><code>/optimise/&lt;version&gt;</code></td><td class="wrapc">a loop cycle: diagnose → propose → gate outcome</td><td>M6</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: the URL grammar follows tau2-loop's. One id per thing, the path names the subject, and the query string holds the lens.<span class="path">../tau2-loop/AGENTS.md §4b</span></p>
 </div></section>
 
 <!-- ============================================================ 8 -->
@@ -536,7 +609,7 @@ footer code{overflow-wrap:anywhere}
 <div class="tw"><table>
 <thead><tr><th>risk</th><th>evidence</th><th>what we do</th></tr></thead>
 <tbody>
-<tr><td class="sub">wrong reference answers</td><td class="wrapc">2 of the 5 demo references misread their page (§4). The merged answer and the human's raw answer disagree on HR</td><td class="wrapc">the M1 audit and a <code>disputed</code> flag. Report accuracy two ways, raw and audited. A disputed failure never drives an optimiser edit</td></tr>
+<tr><td class="sub">wrong reference answers</td><td class="wrapc">2 of the 5 demo references misread their page (§4). The merged answer and the human's raw answer disagree on HR</td><td class="wrapc">the M4 audit and a <code>disputed</code> flag. Report accuracy two ways, raw and audited. A disputed failure never drives an optimiser edit</td></tr>
 <tr><td class="sub">our answer score is not the paper's</td><td class="wrapc">the paper judges with GPT-5.2 at medium effort; we judge with Claude on the subscription</td><td class="wrapc">label answer accuracy as <code>custom</code>. Use the paper's binary prompt, a judge tier different from the generator, and calibrate it on 40 hand labels. Retrieval NDCG@10 stays directly comparable</td></tr>
 <tr><td class="sub">visual indexing speed on MPS</td><td class="wrapc">no published Apple-silicon throughput; ColQwen breaks on torch 2.6.0 with MPS (reported)</td><td class="wrapc">text channel first (M2 needs no GPU); time 50 pages before committing. Fallback: embed once on a rented GPU, which is a cost decision</td></tr>
 <tr><td class="sub">licences</td><td class="wrapc">the corpora are public domain (SEC, FDA, USAF) or CC-BY-4.0 (EU, OpenStax). Models vary: EVIE Apache-2.0, zerank-2 Apache-2.0; nemotron-8B CC-BY-NC, webAI ColVec non-commercial</td><td class="wrapc">only commercially usable models in the stack; attribute the corpora on every page we publish</td></tr>
@@ -598,7 +671,7 @@ footer code{overflow-wrap:anywhere}
 
 <form class="q" data-lavish-question="q6-go" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const c=f.get('q6'); if(!c) return; const n=(f.get('q6-note')||'').trim(); window.lavish && window.lavish.queuePrompt('Q6 next step: '+c+(n?' — note: '+n:''), {tag:'choice', text:'Q6: '+c, element:event.currentTarget, queueKey:'q6', data:{question:'q6-go', answer:c, note:n}}); event.currentTarget.querySelector('.ack').textContent='Queued: '+c;">
   <h3>Q6 · What happens next?</h3>
-  <label class="opt"><input type="radio" name="q6" value="go: build M1 and M2 (no model spend), then report" checked><span class="t"><b>Go: build M1 and M2, then report back (recommended)</b><span>The split, the reference audit and offline retrieval, with NDCG@10 against the board. No answer generation yet.</span></span></label>
+  <label class="opt"><input type="radio" name="q6" value="go: build M1 (the viewer) and M2 (the retrieval pipeline and its Search tab), then report" checked><span class="t"><b>Go: build M1 (the viewer) and M2 (the retrieval pipeline and its Search tab), then report back (recommended)</b><span>Two vertical slices you can open in the browser: the benchmark and the board, then live search over finance_en. No model spend.</span></span></label>
   <label class="opt"><input type="radio" name="q6" value="revise the plan first"><span class="t"><b>Revise the plan first</b><span>Annotate this page; I will update it and re-serve.</span></span></label>
   <textarea class="free" name="q6-note" placeholder="Optional note"></textarea>
   <div class="actions"><button class="btn" type="submit">Queue answer</button><span class="ack" role="status" aria-live="polite"></span></div>
@@ -683,7 +756,7 @@ footer code{overflow-wrap:anywhere}
 </div></section>
 
 <footer>
-  vidore-v3-loop · <code>.lavish/s00_vidore-v3-research-plan.html</code> · repo <a href="https://github.com/nmp-dsci/vidore-v3-loop">github.com/nmp-dsci/vidore-v3-loop</a> · sources in <code>docs/research/</code> · design: portfolio Field Guide tokens (nmp-dsci.github.io) · page images: SEC (public domain), FDA (public domain), USAF TO (distribution A), European Commission (CC-BY-4.0), OpenStax (CC-BY-4.0), via the ViDoRe V3 datasets
+  vidore-v3-loop · <code>.lavish/s00_vidore-v3-research-plan.html</code> · repo <a href="https://github.com/nmp-dsci/vidore-v3-loop">github.com/nmp-dsci/vidore-v3-loop</a> · sources in <code>docs/research/</code> · design: portfolio Field Guide tokens (nmp-dsci.github.io), orange project accent · page images: SEC (public domain), FDA (public domain), USAF TO (distribution A), European Commission (CC-BY-4.0), OpenStax (CC-BY-4.0), via the ViDoRe V3 datasets
 </footer>
 </body>
 </html>

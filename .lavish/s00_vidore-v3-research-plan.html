@@ -700,7 +700,7 @@ footer code{overflow-wrap:anywhere}
 <tr><td class="sub">Stage delta</td><td class="wrapc">which gold pages did fusion or the reranker gain, and which did it lose?</td><td class="wrapc">shows exactly what each stage earns or costs, page by page</td><td>M2 per question · M3 counts</td></tr>
 <tr><td class="sub">Latency</td><td class="wrapc">time per stage per query</td><td class="wrapc">a stage that adds 0.5 NDCG for 10 s is a decision, not a free win</td><td>M2 · M3</td></tr>
 </tbody></table></div>
-<p class="cap">Takeaway: NDCG@10 compares us with the board. Recall and complete coverage say whether the answer step can possibly succeed. In M3 every metric is also sliced by query type, content type (table, chart, infographic), format and author, each with its denominator, and our NDCG@10 is checked against <code>pytrec_eval</code> on the same rankings before it is published.<span class="path">existing: src/vidore_loop/eval/metrics.py (NDCG@k, Recall@k, matched to trec_eval in tests/test_metrics.py) · the rest added in M2</span></p>
+<p class="cap">Takeaway: NDCG@10 compares us with the board. Recall and complete coverage say whether the answer step can possibly succeed. In M3 every metric is also sliced by query type, content type (table, chart, infographic), format and author, each with its denominator, and our NDCG@10 is checked against <code>pytrec_eval</code> on the same rankings before it is published.<span class="path">existing: src/vidore_loop/eval/metrics.py (NDCG@k, Recall@k: trec_eval's linear-gain formula, hand-checked in tests/test_metrics.py; the pytrec_eval cross-check is added in M2) · the rest added in M2</span></p>
 
 <h3>Built in this order, each step usable before the next</h3>
 <ol class="steps">

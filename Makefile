@@ -26,6 +26,9 @@ pages: ## prefetch DATASET's page images + OCR text into data/cache/pages (the v
 index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 for a visual timing run, MODEL=evie|tomoro; visual needs `uv sync --extra retrieval`)
 	uv run vidoreloop index --dataset $(DATASET) --stage $(or $(STAGE),text) $(if $(LIMIT),--limit $(LIMIT)) $(if $(MODEL),--model $(MODEL))
 
+index-visual-overnight: ## the full visual index for DATASET with MODEL (default evie), resumable, the Mac kept awake
+	caffeinate -is uv run vidoreloop index --dataset $(DATASET) --stage visual --model $(or $(MODEL),evie)
+
 dev: ## the API on :$(API_PORT), reloading on code changes (UI: cd frontend && npm run dev → :5175)
 	uv run vidoreloop serve --port $(API_PORT) --reload
 
@@ -52,4 +55,4 @@ lint: ## ruff + mypy (+ frontend design lint when node_modules exist)
 fmt: ## ruff format + fix
 	uv run ruff format src tests && uv run ruff check --fix src tests
 
-.PHONY: help setup datasets download stats pages index dev viewer platform-up platform-status smoke test lint fmt
+.PHONY: help setup datasets download stats pages index index-visual-overnight dev viewer platform-up platform-status smoke test lint fmt

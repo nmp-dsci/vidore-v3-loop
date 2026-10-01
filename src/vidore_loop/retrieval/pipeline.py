@@ -31,6 +31,7 @@ def status(key: str) -> dict[str, Any]:
         "text": text.available(key),
         "visual": bool(v),
         "visual_complete": bool(v and v.get("complete")),
+        "visual_building": visual.building(key),
         "visual_stats": v,
         "reranker": _heavy_ok() and _reranker_downloaded(),
     }
@@ -56,6 +57,7 @@ def run(
     query: str | None = None,
     query_id: int | None = None,
     stages: tuple[str, ...] = STAGES,
+    rerank_depth: int = 20,
 ) -> dict[str, Any]:
     q = catalog.question(key, query_id) if query_id is not None else None
     if query_id is not None and q is None:
@@ -87,6 +89,12 @@ def run(
             out["visual"] = {
                 "unavailable": "the retrieval extra is not installed: `uv sync --extra retrieval`"
             }
+        elif st["visual_building"]:
+            out["visual"] = {
+                "unavailable": f"the visual index is being built ({st['visual_stats']['pages']} of "
+                f"{len(pages.page_index(key))} pages so far); searching would load a second copy of "
+                "the model, which does not fit in memory beside the build"
+            }
         else:
             from vidore_loop.retrieval import visual
 
@@ -113,14 +121,17 @@ def run(
         else:
             from vidore_loop.retrieval import rerank
 
+            depth = max(1, min(rerank_depth, len(lists["fused"])))
             cands = []
-            for cid, _ in lists["fused"]:
+            for cid, _ in lists["fused"][:depth]:
                 meta = pages.page_meta(key, cid)
                 cands.append((cid, text.page_text(meta) if meta else ""))
             t0 = time.time()
-            ranked, _secs = rerank.rerank(query_text, cands)
-            lists["reranked"] = ranked
-            out["reranked"] = {"ms": _ms(t0), "model": rerank.MODEL_ID}
+            ranked, cost = rerank.rerank(key, query_text, cands)
+            # pages below the depth keep their fused order beneath the reranked ones
+            tail = [(cid, float("-inf")) for cid, _ in lists["fused"][depth:]]
+            lists["reranked"] = ranked + tail
+            out["reranked"] = {"ms": _ms(t0), "model": rerank.MODEL_ID, "depth": depth, **cost}
 
     index = pages.page_index(key)
     for name in STAGES:

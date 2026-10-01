@@ -161,7 +161,7 @@ export const STAGE_LABEL: Record<Stage, [string, string]> = {
   text: ['A · text', 'BM25S on the OCR markdown'],
   visual: ['B · visual', 'late interaction on the page image'],
   fused: ['C · fused', 'reciprocal rank fusion → 50'],
-  reranked: ['D · reranked', 'zerank-2 reads the 50'],
+  reranked: ['D · reranked', 'zerank-2 rereads the top of the fused list'],
 };
 
 export type Metrics = {
@@ -200,6 +200,9 @@ export type StageOut = {
   ms?: number;
   inputs?: string[];
   model?: string;
+  depth?: number;
+  scored?: number;
+  cached?: number;
   hits?: Hit[];
   n?: number;
   metrics?: Metrics;
@@ -217,6 +220,7 @@ export type RetrievalStatus = {
   text: boolean;
   visual: boolean;
   visual_complete: boolean;
+  visual_building: boolean;
   visual_stats: {
     model: string;
     pages: number;

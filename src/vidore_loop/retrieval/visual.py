@@ -34,6 +34,24 @@ from vidore_loop.config import settings
 from vidore_loop.data import pages
 
 PART = 50
+MIN_FREE_PCT = 15  # stop cleanly (resumable) below this much free memory
+
+
+class LowMemoryError(RuntimeError):
+    """The machine is short of memory; the build stopped at a part boundary and can be rerun."""
+
+
+def free_memory_pct() -> int | None:
+    """macOS's own free-memory figure (`memory_pressure`); None where it is unavailable."""
+    import re
+    import subprocess
+
+    try:
+        out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    m = re.search(r"free percentage: (\d+)%", out)
+    return int(m.group(1)) if m else None
 
 
 @dataclass(frozen=True)
@@ -96,10 +114,40 @@ def _cut(vectors: Any, dim: int) -> np.ndarray:
     return v.astype(np.float16)
 
 
+def _lock(key: str) -> Path:
+    return settings().hf_home / "index" / key / "visual" / "building.lock"
+
+
+def building(key: str) -> bool:
+    """A build is running for this dataset (its lock names a live process)."""
+    import os
+
+    lock = _lock(key)
+    if not lock.exists():
+        return False
+    try:
+        os.kill(int(lock.read_text().strip()), 0)
+    except (ValueError, ProcessLookupError, PermissionError):
+        return False
+    return True
+
+
 def build(
     key: str, model_key: str = "evie", limit: int | None = None, batch_size: int = 2
 ) -> dict[str, Any]:
     """Encode the pages (or the first `limit`) part by part, skipping parts already built."""
+    import os
+
+    lock = _lock(key)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_text(str(os.getpid()))
+    try:
+        return _build(key, model_key, limit, batch_size)
+    finally:
+        lock.unlink(missing_ok=True)
+
+
+def _build(key: str, model_key: str, limit: int | None, batch_size: int) -> dict[str, Any]:
     from PIL import Image
 
     m = MODELS[model_key]
@@ -107,12 +155,17 @@ def build(
     ids = all_ids[:limit] if limit else all_ids
     out = index_dir(key, model_key)
     out.mkdir(parents=True, exist_ok=True)
-    encoded, seconds = 0, 0.0
     for start in range(0, len(ids), PART):
         part = out / f"part_{start:05d}.npz"
         chunk_ids = ids[start : start + PART]
         if part.exists() and len(np.load(part)["ids"]) == len(chunk_ids):
             continue
+        free = free_memory_pct()
+        if free is not None and free < MIN_FREE_PCT:
+            raise LowMemoryError(
+                f"{free}% memory free (< {MIN_FREE_PCT}%): stopped before part {start // PART}; "
+                "rerun the same command to resume"
+            )
         enc = model(model_key)
         vecs: list[np.ndarray] = []
         t0 = time.time()
@@ -126,17 +179,16 @@ def build(
                 _cut(v, m.dim)
                 for v in enc.encode_document(images, batch_size=batch_size, show_progress_bar=False)
             ]
-        seconds += time.time() - t0
-        encoded += len(chunk_ids)
+        seconds = time.time() - t0
         np.savez(
             part,
             ids=np.asarray(chunk_ids, dtype=np.int64),
             lengths=np.asarray([len(v) for v in vecs], dtype=np.int32),
             vectors=np.concatenate(vecs),
         )
-    stats = _write_stats(key, model_key, encoded, seconds)
+        _write_stats(key, model_key, len(chunk_ids), seconds)
     _load.cache_clear()
-    return stats
+    return stats_or_empty(key, model_key)
 
 
 def _write_stats(key: str, model_key: str, encoded: int, seconds: float) -> dict[str, Any]:
@@ -164,6 +216,10 @@ def _write_stats(key: str, model_key: str, encoded: int, seconds: float) -> dict
     }
     (out / "stats.json").write_text(json.dumps(s, indent=1))
     return s
+
+
+def stats_or_empty(key: str, model_key: str) -> dict[str, Any]:
+    return stats(key, model_key) or {}
 
 
 def stats(key: str, model_key: str) -> dict[str, Any] | None:

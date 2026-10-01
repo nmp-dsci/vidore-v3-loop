@@ -28,6 +28,7 @@ export function Pipeline() {
   const dataset = sp.get('dataset') ?? 'finance_en';
   const qid = sp.get('qid');
   const qtext = sp.get('q') ?? '';
+  const depth = Number(sp.get('depth') ?? 20);
   const [draft, setDraft] = useState(qtext);
   const [on, setOn] = useState<Record<Stage, boolean>>({ text: true, visual: true, fused: true, reranked: true });
   const [res, setRes] = useState<SearchOut | null>(null);
@@ -52,6 +53,7 @@ export function Pipeline() {
       query_id: qid ? Number(qid) : null,
       query: qid ? null : qtext,
       stages: STAGES.filter((s) => on[s]),
+      rerank_depth: depth,
     })
       .then((r) => alive && setRes(r))
       .catch((e: Error) => alive && setErr(e.message))
@@ -59,7 +61,7 @@ export function Pipeline() {
     return () => {
       alive = false;
     };
-  }, [dataset, qid, qtext, on]);
+  }, [dataset, qid, qtext, on, depth]);
 
   const runFree = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +108,24 @@ export function Pipeline() {
             <span>{STAGE_LABEL[s][0]}</span>
           </button>
         ))}
+        <label className="pick small">
+          <span>rerank the top</span>
+          <select
+            value={depth}
+            onChange={(e) => {
+              const next = new URLSearchParams(sp);
+              next.set('depth', e.target.value);
+              nav(`/pipeline?${next.toString()}`, { replace: true });
+            }}
+            aria-label="rerank depth"
+          >
+            {[10, 20, 50].map((d) => (
+              <option key={d} value={d}>
+                {d} pages (≈{Math.round(d * 3.2)} s the first time)
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {qid && question.data && (
@@ -119,7 +139,12 @@ export function Pipeline() {
           </p>
         </div>
       )}
-      {busy && <p className="empty">Running… (the first query loads the models: up to a minute)</p>}
+      {busy && (
+        <p className="empty">
+          Running… The first query loads the models (up to a minute); the reranker then reads each new page at ≈3.2 s on this
+          Mac, so a fresh question at depth {depth} takes ≈{Math.round(depth * 3.2)} s. A question already reranked is instant.
+        </p>
+      )}
       {err && <Loading error={err} />}
 
       {res && !busy && (
@@ -165,6 +190,7 @@ function StatusLine({ s, dataset }: { s: RetrievalStatus | null; dataset: string
     <p className="small statusline">
       <span className={`status ${s.text ? 'ok' : 'no'}`}>text index</span>{' '}
       <span className={`status ${s.visual_complete ? 'ok' : s.visual ? 'warn' : 'no'}`}>
+        {s.visual_building ? 'building · ' : ''}
         visual index{v ? ` · ${v.model.split('/')[1]} · ${v.pages} pages · ${v.seconds_per_page} s/page on ${v.device}` : ''}
         {s.visual && !s.visual_complete ? ' (partial)' : ''}
       </span>{' '}
@@ -274,7 +300,12 @@ function StageColumn({
       <header>
         <b>{STAGE_LABEL[s][0]}</b>
         <span className="small muted">{STAGE_LABEL[s][1]}</span>
-        {out.ms != null && <span className="mono small">{out.ms} ms</span>}
+        {out.ms != null && <span className="mono small">{out.ms >= 1000 ? `${(out.ms / 1000).toFixed(1)} s` : `${out.ms} ms`}</span>}
+        {out.depth != null && (
+          <span className="small muted">
+            top {out.depth} reranked · {out.scored} scored now, {out.cached} from cache
+          </span>
+        )}
       </header>
       {out.unavailable ? (
         <p className="empty small">{out.unavailable}</p>

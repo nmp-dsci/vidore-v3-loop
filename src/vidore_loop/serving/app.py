@@ -29,6 +29,7 @@ class SearchIn(BaseModel):
     query: str | None = None
     query_id: int | None = None
     stages: list[str] = ["text", "visual", "fused", "reranked"]
+    rerank_depth: int = 20
 
 
 def _dataset(key: str) -> registry.Dataset:
@@ -148,6 +149,7 @@ def create_app() -> FastAPI:
                 query=body.query,
                 query_id=body.query_id,
                 stages=tuple(st for st in body.stages if st in pipeline.STAGES),
+                rerank_depth=max(1, min(body.rerank_depth, 50)),
             )
         except KeyError as e:
             raise HTTPException(404, str(e)) from e

@@ -228,9 +228,10 @@ def stats(key: str, model_key: str) -> dict[str, Any] | None:
 
 
 def active(key: str) -> str | None:
-    """The model whose index covers the most pages; None when there is no visual index."""
-    best = [(s["pages"], k) for k in MODELS if (s := stats(key, k)) and s["pages"]]
-    return max(best)[1] if best else None
+    """The model whose index covers the most pages (EVIE on a tie); None when there is none."""
+    order = list(MODELS)  # on a tie the first model wins: evie, the chosen default
+    best = [(s["pages"], -order.index(k), k) for k in MODELS if (s := stats(key, k)) and s["pages"]]
+    return max(best)[2] if best else None
 
 
 def available(key: str) -> bool:

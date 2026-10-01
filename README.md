@@ -66,4 +66,4 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
 | M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | built, in review |
-| M2 retrieval pipeline + Search tab · M3 retrieval scored + Runs | designed |
+| M2 retrieval pipeline + RAG pipeline tab · M3 retrieval scored + Runs | designed |

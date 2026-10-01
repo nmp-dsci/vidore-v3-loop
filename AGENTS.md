@@ -22,7 +22,7 @@ loop improves it, the same loop as tau2-loop and DABStep-loop.
 | Metrics | NDCG@10 with linear graded gain, as `pytrec_eval`/MTEB | numbers comparable with the leaderboard |
 | Billing | the Claude subscription via the Claude Agent SDK, `BILLING=subscription`, no key | the portfolio rule since tau2-loop |
 | Tracking | the central MLflow, experiment `vidore-v3-loop/evals`, required tags `project`, `git_sha`, `env`, `billing` | PLATFORM.md |
-| Milestones | vertical slices: each ships its backend piece and the viewer tab that shows it (M1 viewer, M2 retrieval pipeline + Search, M3 retrieval scored + Runs, M4 answers + Review, M5 agent + Agent, M6 loop + Optimise, M7 grounding) | the owner's call: every milestone ends with something to open in the browser |
+| Milestones | vertical slices: each ships its backend piece and the viewer tab that shows it (M1 viewer, M2 retrieval pipeline + RAG pipeline tab (answers join it in M4), M3 retrieval scored + Runs, M4 answers + Review, M5 agent + Agent, M6 loop + Optimise, M7 grounding) | the owner's call: every milestone ends with something to open in the browser |
 | Viewer | React 18 + Vite + TypeScript + react-router, served by FastAPI (API :8083, dev UI :5175), tau2-loop's and DataAgentBench's layout and URL grammar | one portfolio, one way of reading a run |
 | Project colour | orange `--accent` (#A8440B light, #F2945A dark); `--ok` green carries "passed"; `--amber` retuned to olive (#6F5A00 / #CDB04A) for "partial" so it never reads as the accent | the owner's call; a recorded divergence from the site palette, as tau2-loop's red |
 

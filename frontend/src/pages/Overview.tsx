@@ -13,7 +13,7 @@ const BLURB: Record<string, string> = {
 const MILESTONES: [string, string, 'ok' | 'warn' | 'no'][] = [
   ['M0', 'scaffold: pinned datasets, loader, NDCG@10, smoke, CI', 'ok'],
   ['M1', 'this viewer: datasets, questions, reference answers, evidence pages with human boxes; the board', 'warn'],
-  ['M2', 'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + Search tab', 'no'],
+  ['M2', 'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + the RAG pipeline tab (its answer column lands in M4)', 'no'],
   ['M3', 'retrieval scored on our finance_en split + Runs tab, our row on the Leaderboard', 'no'],
   ['M4', 'Claude answers, judge and reference audit + Review tab', 'no'],
   ['M5', 'the agent + Agent tab', 'no'],

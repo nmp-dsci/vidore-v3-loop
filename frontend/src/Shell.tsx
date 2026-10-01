@@ -13,7 +13,7 @@ const NAV: [string, string][] = [
   ['/leaderboard', 'Leaderboard'],
 ];
 const LATER: [string, string][] = [
-  ['Search', 'M2'],
+  ['RAG pipeline', 'M2'],
   ['Runs', 'M3'],
   ['Review', 'M4'],
   ['Agent', 'M5'],

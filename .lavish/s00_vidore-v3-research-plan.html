@@ -394,6 +394,51 @@ footer code{overflow-wrap:anywhere}
 <!-- ============================================================ 5 -->
 <section id="s5" class="band"><div class="wrap">
 <h2>5 · Scoreboard — open late-interaction models own the top fifteen</h2>
+<div class="note acc" id="li-explainer"><span class="label">what “open late-interaction” means</span>
+<p><b>Open</b> means open weights: the model is a download on Hugging Face, run on your own machine under its licence, as opposed to a closed embedding API such as Voyage or Cohere. Open is not the same as free for commercial use. EVIE and Tomoro are Apache-2.0, but nemotron-8B is CC-BY-NC and webAI's ColVec is non-commercial.</p>
+<p><b>Late interaction</b> is about how a page and a question are compared. A single-vector model squeezes the whole page into one vector before the question arrives, then compares one vector with one. A late-interaction model, in the ColBERT / ColPali style, keeps one vector per small patch of the page image (≈750–1,280 per page), and one per word of the question. The question meets the page late, patch by patch: each question word finds its best-matching patch, and those best matches are summed (“MaxSim”).</p></div>
+<span class="label fig-title">Fig 2a · one vector per page against one vector per patch</span>
+<div class="figbox">
+<svg class="dia" viewBox="0 0 1000 300" role="img" aria-label="Single-vector retrieval compresses a page to one vector and compares it with one question vector. Late interaction keeps a vector per page patch and per question word, matches each word to its best patch and sums the matches.">
+  <g id="sv"><title>Single vector: page → 1 vector, question → 1 vector, score = their similarity</title>
+    <text class="tx k" x="20" y="30">SINGLE VECTOR (e.g. Qwen3-VL-Embedding, 65.1)</text>
+    <rect class="nd" x="20" y="50" width="90" height="116" rx="6"/>
+    <text class="tx s" x="34" y="190">page</text>
+    <path class="ed" d="M110,108 L168,108"/>
+    <rect class="nd" x="170" y="96" width="24" height="24" rx="3"/>
+    <text class="tx s" x="150" y="146">1 vector</text>
+    <rect class="nd" x="300" y="96" width="24" height="24" rx="3"/>
+    <text class="tx s" x="276" y="146">1 vector</text>
+    <text class="tx s" x="330" y="113">“uninsured deposits 2024?”</text>
+    <path class="ed dash" d="M196,108 L298,108"/>
+    <text class="tx n" x="222" y="96">dot</text>
+    <text class="tx s" x="20" y="228">≈4 KB a page. Fast and small, but a table</text>
+    <text class="tx s" x="20" y="248">cell must survive being averaged into one vector.</text>
+  </g>
+  <line class="gl" x1="520" y1="20" x2="520" y2="280"/>
+  <g id="li"><title>Late interaction: page → a vector per patch, question → a vector per word; each word takes its best patch (MaxSim), and the best matches are summed</title>
+    <text class="tx k" x="550" y="30">LATE INTERACTION (e.g. EVIE, 71.7)</text>
+    <rect class="nd" x="550" y="50" width="90" height="116" rx="6"/>
+    <g>
+      <rect class="nd hi" x="558" y="60" width="16" height="12" rx="2"/><rect class="nd" x="578" y="60" width="16" height="12" rx="2"/><rect class="nd" x="598" y="60" width="16" height="12" rx="2"/><rect class="nd" x="618" y="60" width="14" height="12" rx="2"/>
+      <rect class="nd" x="558" y="78" width="16" height="12" rx="2"/><rect class="nd" x="578" y="78" width="16" height="12" rx="2"/><rect class="nd hi" x="598" y="78" width="16" height="12" rx="2"/><rect class="nd" x="618" y="78" width="14" height="12" rx="2"/>
+      <rect class="nd" x="558" y="96" width="16" height="12" rx="2"/><rect class="nd" x="578" y="96" width="16" height="12" rx="2"/><rect class="nd" x="598" y="96" width="16" height="12" rx="2"/><rect class="nd" x="618" y="96" width="14" height="12" rx="2"/>
+      <rect class="nd" x="558" y="114" width="16" height="12" rx="2"/><rect class="nd hi" x="578" y="114" width="16" height="12" rx="2"/><rect class="nd" x="598" y="114" width="16" height="12" rx="2"/><rect class="nd" x="618" y="114" width="14" height="12" rx="2"/>
+      <rect class="nd" x="558" y="132" width="16" height="12" rx="2"/><rect class="nd" x="578" y="132" width="16" height="12" rx="2"/><rect class="nd" x="598" y="132" width="16" height="12" rx="2"/><rect class="nd" x="618" y="132" width="14" height="12" rx="2"/>
+    </g>
+    <text class="tx s" x="550" y="190">page → ≈1,000 patch vectors</text>
+    <text class="tx s" x="770" y="66">uninsured</text><text class="tx s" x="770" y="102">deposits</text><text class="tx s" x="770" y="138">2024</text>
+    <path class="ed hi" d="M766,62 L576,66"/>
+    <path class="ed hi" d="M766,98 L616,84"/>
+    <path class="ed hi" d="M766,134 L596,120"/>
+    <text class="tx n" x="870" y="102">Σ best match</text>
+    <text class="tx s" x="550" y="228">≈0.8 MB a page (Tomoro size). Each question word</text>
+    <text class="tx s" x="550" y="248">can land on the exact cell or chart label that answers it.</text>
+  </g>
+</svg>
+</div>
+<p class="cap">Takeaway: late interaction keeps the page's detail until the question arrives, which is why it leads on tables and charts. The cost is about 200 times the storage of one vector, which is trivial at 2,942 pages.<span class="path">scores: English-query mean of 5 (Fig 2, docs/research/mteb_vidore3_scores_2026-09-28.json) · sizes: docs/research/systems.md</span></p>
+
 <p>There are two retrieval boards, and neither scores answers. The MTEB board ranks single models over all 10 datasets and 6 query languages. The ViDoRe pipeline board, launched in February 2026, ranks whole retrieval pipelines on English queries over the 8 public sets. The figure below uses English queries on the 5 public English sets, where the two boards agree: nemotron-colembed-vl-8b-v2 scores 69.1 on both.</p>
 <span class="label fig-title">Fig 2 · retrieval NDCG@10, English queries, mean of 5 public English datasets</span>
 <div class="figbox">

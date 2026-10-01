@@ -468,6 +468,11 @@ footer code{overflow-wrap:anywhere}
 </div>
 <p class="cap">Takeaway: an LLM reading the candidate pages adds 5.5 points over its own retriever, the largest single jump on the board. It costs about 200 times the latency: 136 s against 0.67 s per query.<span class="path">pipeline board: github.com/illuin-tech/vidore-benchmark results/metrics (last entry 2026-03-13) · EVIE-8B: docs/research/mteb_vidore3_scores_2026-09-28.json</span></p>
 
+<div class="note" id="kinds"><span class="label">reading the “type” column · two words: what the model reads + how it compares</span>
+<p><b>visual</b> = it reads the page <i>image</i> (pixels, so tables and charts as laid out). <b>text</b> = it reads the page's OCR text only.</p>
+<p><b>LI</b> = late interaction: one vector per patch or word, matched word-to-best-patch (Fig 2a). <b>dense</b> = one vector per page. <b>BM25</b> = keyword matching, no model.</p>
+<p><b>+ reranker</b> = a second model rereads the top 50–100 and reorders them. <b>+ LLM agent</b> = a language model rewrites the query, searches again, and orders the results.</p>
+<p>So <b>visual LI</b> is a model that looks at the page image and keeps a vector per patch: EVIE, ColQwen, nemotron-colembed. It is M2's visual channel.</p></div>
 <h3>Per English dataset — where the room is</h3>
 <div class="tw"><table>
 <thead><tr><th>system (English queries)</th><th>type</th><th class="num">finance_en</th><th class="num">pharma</th><th class="num">industrial</th><th class="num">hr</th><th class="num">comp sci</th><th class="num">mean</th></tr></thead>

@@ -312,3 +312,9 @@ details.docs{margin-top:var(--s4)}
 .hbox.a2{stroke-dasharray:3 4}
 .pv-text{min-width:0}
 .pv-text pre{margin-top:var(--s2);font:400 var(--t-1)/1.5 var(--mono);background:var(--band);border-radius:var(--r-sm);padding:var(--s3);max-height:80vh;overflow:auto;color:var(--ink-2)}
+
+/* the leaderboard's "kind" glossary */
+.kinds{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--s1) var(--s4);margin:var(--s5) 0 0;padding:var(--s4) var(--s5);background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);font-size:var(--t-1);max-width:90ch}
+.kinds dt{font:500 var(--t-2)/1.6 var(--mono);color:var(--accent);white-space:nowrap}
+.kinds dd{margin:0;color:var(--ink-2)}
+@media (max-width:640px){.kinds{grid-template-columns:minmax(0,1fr)}}

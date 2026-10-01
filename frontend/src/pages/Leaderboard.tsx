@@ -28,6 +28,17 @@ export function Leaderboard() {
         only in the paper. Our own rows arrive in M3 (retrieval) and M4 (answers).
       </p>
 
+      <dl className="kinds">
+        <dt>visual / text</dt>
+        <dd>what the model reads: the page image (tables and charts as laid out), or the page's OCR text only</dd>
+        <dt>LI</dt>
+        <dd>late interaction: one vector per image patch or word; each question word is matched to its best patch (MaxSim)</dd>
+        <dt>dense</dt>
+        <dd>one vector per page, compared with one vector for the question</dd>
+        <dt>+ reranker · + LLM agent</dt>
+        <dd>a second model rereads the top 50–100 and reorders them; an agent also rewrites the query and searches again</dd>
+      </dl>
+
       <h2>Pipelines — the ViDoRe pipeline board</h2>
       <div className="tw">
         <table>

@@ -47,6 +47,10 @@ make smoke                          # zero-LLM run logged to the central MLflow
 make pages DATASET=finance_en       # prefetch its page images + OCR text (≈930 MB for finance; lazy otherwise)
 make viewer                         # build the UI and serve it with the API → http://127.0.0.1:8083
 make dev                            # API with reload on :8083; `cd frontend && npm run dev` → :5175
+make index DATASET=finance_en STAGE=text      # BM25S over the OCR text (seconds)
+uv sync --extra retrieval                     # torch + sentence-transformers, for the two stages below
+make index DATASET=finance_en STAGE=visual    # EVIE-4.5B over every page image (LIMIT=50 for a timing run)
+make index DATASET=finance_en STAGE=reranker  # downloads zerank-2 (≈8 GB)
 make test · make lint
 ```
 
@@ -66,4 +70,5 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
 | M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | built, in review |
-| M2 retrieval pipeline + RAG pipeline tab · M3 retrieval scored + Runs | designed |
+| M2 retrieval pipeline + RAG pipeline tab | in progress: text channel, fusion, metrics and the tab done; visual channel and reranker next |
+| M3 retrieval scored + Runs | designed |

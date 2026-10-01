@@ -205,7 +205,7 @@ footer code{overflow-wrap:anywhere}
 <h1>ViDoRe V3's best English system is a retriever plus an LLM that <em>re-reads the pages</em> — we start there, on bank annual reports</h1>
 <p class="lead">ViDoRe V3 asks enterprise questions of real PDFs where the answer often sits in a table, chart or diagram. On English queries the top published pipeline, an 8B visual retriever with Claude Opus 4.5 as an agentic reranker, reaches 74.6 NDCG@10. Its retriever alone scores 69.1. Even when handed the right pages, the best generator answers 72.6% correctly. I recommend starting with <code>finance_en</code>: six US bank 10-Ks, 309 English questions, 173 of them over tables.</p>
 <nav class="toc" aria-label="sections">
-  <a href="#s1">1 · bottom line</a><a href="#s2">2 · what is scored</a><a href="#s3">3 · five datasets</a><a href="#s4">4 · demo questions</a><a href="#s5">5 · scoreboard</a><a href="#s6">6 · winning systems</a><a href="#s7">7 · the build</a><a href="#s7ui">7b · the UI</a><a href="#s8">8 · risks</a><a href="#q">decisions</a>
+  <a href="#s1">1 · bottom line</a><a href="#s2">2 · what is scored</a><a href="#s3">3 · five datasets</a><a href="#s4">4 · demo questions</a><a href="#s5">5 · scoreboard</a><a href="#s6">6 · winning systems</a><a href="#s7">7 · the build</a><a href="#s7ui">7b · the UI</a><a href="#s7m2">7c · M2 in detail</a><a href="#s8">8 · risks</a><a href="#q">decisions</a>
 </nav>
 </div>
 
@@ -601,6 +601,37 @@ footer code{overflow-wrap:anywhere}
 <tr><td class="sub">Optimise</td><td><code>/optimise/&lt;version&gt;</code></td><td class="wrapc">a loop cycle: diagnose → propose → gate outcome</td><td>M6</td></tr>
 </tbody></table></div>
 <p class="cap">Takeaway: the URL grammar follows tau2-loop's. One id per thing, the path names the subject, and the query string holds the lens.<span class="path">../tau2-loop/AGENTS.md §4b</span></p>
+</div></section>
+
+<!-- ============================================================ 7c -->
+<section id="s7m2" class="band"><div class="wrap">
+<h2>7c · M2 in detail — a text channel and a visual channel, fused and reranked</h2>
+<p>Yes: M2 builds both channels, and every stage of it runs on this laptop with open models. Claude is not called anywhere in M2, so it costs no subscription. Each channel gets its own index over the same 2,942 finance pages, built once. A question runs through both, the two rankings are fused, and a reranker reads the fused top 50 to pick the final 10.</p>
+<div class="tw"><table>
+<thead><tr><th>stage</th><th>reads</th><th>model</th><th>built</th><th>out</th><th>reference on finance (English)</th></tr></thead>
+<tbody>
+<tr><td class="sub">A · text channel</td><td class="wrapc">each page's OCR markdown, as shipped in the dataset, with its document name prepended</td><td class="wrapc">BM25S (lexical; no weights). A small dense text embedder is optional, added only if BM25 misses paraphrases</td><td class="wrapc">seconds; a few MB of index</td><td>top 100 pages</td><td class="wrapc">BM25 averages 53.3 across the 5 English sets; finance alone is not published</td></tr>
+<tr><td class="sub">B · visual channel</td><td class="wrapc">each page <b>image</b>. The model sees tables, charts and diagrams as laid out, not as OCR text</td><td class="wrapc">a 4B late-interaction model: EVIE-4.5B (Apache-2.0, 71.1 mean) or tomoro-colqwen3-embed-4b (Apache-2.0, 67.5 mean, best tooling). Each page becomes ≈750–1,280 small vectors; a question is matched against all of them (MaxSim)</td><td class="wrapc">once, on the M1 Pro's GPU (MPS). Speed is not published: I time 50 pages first. ≈0.8 MB a page at Tomoro's size, so ≈2.4 GB for finance</td><td>top 100 pages</td><td class="wrapc">EVIE-4.5B 72.3; tomoro-4b 69.7; EVIE-8B 73.7</td></tr>
+<tr><td class="sub">C · fusion</td><td class="wrapc">the two top-100 lists</td><td class="wrapc">reciprocal rank fusion: a page ranked high by either channel rises; pages both like rise most</td><td>no index</td><td>top 50</td><td class="wrapc">fusing visual and text lifted F1@10 to 30.2 from 27.8 visual-only in the paper</td></tr>
+<tr><td class="sub">D · rerank</td><td class="wrapc">the question with each of the 50 pages' markdown, one pair at a time</td><td class="wrapc">zerank-2, a 4B cross-encoder (Apache-2.0, self-hosted since its API closed). Alternative: Qwen3-VL-Reranker-2B, which reads the page images instead</td><td class="wrapc">no index; per query, 50 pairs. Latency on MPS unmeasured</td><td><b>final top 10</b></td><td class="wrapc">text + zerank-2 reaches 74.2; the agentic best is 75.9</td></tr>
+</tbody></table></div>
+<p class="cap">Takeaway: the text channel is the cheap, sure half (running on day one). The visual channel is the half that sees charts and tables; its only unknown is indexing speed on this machine. Two 4B models are ≈8 GB each on disk; 32 GB of RAM holds both.<span class="path">model scores: docs/research/systems.md and mteb_vidore3_scores_2026-09-28.json · F1@10: arXiv 2601.08620 Table 11</span></p>
+
+<h3>What you will see in the Search tab</h3>
+<ul class="bl">
+  <li><b>Pick a finance question or type your own.</b> Four columns appear side by side: text, visual, fused, reranked. Each holds its top 10 as page thumbnails.</li>
+  <li><b>Every hit carries its human grade</b> when the question has one (full · 2, part · 1, or not relevant), so you can see which channel found the evidence and which missed it.</li>
+  <li><b>Open a hit</b> to see the page with the human boxes, as in M1, plus why it ranked: the BM25 terms it matched, its visual score, its rank in each list.</li>
+</ul>
+
+<h3>Built in this order, each step usable before the next</h3>
+<ol class="steps">
+  <li>Text channel and <code>POST /api/search</code>, with the Search tab showing one column. Runs in minutes; no new weights.</li>
+  <li>Visual channel: time 50 pages, then index all 2,942 (or stop and ask about a rented GPU if it is too slow). Second column.</li>
+  <li>Fusion: third column, no cost.</li>
+  <li>Reranker: fourth column. Its per-query latency is measured and shown.</li>
+</ol>
+<p class="insight">M2 makes the pipeline visible, not scored. The NDCG@10 against the board's 72–74 comes in M3, on the train split, so we never tune on test.</p>
 </div></section>
 
 <!-- ============================================================ 8 -->

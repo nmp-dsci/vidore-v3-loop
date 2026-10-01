@@ -159,7 +159,7 @@ export const STAGES = ['text', 'visual', 'fused', 'reranked'] as const;
 export type Stage = (typeof STAGES)[number];
 export const STAGE_LABEL: Record<Stage, [string, string]> = {
   text: ['A · text', 'BM25S on the OCR markdown'],
-  visual: ['B · visual', 'EVIE-4.5B on the page image'],
+  visual: ['B · visual', 'late interaction on the page image'],
   fused: ['C · fused', 'reciprocal rank fusion → 50'],
   reranked: ['D · reranked', 'zerank-2 reads the 50'],
 };
@@ -217,6 +217,12 @@ export type RetrievalStatus = {
   text: boolean;
   visual: boolean;
   visual_complete: boolean;
-  visual_stats: { pages: number; seconds_per_page: number; mean_vectors_per_page: number; device: string } | null;
+  visual_stats: {
+    model: string;
+    pages: number;
+    seconds_per_page: number | null;
+    mean_vectors_per_page: number | null;
+    device: string;
+  } | null;
   reranker: boolean;
 };

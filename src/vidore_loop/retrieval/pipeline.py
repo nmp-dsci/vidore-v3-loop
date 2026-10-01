@@ -25,7 +25,8 @@ SHOW = 10  # hits returned per stage
 def status(key: str) -> dict[str, Any]:
     from vidore_loop.retrieval import visual
 
-    v = visual.stats(key) if visual.available(key) else None
+    mk = visual.active(key)
+    v = visual.stats(key, mk) if mk else None
     return {
         "text": text.available(key),
         "visual": bool(v),

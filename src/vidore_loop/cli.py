@@ -87,6 +87,7 @@ def index(
     dataset: str = typer.Option(..., help="a dataset key"),
     stage: str = typer.Option("text", help="text | visual | reranker (downloads the model)"),
     limit: int = typer.Option(0, help="visual only: encode the first N pages (a timing run)"),
+    model: str = typer.Option("evie", help="visual only: evie | tomoro"),
 ) -> None:
     """Build a retrieval index into data/cache/index/<key>/<stage>/."""
     key = registry.get(dataset).key
@@ -97,7 +98,7 @@ def index(
     elif stage == "visual":
         from vidore_loop.retrieval import visual
 
-        console.print(visual.build(key, limit=limit or None))
+        console.print(visual.build(key, model_key=model, limit=limit or None))
     elif stage == "reranker":
         from vidore_loop.retrieval import rerank
 

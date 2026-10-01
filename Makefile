@@ -23,8 +23,8 @@ stats: ## DATASET's queries by language / type / format, and its qrels grades
 pages: ## prefetch DATASET's page images + OCR text into data/cache/pages (the viewer fetches lazily otherwise)
 	uv run vidoreloop pages --dataset $(DATASET)
 
-index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 for a visual timing run; visual needs `uv sync --extra retrieval`)
-	uv run vidoreloop index --dataset $(DATASET) --stage $(or $(STAGE),text) $(if $(LIMIT),--limit $(LIMIT))
+index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 for a visual timing run, MODEL=evie|tomoro; visual needs `uv sync --extra retrieval`)
+	uv run vidoreloop index --dataset $(DATASET) --stage $(or $(STAGE),text) $(if $(LIMIT),--limit $(LIMIT)) $(if $(MODEL),--model $(MODEL))
 
 dev: ## the API on :$(API_PORT), reloading on code changes (UI: cd frontend && npm run dev → :5175)
 	uv run vidoreloop serve --port $(API_PORT) --reload

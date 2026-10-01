@@ -165,7 +165,7 @@ function StatusLine({ s, dataset }: { s: RetrievalStatus | null; dataset: string
     <p className="small statusline">
       <span className={`status ${s.text ? 'ok' : 'no'}`}>text index</span>{' '}
       <span className={`status ${s.visual_complete ? 'ok' : s.visual ? 'warn' : 'no'}`}>
-        visual index{v ? ` · ${v.pages} pages · ${v.seconds_per_page} s/page on ${v.device}` : ''}
+        visual index{v ? ` · ${v.model.split('/')[1]} · ${v.pages} pages · ${v.seconds_per_page} s/page on ${v.device}` : ''}
         {s.visual && !s.visual_complete ? ' (partial)' : ''}
       </span>{' '}
       <span className={`status ${s.reranker ? 'ok' : 'no'}`}>reranker {s.reranker ? 'ready' : 'not ready (zerank-2 not downloaded)'}</span>

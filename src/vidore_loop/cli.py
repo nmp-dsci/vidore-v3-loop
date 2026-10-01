@@ -83,6 +83,31 @@ def pages(
 
 
 @app.command()
+def index(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    stage: str = typer.Option("text", help="text | visual | reranker (downloads the model)"),
+    limit: int = typer.Option(0, help="visual only: encode the first N pages (a timing run)"),
+) -> None:
+    """Build a retrieval index into data/cache/index/<key>/<stage>/."""
+    key = registry.get(dataset).key
+    if stage == "text":
+        from vidore_loop.retrieval import text
+
+        console.print(f"{key}: {text.build(key)} pages in the text index")
+    elif stage == "visual":
+        from vidore_loop.retrieval import visual
+
+        console.print(visual.build(key, limit=limit or None))
+    elif stage == "reranker":
+        from vidore_loop.retrieval import rerank
+
+        rerank.model()
+        console.print(f"{rerank.MODEL_ID} downloaded and loaded")
+    else:
+        raise typer.BadParameter("stage is text, visual or reranker")
+
+
+@app.command()
 def serve(port: int = 8083, host: str = "127.0.0.1", reload: bool = False) -> None:
     """The viewer's API, and the built frontend when frontend/dist exists."""
     from pathlib import Path

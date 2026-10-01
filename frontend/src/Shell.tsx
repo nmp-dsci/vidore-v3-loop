@@ -10,10 +10,10 @@ import { type Health, useGet } from './lib/api';
 const NAV: [string, string][] = [
   ['/', 'Overview'],
   ['/datasets', 'Datasets & questions'],
+  ['/pipeline', 'RAG pipeline'],
   ['/leaderboard', 'Leaderboard'],
 ];
 const LATER: [string, string][] = [
-  ['RAG pipeline', 'M2'],
   ['Runs', 'M3'],
   ['Review', 'M4'],
   ['Agent', 'M5'],
@@ -44,8 +44,8 @@ export function Shell() {
               </span>
             ))}
           </nav>
-          <span className="mode" title="reads the pinned datasets and committed files; calls no model">
-            {health ? 'read only · no model' : '…'}
+          <span className="mode" title="reads the pinned datasets and committed files; retrieval runs open models locally; never calls Claude">
+            {health ? 'read only · no Claude' : '…'}
           </span>
         </div>
       </header>

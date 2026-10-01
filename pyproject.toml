@@ -19,11 +19,16 @@ dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.32",
   "pillow>=11.0",
+  "bm25s>=0.3.11",
+  "pystemmer>=3.1.0",
 ]
 
 [project.optional-dependencies]
 # MTEB's own ViDoRe(v3) retrieval benchmark: heavy (torch), only for comparing against the board.
 mteb = ["mteb>=2.0"]
+# M2's visual channel and reranker: open models run locally (EVIE-4.5B, zerank-2). Heavy;
+# `uv sync --extra retrieval`. CI and the offline tests never need it.
+retrieval = ["torch>=2.8", "sentence-transformers[image]>=6.0", "transformers>=4.57", "accelerate>=1.0"]
 
 [project.scripts]
 vidoreloop = "vidore_loop.cli:app"
@@ -35,6 +40,7 @@ dev = [
   "mypy>=1.13",
   "types-PyYAML",
   "httpx>=0.27",
+  "pytrec-eval-terrier>=0.5.10",
 ]
 
 [build-system]
@@ -60,7 +66,7 @@ packages = ["vidore_loop"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*"]
+module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*", "bm25s.*", "Stemmer", "torch.*", "sentence_transformers.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 

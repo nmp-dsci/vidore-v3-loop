@@ -16,13 +16,13 @@ export function Loading({ error, what }: { error: string | null; what?: string }
 }
 
 /** Every English dataset as a lozenge, one click into it. */
-export function DatasetChips({ current }: { current?: string }) {
+export function DatasetChips({ current, hrefFor }: { current?: string; hrefFor?: (d: string) => string }) {
   return (
     <nav className="chips domainbar" aria-label="datasets">
       {DATASETS.map((d) => (
         <Link
           key={d}
-          to={`/datasets/${d}`}
+          to={hrefFor ? hrefFor(d) : `/datasets/${d}`}
           className={`chip nav ${d === current ? 'on' : ''}`}
           aria-current={d === current ? 'page' : undefined}
         >

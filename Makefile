@@ -23,6 +23,9 @@ stats: ## DATASET's queries by language / type / format, and its qrels grades
 pages: ## prefetch DATASET's page images + OCR text into data/cache/pages (the viewer fetches lazily otherwise)
 	uv run vidoreloop pages --dataset $(DATASET)
 
+index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 for a visual timing run; visual needs `uv sync --extra retrieval`)
+	uv run vidoreloop index --dataset $(DATASET) --stage $(or $(STAGE),text) $(if $(LIMIT),--limit $(LIMIT))
+
 dev: ## the API on :$(API_PORT), reloading on code changes (UI: cd frontend && npm run dev → :5175)
 	uv run vidoreloop serve --port $(API_PORT) --reload
 
@@ -49,4 +52,4 @@ lint: ## ruff + mypy (+ frontend design lint when node_modules exist)
 fmt: ## ruff format + fix
 	uv run ruff format src tests && uv run ruff check --fix src tests
 
-.PHONY: help setup datasets download stats pages dev viewer platform-up platform-status smoke test lint fmt
+.PHONY: help setup datasets download stats pages index dev viewer platform-up platform-status smoke test lint fmt

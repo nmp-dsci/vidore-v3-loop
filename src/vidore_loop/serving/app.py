@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from vidore_loop.config import FRONTEND_DIST, settings
 from vidore_loop.data import catalog, pages, registry
@@ -19,6 +20,15 @@ from vidore_loop.data import leaderboard as board
 
 # English datasets in the order the plan ranks them (s00 §3): commercial value first
 ENGLISH_ORDER = ("finance_en", "pharmaceuticals", "industrial", "hr", "computer_science")
+
+
+class SearchIn(BaseModel):
+    """One question through the retrieval stages: a benchmark question by id, or free text."""
+
+    dataset: str
+    query: str | None = None
+    query_id: int | None = None
+    stages: list[str] = ["text", "visual", "fused", "reranked"]
 
 
 def _dataset(key: str) -> registry.Dataset:
@@ -119,6 +129,30 @@ def create_app() -> FastAPI:
         return FileResponse(
             path, media_type="image/jpeg", headers={"cache-control": "max-age=86400"}
         )
+
+    @app.get("/api/retrieval/status")
+    def retrieval_status(dataset: str = "finance_en") -> dict[str, Any]:
+        _dataset(dataset)
+        from vidore_loop.retrieval import pipeline
+
+        return pipeline.status(dataset)
+
+    @app.post("/api/search")
+    def search(body: SearchIn) -> dict[str, Any]:
+        _dataset(body.dataset)
+        from vidore_loop.retrieval import pipeline
+
+        try:
+            return pipeline.run(
+                body.dataset,
+                query=body.query,
+                query_id=body.query_id,
+                stages=tuple(st for st in body.stages if st in pipeline.STAGES),
+            )
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
 
     @app.get("/api/leaderboard")
     def leaderboard() -> dict[str, Any]:

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import {
   type DatasetCard,
   type DatasetDetail,
-  type PageMeta,
   type Question,
   type QueryRow,
   datasetLabel,
@@ -11,8 +10,9 @@ import {
   pageImage,
   useGet,
 } from '../lib/api';
-import { NO_FILTERS, boxRects, facet, filterQueries, filtersFrom, filtersTo, type Filters } from '../lib/filter';
+import { NO_FILTERS, facet, filterQueries, filtersFrom, filtersTo, type Filters } from '../lib/filter';
 import { CheckChip, DatasetChips, Kpi, Loading } from '../lib/ui';
+import { PageView } from '../lib/page';
 
 /** `/datasets` — the five English sets, one click into each. */
 export function Datasets() {
@@ -318,6 +318,12 @@ function QuestionView({
           {next != null && <Link to={`/datasets/${k}/${next}${loc.search}`}>next (j) →</Link>}
         </span>
       </div>
+      <div className="row runrow">
+        <Link className="btn" to={`/pipeline?dataset=${k}&qid=${q.query_id}`}>
+          Run retrieval on this question →
+        </Link>
+        <span className="small muted">opens the RAG pipeline tab with every stage scored against these gold pages</span>
+      </div>
       <p className="qbig">{q.query}</p>
       <div className="chips">
         {q.query_types.map((t) => (
@@ -394,69 +400,7 @@ function QuestionView({
           </button>
         ))}
       </div>
-      {current && <PageView k={k} rel={current} />}
+      {current && <PageView k={k} corpusId={current.corpus_id} boxes={current.boxes} grade={current.score} />}
     </article>
-  );
-}
-
-function PageView({ k, rel }: { k: string; rel: Question['pages'][number] }) {
-  const { data: meta, error } = useGet<PageMeta>(`/api/pages/${k}/${rel.corpus_id}`);
-  const [showBoxes, setShowBoxes] = useState(true);
-  const [showText, setShowText] = useState(false);
-  const rects = boxRects(rel.boxes);
-  const annotators = [...new Set(rects.map((r) => r.annotator))];
-  if (!meta)
-    return (
-      <Loading
-        error={error}
-        what={`page ${rel.corpus_id} (the first view of a part of the corpus fetches ~230 pages from the Hub: about 15 s)`}
-      />
-    );
-  return (
-    <div className="pageview">
-      <div className="row pv-bar">
-        <span className="mono small">
-          {meta.doc_id} · p.{meta.page} · corpus {meta.corpus_id} ·{' '}
-          {rel.score === 2 ? 'grade 2: the full answer' : 'grade 1: a required part'}
-        </span>
-        <button type="button" className={`tog ${showBoxes ? 'on' : ''}`} aria-pressed={showBoxes} onClick={() => setShowBoxes((v) => !v)}>
-          <span>
-            boxes · {rects.length} from {annotators.length} {annotators.length === 1 ? 'annotator' : 'annotators'}
-          </span>
-        </button>
-        <button type="button" className={`tog ${showText ? 'on' : ''}`} aria-pressed={showText} onClick={() => setShowText((v) => !v)}>
-          <span>OCR text</span>
-        </button>
-        <a href={pageImage(k, rel.corpus_id)} target="_blank" rel="noreferrer" className="small">
-          open image
-        </a>
-      </div>
-      <div className={`pv-body ${showText ? 'split' : ''}`}>
-        <div className="pv-page">
-          <img src={pageImage(k, rel.corpus_id)} alt={`${meta.doc_id} page ${meta.page}`} />
-          {showBoxes && (
-            <svg viewBox={`0 0 ${meta.width} ${meta.height}`} preserveAspectRatio="none" aria-hidden="true">
-              {rects.map((r, i) => (
-                <rect
-                  key={i}
-                  x={r.x}
-                  y={r.y}
-                  width={r.w}
-                  height={r.h}
-                  className={`hbox a${annotators.indexOf(r.annotator) % 3}`}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-            </svg>
-          )}
-        </div>
-        {showText && (
-          <div className="pv-text">
-            <span className="label">OCR markdown · what a text-only system sees</span>
-            <pre>{meta.markdown || '(empty)'}</pre>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }

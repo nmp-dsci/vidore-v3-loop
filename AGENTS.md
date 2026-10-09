@@ -18,7 +18,7 @@ loop improves it, the same loop as tau2-loop and DABStep-loop.
 |---|---|---|
 | Data | the 8 public datasets from the Hub, each pinned by revision (`data/registry.py`); `paper_revision` recorded beside it | the benchmark moves; a run must name the bytes it read |
 | Scope | English datasets, one at a time (`finance_en`, `computer_science`, `hr`, `industrial`, `pharmaceuticals`), English queries first | the owner's call: depth on one corpus before breadth |
-| Split | ours, per dataset, not built yet; upstream has a single `test` split | nothing is held out upstream, so the loop needs its own train/test |
+| Split | ours, per dataset: 50/50 of the English questions, stratified by the set of query types, seed 300 (finance 155 / 154), committed in `data/splits/` | nothing is held out upstream, so the loop needs its own train/test |
 | Metrics | NDCG@10 with linear graded gain, as `pytrec_eval`/MTEB | numbers comparable with the leaderboard |
 | Billing | the Claude subscription via the Claude Agent SDK, `BILLING=subscription`, no key | the portfolio rule since tau2-loop |
 | Tracking | the central MLflow, experiment `vidore-v3-loop/evals`, required tags `project`, `git_sha`, `env`, `billing` | PLATFORM.md |
@@ -37,21 +37,24 @@ src/vidore_loop/
   data/registry.py     the 8 datasets, revisions, sizes
   data/loader.py       load a config at its revision into data/cache/
   eval/metrics.py      NDCG@k, recall@k over graded qrels
-  tracking/mlflow_log.py  preflight, required tags, smoke run
+  tracking/mlflow_log.py  preflight, required tags, smoke run, retrieval runs
+  eval/split.py        our train/test split → data/splits/<key>.json (written once)
+  eval/runs.py         a scored run: a config over a split → runs/<id>/ (run.json + queries.jsonl), MLflow; the test guard
   data/catalog.py      English questions shaped for the viewer; hand checks
   data/pages.py        page images + OCR text by row group → data/cache/pages/
   data/leaderboard.py  the boards from docs/research/
-  serving/app.py       FastAPI: /api/datasets, /queries, /pages, /leaderboard; serves frontend/dist , /api/search, /api/retrieval/status
+  serving/app.py       FastAPI: /api/datasets, /queries, /pages, /leaderboard, /api/search, /api/retrieval/status, /api/runs (+ POST, runs in-process), /api/split; serves frontend/dist
   retrieval/text.py    channel A: BM25S over OCR markdown (+ document name) → data/cache/index/<key>/text/
   retrieval/visual.py  channel B: EVIE-4.5B multi-vectors (128-d, fp16), MaxSim → …/visual/
-  retrieval/fuse.py    stage C: reciprocal rank fusion (K = 60) → top 50
+  retrieval/fuse.py    stage C: weighted reciprocal rank fusion (K = 60) → top 50; WEIGHTS chosen on train
   retrieval/rerank.py  stage D: zerank-2 cross-encoder over the 50 → top 10
-  retrieval/pipeline.py  one question through the stages, scored by eval/metrics.report
+  retrieval/pipeline.py  compute(): every stage's ranking (shared by the tab and runs); run(): one question for the tab
 frontend/              React + Vite viewer (:5175 dev), orange tokens, design lint
 data/audits/           hand checks of reference answers (hand_checks.jsonl)
 docs/research/         the committed sources behind every board number
 tests/                 offline only
-data/splits/           our committed train/test cut (to come)
+data/splits/           our committed train/test cut
+runs/                  scored runs, committed (run.json + queries.jsonl per run)
 ai_specs/              specs the coding agents executed
 ```
 
@@ -60,6 +63,7 @@ ai_specs/              specs the coding agents executed
 - `uv` for everything Python; Ruff (line 100); mypy strict; pytest offline only.
 - Never commit `.env`, keys or `data/cache/`. Never add `.lavish/` to `.gitignore`.
 - A number on a page has its denominator; a figure has a committed source.
-- Run folders will be immutable once scored. Fix the code and re-run.
+- Run folders are immutable once scored. Fix the code and re-run.
+- A run on test needs `--final`, and a configuration already scored on test is refused without `--force`.
 - The test split is reported, never optimised on.
 - Commit messages: imperative subject, a body that says why.

@@ -4,6 +4,7 @@ import {
   type Hit,
   type Metrics,
   type Question,
+  type QueryRow,
   type RetrievalStatus,
   type SearchOut,
   STAGES,
@@ -15,7 +16,7 @@ import {
   useGet,
 } from '../lib/api';
 import { PageView } from '../lib/page';
-import { DatasetChips, Loading } from '../lib/ui';
+import { Busy, DatasetChips, Loading } from '../lib/ui';
 
 /**
  * `/pipeline?dataset=&qid=` or `?q=` — one question through the retrieval half of the RAG
@@ -30,13 +31,19 @@ export function Pipeline() {
   const qtext = sp.get('q') ?? '';
   const depth = Number(sp.get('depth') ?? 20);
   const [draft, setDraft] = useState(qtext);
-  const [on, setOn] = useState<Record<Stage, boolean>>({ text: true, visual: true, fused: true, reranked: true });
+  const [on, setOn] = useState<Record<Stage, boolean>>({
+    text: true,
+    visual: true,
+    fused: true,
+    reranked: true,
+  });
   const [res, setRes] = useState<SearchOut | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<number | null>(null); // when the search started
   const [open, setOpen] = useState<number | null>(null);
   const status = useGet<RetrievalStatus>(`/api/retrieval/status?dataset=${dataset}`);
   const question = useGet<Question>(qid ? `/api/datasets/${dataset}/queries/${qid}` : null);
+  const bench = useGet<QueryRow[]>(`/api/datasets/${dataset}/queries`);
 
   useEffect(() => setDraft(qtext), [qtext]);
   useEffect(() => {
@@ -45,7 +52,7 @@ export function Pipeline() {
       return;
     }
     let alive = true;
-    setBusy(true);
+    setBusy(Date.now());
     setErr(null);
     setOpen(null);
     post<SearchOut>('/api/search', {
@@ -57,7 +64,7 @@ export function Pipeline() {
     })
       .then((r) => alive && setRes(r))
       .catch((e: Error) => alive && setErr(e.message))
-      .finally(() => alive && setBusy(false));
+      .finally(() => alive && setBusy(null));
     return () => {
       alive = false;
     };
@@ -77,19 +84,27 @@ export function Pipeline() {
         One question through every stage, <em>scored against the gold pages</em>
       </h1>
       <p className="lead">
-        Pick a question on the Datasets tab and press <b>Run retrieval</b>, or type your own here. Each stage returns its
-        top 10. For a benchmark question, the human grades show which hits are right, and every metric is computed
-        against the gold pages.
+        Pick a benchmark question or type your own to see every stage's top 10, scored against the gold pages.
       </p>
       <DatasetChips current={dataset} hrefFor={(d) => `/pipeline?dataset=${d}`} />
       <StatusLine s={status.data} dataset={dataset} />
 
+      <QuestionPicker
+        rows={bench.data}
+        qid={qid}
+        onPick={(id) => {
+          const next = new URLSearchParams({ dataset });
+          if (id) next.set('qid', id);
+          if (sp.get('depth')) next.set('depth', sp.get('depth') as string);
+          nav(`/pipeline?${next.toString()}`);
+        }}
+      />
       <form className="row askrow" onSubmit={runFree}>
         <input
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Ask ${datasetLabel(dataset)} anything, e.g. “Wells Fargo CET1 ratio 2024”`}
+          placeholder={`…or ask ${datasetLabel(dataset)} anything, e.g. “Wells Fargo CET1 ratio 2024”`}
           aria-label="your question"
         />
         <button className="btn" type="submit" disabled={!draft.trim()}>
@@ -131,7 +146,8 @@ export function Pipeline() {
       {qid && question.data && (
         <div className="qcard">
           <span className="label">
-            benchmark question <Link to={`/datasets/${dataset}/${qid}`}>q{qid}</Link> · {question.data.query_types.join(' · ')}
+            benchmark question <Link to={`/datasets/${dataset}/${qid}`}>q{qid}</Link> ·{' '}
+            {question.data.query_types.join(' · ')}
           </span>
           <p className="qbig">{question.data.query}</p>
           <p className="small">
@@ -139,22 +155,35 @@ export function Pipeline() {
           </p>
         </div>
       )}
-      {busy && (
-        <p className="empty">
-          Running… The first query loads the models (up to a minute); the reranker then reads each new page at ≈3.2 s on this
-          Mac, so a fresh question at depth {depth} takes ≈{Math.round(depth * 3.2)} s. A question already reranked is instant.
-        </p>
+      {busy != null && (
+        <>
+          <Busy
+            label={`Running ${STAGES.filter((s) => on[s]).length} stages`}
+            since={busy}
+            detail={
+              on.reranked
+                ? `A new question takes up to ≈${Math.round(depth * 3.2)} s while the reranker reads its top ${depth} pages.`
+                : undefined
+            }
+          />
+          <SkeletonCols stages={STAGES.filter((s) => on[s])} />
+        </>
       )}
       {err && <Loading error={err} />}
 
-      {res && !busy && (
+      {res && busy == null && (
         <>
           {res.gold.length > 0 && <GoldStrip k={dataset} res={res} stages={shown} onOpen={setOpen} />}
           {res.gold.length > 0 && <MetricsTable res={res} stages={shown} />}
           {res.gold.length === 0 && (
-            <p className="small muted">A free-text question has no gold pages, so no metrics: judge the hits yourself.</p>
+            <p className="small muted">Free-text questions have no gold pages, so judge the hits yourself.</p>
           )}
-          <div className="stagecols" style={{ gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr))` }}>
+          <div
+            className="stagecols"
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(1, shown.length)}, minmax(0, 1fr))`,
+            }}
+          >
             {shown.map((s) => (
               <StageColumn key={s} k={dataset} s={s} out={res.stages[s]!} open={open} onOpen={setOpen} />
             ))}
@@ -191,10 +220,13 @@ function StatusLine({ s, dataset }: { s: RetrievalStatus | null; dataset: string
       <span className={`status ${s.text ? 'ok' : 'no'}`}>text index</span>{' '}
       <span className={`status ${s.visual_complete ? 'ok' : s.visual ? 'warn' : 'no'}`}>
         {s.visual_building ? 'building · ' : ''}
-        visual index{v ? ` · ${v.model.split('/')[1]} · ${v.pages} pages · ${v.seconds_per_page} s/page on ${v.device}` : ''}
+        visual index
+        {v ? ` · ${v.model.split('/')[1]} · ${v.pages} pages · ${v.seconds_per_page} s/page on ${v.device}` : ''}
         {s.visual && !s.visual_complete ? ' (partial)' : ''}
       </span>{' '}
-      <span className={`status ${s.reranker ? 'ok' : 'no'}`}>reranker {s.reranker ? 'ready' : 'not ready (zerank-2 not downloaded)'}</span>
+      <span className={`status ${s.reranker ? 'ok' : 'no'}`}>
+        reranker {s.reranker ? 'ready' : 'not ready (zerank-2 not downloaded)'}
+      </span>
       {!s.text && (
         <span className="muted">
           {' '}
@@ -274,10 +306,7 @@ function MetricsTable({ res, stages }: { res: SearchOut; stages: Stage[] }) {
           </tbody>
         </table>
       </div>
-      <p className="small muted">
-        Percentages are of this question’s gold pages. One function (<code>eval/metrics.py</code>, checked against{' '}
-        <code>pytrec_eval</code>) computes these here and in M3’s runs.
-      </p>
+      <p className="small muted">Percentages are of this question’s gold pages, computed as in the Runs tab.</p>
     </>
   );
 }
@@ -300,7 +329,18 @@ function StageColumn({
       <header>
         <b>{STAGE_LABEL[s][0]}</b>
         <span className="small muted">{STAGE_LABEL[s][1]}</span>
-        {out.ms != null && <span className="mono small">{out.ms >= 1000 ? `${(out.ms / 1000).toFixed(1)} s` : `${out.ms} ms`}</span>}
+        {out.weights && (
+          <span className="small muted">
+            weights{' '}
+            {Object.entries(out.weights)
+              .map(([c, w]) => `${c} ${w}`)
+              .join(' · ')}
+            {out.weights.text === 0 && ' (text off: it lowered NDCG@10 on train)'}
+          </span>
+        )}
+        {out.ms != null && (
+          <span className="mono small">{out.ms >= 1000 ? `${(out.ms / 1000).toFixed(1)} s` : `${out.ms} ms`}</span>
+        )}
         {out.depth != null && (
           <span className="small muted">
             top {out.depth} reranked · {out.scored} scored now, {out.cached} from cache
@@ -340,7 +380,9 @@ function HitCard({ k, h, on, onOpen }: { k: string; h: Hit; on: boolean; onOpen:
             {g === 2 ? '● full · 2' : g === 1 ? '◐ part · 1' : '○ not gold'}
           </span>
         )}
-        {h.terms && h.terms.length > 0 && <span className="small muted">matched: {h.terms.slice(0, 6).join(', ')}</span>}
+        {h.terms && h.terms.length > 0 && (
+          <span className="small muted">matched: {h.terms.slice(0, 6).join(', ')}</span>
+        )}
       </span>
     </button>
   );
@@ -388,6 +430,19 @@ function WhyRanked({ res, cid }: { res: SearchOut; cid: number }) {
           })
           .join('  ·  ')}
       </dd>
+      <dt>score in each stage</dt>
+      <dd className="mono">
+        {STAGES.filter((s) => res.stages[s] && !res.stages[s]!.unavailable)
+          .map((s) => {
+            const v = hit?.scores?.[s];
+            return `${STAGE_LABEL[s][0]}: ${v == null ? '—' : v.toFixed(s === 'fused' ? 4 : 2)}`;
+          })
+          .join('  ·  ')}
+        <span className="small muted">
+          {' '}
+          (A: BM25 · B: visual MaxSim, summed over the question's tokens · C: RRF · D: zerank-2; — = not scored there)
+        </span>
+      </dd>
       {hit?.terms && (
         <>
           <dt>question words found on the page (BM25)</dt>
@@ -401,7 +456,17 @@ function WhyRanked({ res, cid }: { res: SearchOut; cid: number }) {
 }
 
 /** Every gold page, and where each stage put it: coverage at a glance, including pages no stage found. */
-function GoldStrip({ k, res, stages, onOpen }: { k: string; res: SearchOut; stages: Stage[]; onOpen: (cid: number) => void }) {
+function GoldStrip({
+  k,
+  res,
+  stages,
+  onOpen,
+}: {
+  k: string;
+  res: SearchOut;
+  stages: Stage[];
+  onOpen: (cid: number) => void;
+}) {
   return (
     <>
       <h3>The gold pages, and where each stage ranked them</h3>
@@ -409,7 +474,9 @@ function GoldStrip({ k, res, stages, onOpen }: { k: string; res: SearchOut; stag
         {res.gold.map((g) => (
           <button key={g.corpus_id} type="button" className={`gold g${g.grade}`} onClick={() => onOpen(g.corpus_id)}>
             <img src={pageImage(k, g.corpus_id)} alt="" loading="lazy" />
-            <span className={`chip ${g.grade === 2 ? 'ok' : 'warn'}`}>{g.grade === 2 ? '● full · 2' : '◐ part · 1'}</span>
+            <span className={`chip ${g.grade === 2 ? 'ok' : 'warn'}`}>
+              {g.grade === 2 ? '● full · 2' : '◐ part · 1'}
+            </span>
             <span className="granks mono small">
               {stages
                 .filter((s) => res.stages[s]?.gold_ranks)
@@ -426,5 +493,82 @@ function GoldStrip({ k, res, stages, onOpen }: { k: string; res: SearchOut; stag
         ))}
       </div>
     </>
+  );
+}
+
+/** Every benchmark question of the dataset, grouped by its set of query types. */
+function QuestionPicker({
+  rows,
+  qid,
+  onPick,
+}: {
+  rows: QueryRow[] | null;
+  qid: string | null;
+  onPick: (qid: string | null) => void;
+}) {
+  const groups = new Map<string, QueryRow[]>();
+  for (const r of rows ?? []) {
+    const k = [...r.query_types].sort().join(' + ') || 'untyped';
+    groups.set(k, [...(groups.get(k) ?? []), r]);
+  }
+  const clip = (t: string) => (t.length > 110 ? `${t.slice(0, 107)}…` : t);
+  const pickRandom = () => {
+    if (rows?.length) onPick(String(rows[Math.floor(Math.random() * rows.length)].query_id));
+  };
+  return (
+    <div className="row askrow pickrow">
+      <select
+        value={qid ?? ''}
+        onChange={(e) => onPick(e.target.value || null)}
+        disabled={!rows}
+        aria-label="benchmark question"
+      >
+        <option value="">
+          {rows ? `Pick one of the ${rows.length} benchmark questions…` : 'Loading the questions…'}
+        </option>
+        {[...groups.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, qs]) => (
+            <optgroup key={k} label={`${k} (${qs.length})`}>
+              {qs.map((q) => (
+                <option key={q.query_id} value={q.query_id}>
+                  q{q.query_id} · {clip(q.query)}
+                  {q.n_full ? '' : ' · no full-answer page'}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+      </select>
+      <button className="tog" type="button" onClick={pickRandom} disabled={!rows?.length}>
+        <span>Random</span>
+      </button>
+    </div>
+  );
+}
+
+/** Placeholder stage columns that pulse while a search runs. */
+function SkeletonCols({ stages }: { stages: Stage[] }) {
+  return (
+    <div
+      className="stagecols"
+      aria-hidden="true"
+      style={{
+        gridTemplateColumns: `repeat(${Math.max(1, stages.length)}, minmax(0, 1fr))`,
+      }}
+    >
+      {stages.map((s) => (
+        <section key={s} className="stagecol skel">
+          <header>
+            <b>
+              <span className="busy-dot" />
+              {STAGE_LABEL[s][0]}
+            </b>
+          </header>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skel-hit" />
+          ))}
+        </section>
+      ))}
+    </div>
   );
 }

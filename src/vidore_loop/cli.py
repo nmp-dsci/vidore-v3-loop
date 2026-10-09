@@ -136,5 +136,134 @@ def smoke() -> None:
     console.print(f"run_id {log_smoke(ndcg, recall)}")
 
 
+@app.command("split")
+def make_split(dataset: str = typer.Option(..., help="a dataset key")) -> None:
+    """Write our fixed train / test split of a dataset's English questions (once)."""
+    from vidore_loop.eval import split
+
+    doc = split.write(registry.get(dataset).key)
+    console.print(
+        f"{split.path(doc['dataset'])}: train {doc['n']['train']} · test {doc['n']['test']}"
+    )
+
+
+@app.command("eval")
+def evaluate(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    split_name: str = typer.Option("train", "--split", help="train | test (test needs --final)"),
+    stages: str = typer.Option("text,visual,fused,reranked", help="comma-separated stages"),
+    depth: int = typer.Option(20, help="how many fused pages the reranker reads"),
+    w_text: float = typer.Option(1.0, help="fusion weight of the text channel"),
+    w_visual: float = typer.Option(1.0, help="fusion weight of the visual channel"),
+    final: bool = typer.Option(
+        False, help="score the test split, once, for a configuration chosen on train"
+    ),
+    force: bool = typer.Option(False, help="repeat a configuration already scored on test"),
+    limit: int = typer.Option(0, help="score only the first N questions (a smoke; train only)"),
+    note: str = typer.Option("", help="why this run exists"),
+    in_process: bool = typer.Option(
+        False, help="run here even when the viewer is up (loads a second copy of the models)"
+    ),
+    port: int = typer.Option(8083, help="the viewer's port"),
+) -> None:
+    """Score a pipeline configuration on a split: a run folder under runs/, logged to MLflow.
+
+    When the viewer is running, the run executes inside it (one copy of the models, the
+    viewer's GPU lock) and this command follows its progress."""
+    import json
+    import time
+    import urllib.error
+    import urllib.request
+
+    from vidore_loop.eval import runs
+
+    cfg = runs.RunConfig(
+        dataset=registry.get(dataset).key,
+        split=split_name,
+        stages=tuple(s.strip() for s in stages.split(",") if s.strip()),
+        rerank_depth=depth,
+        weights=(w_text, w_visual),
+        note=note,
+        limit=limit or None,
+    )
+    base = f"http://127.0.0.1:{port}"
+    viewer_up = False
+    if not in_process:
+        try:
+            with urllib.request.urlopen(f"{base}/api/health", timeout=2):  # noqa: S310 - localhost
+                viewer_up = True
+        except (urllib.error.URLError, OSError):
+            viewer_up = False
+    if not viewer_up:
+        rid = runs.execute(
+            cfg,
+            final=final,
+            force=force,
+            on_progress=lambda p: console.print(f"{p.done}/{p.n} · {p.seconds:.0f}s", end="\r"),
+        )
+    else:
+        body = {
+            **{k: v for k, v in cfg.__dict__.items() if k not in ("stages", "weights")},
+            "stages": list(cfg.stages),
+            "weights": list(cfg.weights),
+            "final": final,
+            "force": force,
+        }
+        req = urllib.request.Request(
+            f"{base}/api/runs", json.dumps(body).encode(), {"content-type": "application/json"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310 - localhost
+                rid = json.load(r)["run_id"]
+        except urllib.error.HTTPError as e:
+            raise typer.BadParameter(json.load(e).get("detail", str(e))) from e
+        console.print(f"running in the viewer: {rid}")
+        while True:
+            time.sleep(5)
+            doc = runs.get(rid)
+            p = doc.get("progress", {})
+            console.print(f"{p.get('done', 0)}/{p.get('n', '?')} · {doc['status']}", end="\r")
+            if doc["status"] != "running":
+                break
+    doc = runs.get(rid)
+    console.print(
+        f"\n{rid}: {doc['status']}" + (f" ({doc.get('error')})" if doc.get("error") else "")
+    )
+    if doc.get("summary"):
+        t = Table("stage", "NDCG@10", "Recall@10", "Recall@50", "full hit@10", "complete@50", "MRR")
+        for s, m in doc["summary"].items():
+            t.add_row(
+                s,
+                *(
+                    f"{m[k]['mean']:.3f}" if m[k]["mean"] is not None else "—"
+                    for k in (
+                        "ndcg_10",
+                        "recall_10",
+                        "recall_50",
+                        "hit_full_10",
+                        "complete_50",
+                        "mrr",
+                    )
+                ),
+            )
+        console.print(t)
+    if doc.get("mlflow_error"):
+        console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
+
+
+@app.command("runs")
+def list_runs() -> None:
+    """Every scored run, newest first."""
+    from vidore_loop.eval import runs
+
+    t = Table("run", "split", "n", "status", "NDCG@10 per stage")
+    for r in runs.list_runs():
+        nd = " · ".join(
+            f"{s[0]} {m['ndcg_10']['mean']:.3f}" for s, m in (r.get("summary") or {}).items()
+        )
+        t.add_row(r["run_id"], r["split"], str(r["n"]), r["status"], nd)
+    console.print(t)
+
+
 if __name__ == "__main__":
     app()

@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /** English datasets, in the order the plan ranks them (s00 §3): commercial value first. */
-export const DATASETS = ['finance_en', 'pharmaceuticals', 'industrial', 'hr', 'computer_science'] as const;
+export const DATASETS = [
+  "finance_en",
+  "pharmaceuticals",
+  "industrial",
+  "hr",
+  "computer_science",
+] as const;
 export type DatasetKey = (typeof DATASETS)[number];
 
 const LABELS: Record<string, string> = {
-  finance_en: 'Finance',
-  pharmaceuticals: 'Pharmaceuticals',
-  industrial: 'Industrial',
-  hr: 'HR',
-  computer_science: 'Computer science',
+  finance_en: "Finance",
+  pharmaceuticals: "Pharmaceuticals",
+  industrial: "Industrial",
+  hr: "HR",
+  computer_science: "Computer science",
 };
 export const datasetLabel = (k: string) => LABELS[k] ?? k;
 
@@ -68,15 +74,26 @@ export type QueryRow = {
   query_generator: string;
   n_pages: number;
   n_full: number;
-  hand_check: 'holds' | 'off' | null;
+  hand_check: "holds" | "off" | null;
 };
 
-export type Box = { annotator: number; x1: number; y1: number; x2: number; y2: number };
-export type RelPage = { corpus_id: number; score: number; content_type: string[]; boxes: Box[] };
+export type Box = {
+  annotator: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+export type RelPage = {
+  corpus_id: number;
+  score: number;
+  content_type: string[];
+  boxes: Box[];
+};
 export type HandCheck = {
   dataset: string;
   query_id: number;
-  verdict: 'holds' | 'off';
+  verdict: "holds" | "off";
   checked_answer: string;
   note: string;
   checked_by: string;
@@ -101,8 +118,19 @@ export type PageMeta = {
   markdown: string;
 };
 
-export type ModelRow = { model: string; revision: string; scores: number[]; mean: number };
-export type PipelineRow = { name: string; kind: string; scores: number[]; mean: number; latency: string | null };
+export type ModelRow = {
+  model: string;
+  revision: string;
+  scores: number[];
+  mean: number;
+};
+export type PipelineRow = {
+  name: string;
+  kind: string;
+  scores: number[];
+  mean: number;
+  latency: string | null;
+};
 export type Board = {
   datasets: string[];
   models: ModelRow[];
@@ -110,22 +138,40 @@ export type Board = {
   answers: {
     columns: string[];
     judge: string;
-    rows: { pages: string; as: string; generator: string; scores: (number | null)[] }[];
+    rows: {
+      pages: string;
+      as: string;
+      generator: string;
+      scores: (number | null)[];
+    }[];
     answerable_blind_pct: number[];
   };
-  grounding: { metric: string; rows: { who: string; scores: number[]; overall: number }[] };
+  grounding: {
+    metric: string;
+    rows: { who: string; scores: number[]; overall: number }[];
+  };
   about: string;
+  ours: OurRow[];
 };
 
 export async function get<T>(url: string): Promise<T> {
   const r = await fetch(url);
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
+  if (!r.ok)
+    throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
   return j as T;
 }
 
-export function useGet<T>(url: string | null): { data: T | null; error: string | null; loading: boolean } {
-  const [state, set] = useState<{ data: T | null; error: string | null; loading: boolean }>({
+export function useGet<T>(url: string | null): {
+  data: T | null;
+  error: string | null;
+  loading: boolean;
+} {
+  const [state, set] = useState<{
+    data: T | null;
+    error: string | null;
+    loading: boolean;
+  }>({
     data: null,
     error: null,
     loading: !!url,
@@ -136,7 +182,10 @@ export function useGet<T>(url: string | null): { data: T | null; error: string |
     set({ data: null, error: null, loading: true });
     get<T>(url)
       .then((d) => alive && set({ data: d, error: null, loading: false }))
-      .catch((e: Error) => alive && set({ data: null, error: e.message, loading: false }));
+      .catch(
+        (e: Error) =>
+          alive && set({ data: null, error: e.message, loading: false }),
+      );
     return () => {
       alive = false;
     };
@@ -144,24 +193,30 @@ export function useGet<T>(url: string | null): { data: T | null; error: string |
   return state;
 }
 
-export const pageImage = (key: string, corpusId: number) => `/api/pages/${key}/${corpusId}/image`;
-export const fmtN = (n: number) => n.toLocaleString('en-AU');
+export const pageImage = (key: string, corpusId: number) =>
+  `/api/pages/${key}/${corpusId}/image`;
+export const fmtN = (n: number) => n.toLocaleString("en-AU");
 
 export async function post<T>(url: string, body: unknown): Promise<T> {
-  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
+  if (!r.ok)
+    throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
   return j as T;
 }
 
 /** Retrieval (M2): one question through the stages. */
-export const STAGES = ['text', 'visual', 'fused', 'reranked'] as const;
+export const STAGES = ["text", "visual", "fused", "reranked"] as const;
 export type Stage = (typeof STAGES)[number];
 export const STAGE_LABEL: Record<Stage, [string, string]> = {
-  text: ['A · text', 'BM25S on the OCR markdown'],
-  visual: ['B · visual', 'late interaction on the page image'],
-  fused: ['C · fused', 'reciprocal rank fusion → 50'],
-  reranked: ['D · reranked', 'zerank-2 rereads the top of the fused list'],
+  text: ["A · text", "BM25S on the OCR markdown"],
+  visual: ["B · visual", "late interaction on the page image"],
+  fused: ["C · fused", "reciprocal rank fusion → 50"],
+  reranked: ["D · reranked", "zerank-2 rereads the top of the fused list"],
 };
 
 export type Metrics = {
@@ -192,6 +247,7 @@ export type Hit = {
   page: number | null;
   grade: number | null;
   ranks: Partial<Record<Stage, number | null>>;
+  scores?: Partial<Record<Stage, number | null>>;
   terms?: string[];
 };
 export type StageOut = {
@@ -199,6 +255,7 @@ export type StageOut = {
   note?: string;
   ms?: number;
   inputs?: string[];
+  weights?: Record<string, number>;
   model?: string;
   depth?: number;
   scored?: number;
@@ -230,3 +287,135 @@ export type RetrievalStatus = {
   } | null;
   reranker: boolean;
 };
+
+/** Scored runs (M3): a pipeline configuration over our train or test split. */
+export type Mean = { mean: number | null; n: number };
+export type RankStat = { median: number | null; found: number; n: number };
+export type StageSummary = Record<string, Mean | RankStat>;
+export type RunMeta = {
+  run_id: string;
+  dataset: string;
+  split: "train" | "test";
+  final: boolean;
+  label: string;
+  config: {
+    stages: Stage[];
+    rerank_depth: number;
+    weights: [number, number];
+    note: string;
+    limit: number | null;
+  };
+  fingerprint: string;
+  models: {
+    visual: string | null;
+    visual_dim: number | null;
+    reranker: string | null;
+    text: string;
+  };
+  channel_k: number;
+  fused_k: number;
+  rrf_k: number;
+  split_seed: number;
+  split_fingerprint: string;
+  code_sha: string;
+  started_at: string;
+  finished_at: string | null;
+  seconds?: number;
+  status: "running" | "finished" | "failed" | "interrupted";
+  error?: string;
+  progress: { done: number; n: number; seconds?: number };
+  n: number;
+  summary: Partial<Record<Stage, StageSummary>> | null;
+  costs: Partial<
+    Record<
+      Stage,
+      {
+        mean_ms: number | null;
+        pages_scored?: number;
+        pages_cached?: number;
+        rerank_seconds?: number;
+      }
+    >
+  > | null;
+  mlflow_run_id: string | null;
+  mlflow_error?: string;
+};
+export type SliceRow = {
+  value: string;
+  n: number;
+  stages: Partial<Record<Stage, StageSummary>>;
+};
+export type RunDetail = RunMeta & { slices: Record<string, SliceRow[]> | null };
+export type RunQueryRow = {
+  query_id: number;
+  query: string;
+  query_types: string[];
+  content_type: string[];
+  query_format: string;
+  author: string;
+  n_gold: number;
+  n_full: number;
+  stages: Partial<
+    Record<
+      Stage,
+      {
+        ndcg_10: number;
+        recall_10: number;
+        first_rank: number | null;
+        first_full_rank: number | null;
+        hit_full_10: boolean;
+      }
+    >
+  >;
+};
+export type RunPage = {
+  corpus_id: number;
+  rank: number | null;
+  doc_id: string | null;
+  page: number | null;
+  grade: number;
+};
+export type RunQuery = {
+  run_id: string;
+  dataset: string;
+  query_id: number;
+  query: string;
+  query_types: string[];
+  content_type: string[];
+  query_format: string;
+  query_generator: string;
+  gold: RunPage[];
+  stages: Partial<
+    Record<
+      Stage,
+      {
+        metrics: Metrics;
+        ms: number | null;
+        top: RunPage[];
+        gold_ranks: Record<string, number | null>;
+        scored?: number;
+        cached?: number;
+        depth?: number;
+      }
+    >
+  >;
+};
+export type SplitInfo = {
+  dataset: string;
+  seed: number;
+  stratified_by: string;
+  n: { train: number; test: number };
+  fingerprint: string;
+  strata: { stratum: string; train: number; test: number }[];
+};
+export type OurRow = {
+  run_id: string;
+  dataset: string;
+  label: string;
+  n: number;
+  models: RunMeta["models"];
+  config: RunMeta["config"];
+  ndcg_10: Partial<Record<Stage, number | null>>;
+};
+export const pct1 = (x: number | null | undefined) =>
+  x == null ? "—" : (x * 100).toFixed(1);

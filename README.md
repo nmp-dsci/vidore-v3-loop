@@ -51,6 +51,10 @@ make index DATASET=finance_en STAGE=text      # BM25S over the OCR text (seconds
 uv sync --extra retrieval                     # torch + sentence-transformers, for the two stages below
 make index DATASET=finance_en STAGE=visual    # EVIE-4.5B over every page image (LIMIT=50 for a timing run)
 make index DATASET=finance_en STAGE=reranker  # downloads zerank-2 (≈8 GB)
+make split DATASET=finance_en                 # our train/test split, once (committed)
+make eval DATASET=finance_en WTEXT=0.25       # score a config on train → runs/ + MLflow (runs inside the viewer when it is up)
+make eval DATASET=finance_en SPLIT=test FINAL=1  # the chosen config, once, on test
+make runs                                     # every scored run
 make test · make lint
 ```
 
@@ -69,6 +73,6 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 |---|---|
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
-| M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | built, in review |
-| M2 retrieval pipeline + RAG pipeline tab | in progress: text channel, fusion, metrics and the tab done; visual channel and reranker next |
-| M3 retrieval scored + Runs | designed |
+| M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | done |
+| M2 retrieval pipeline + RAG pipeline tab | built, in review: BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
+| M3 retrieval scored + Runs | built, in review: finance_en split 155/154; on train every text weight lowered NDCG@10 and the reranker (depth 20) did not beat visual alone (74.8, 75.4 vs 75.8), so the champion is fusion with text weight 0. Scored once on test: **NDCG@10 70.0** (text alone 45.2) |

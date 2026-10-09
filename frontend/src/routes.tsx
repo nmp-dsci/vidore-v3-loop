@@ -4,6 +4,7 @@ import { Overview } from './pages/Overview';
 import { Dataset, Datasets } from './pages/Datasets';
 import { Leaderboard } from './pages/Leaderboard';
 import { Pipeline } from './pages/Pipeline';
+import { Run, RunQuestion, Runs } from './pages/Runs';
 
 /**
  * Every viewer address, as data. The grammar follows tau2-loop's: one id per thing,
@@ -20,6 +21,9 @@ export const routes: RouteObject[] = [
       { id: 'dataset', path: '/datasets/:key', element: <Dataset /> },
       { id: 'question', path: '/datasets/:key/:qid', element: <Dataset /> },
       { id: 'pipeline', path: '/pipeline', element: <Pipeline /> },
+      { id: 'runs', path: '/runs', element: <Runs /> },
+      { id: 'run', path: '/runs/:runId', element: <Run /> },
+      { id: 'run-question', path: '/runs/:runId/:qid', element: <RunQuestion /> },
       { id: 'leaderboard', path: '/leaderboard', element: <Leaderboard /> },
       { id: 'missing', path: '*', element: <p className="empty">No page here. Try the Datasets tab.</p> },
     ],

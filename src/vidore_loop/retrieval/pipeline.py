@@ -9,6 +9,7 @@ text index exists.
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -20,6 +21,9 @@ STAGES = ("text", "visual", "fused", "reranked")
 CHANNEL_K = 100  # each channel's list, the pool fusion draws on
 FUSED_K = 50  # what the reranker reads
 SHOW = 10  # hits returned per stage
+# One request on the GPU at a time: the API serves requests from a thread pool, and two threads
+# driving MPS at once abort the process (a Metal command-buffer assertion). Covers model loads too.
+GPU = threading.Lock()
 
 
 def status(key: str) -> dict[str, Any]:
@@ -52,21 +56,18 @@ def _heavy_ok() -> bool:
     return True
 
 
-def run(
+def compute(
     key: str,
-    query: str | None = None,
-    query_id: int | None = None,
+    query_text: str,
     stages: tuple[str, ...] = STAGES,
     rerank_depth: int = 20,
-) -> dict[str, Any]:
-    q = catalog.question(key, query_id) if query_id is not None else None
-    if query_id is not None and q is None:
-        raise KeyError(f"no English query {query_id} in {key}")
-    query_text = (query or (q["query"] if q else "")).strip()
-    if not query_text:
-        raise ValueError("a question is needed: pass query or query_id")
-    gold: dict[int, int] = {p["corpus_id"]: p["score"] for p in q["pages"]} if q else {}
-    st = status(key)
+    weights: tuple[float, float] | None = None,
+    st: dict[str, Any] | None = None,
+) -> tuple[dict[str, list[tuple[int, float]]], dict[str, dict[str, Any]]]:
+    """Every requested stage's full ranking as (corpus_id, score), and each stage's timing,
+    cost or the reason it is unavailable. The viewer's `run` and M3's scored runs share it,
+    so a question scores the same in the RAG pipeline tab and in a run."""
+    st = st or status(key)
     out: dict[str, dict[str, Any]] = {}
     lists: dict[str, list[tuple[int, float]]] = {}
 
@@ -98,9 +99,10 @@ def run(
         else:
             from vidore_loop.retrieval import visual
 
-            t0 = time.time()
-            lists["visual"] = visual.search(key, query_text, CHANNEL_K)
-            out["visual"] = {"ms": _ms(t0)}
+            with GPU:
+                t0 = time.time()
+                lists["visual"] = visual.search(key, query_text, CHANNEL_K)
+                out["visual"] = {"ms": _ms(t0)}
             if not st["visual_complete"]:
                 out["visual"]["note"] = (
                     f"partial index: {st['visual_stats']['pages']} of {len(pages.page_index(key))} pages"
@@ -109,8 +111,12 @@ def run(
     channels = [[cid for cid, _ in lists[c]] for c in ("text", "visual") if c in lists]
     if channels and ("fused" in stages or "reranked" in stages):
         t0 = time.time()
-        lists["fused"] = fuse.rrf(channels, k=FUSED_K)
-        out["fused"] = {"ms": _ms(t0), "inputs": [c for c in ("text", "visual") if c in lists]}
+        inputs = [c for c in ("text", "visual") if c in lists]
+        chosen = dict(zip(("text", "visual"), weights or fuse.WEIGHTS, strict=True))
+        # the weights were chosen for both channels; with one channel it passes through as is
+        used = {c: chosen[c] for c in inputs} if len(inputs) == 2 else {inputs[0]: 1.0}
+        lists["fused"] = fuse.rrf(channels, k=FUSED_K, weights=list(used.values()))
+        out["fused"] = {"ms": _ms(t0), "inputs": inputs, "weights": used}
 
     if "reranked" in stages and "fused" in lists:
         if not st["reranker"]:
@@ -126,14 +132,37 @@ def run(
             for cid, _ in lists["fused"][:depth]:
                 meta = pages.page_meta(key, cid)
                 cands.append((cid, text.page_text(meta) if meta else ""))
-            t0 = time.time()
-            ranked, cost = rerank.rerank(key, query_text, cands)
+            with GPU:
+                t0 = time.time()
+                ranked, cost = rerank.rerank(key, query_text, cands)
             # pages below the depth keep their fused order beneath the reranked ones
             tail = [(cid, float("-inf")) for cid, _ in lists["fused"][depth:]]
             lists["reranked"] = ranked + tail
             out["reranked"] = {"ms": _ms(t0), "model": rerank.MODEL_ID, "depth": depth, **cost}
 
+    return lists, out
+
+
+def run(
+    key: str,
+    query: str | None = None,
+    query_id: int | None = None,
+    stages: tuple[str, ...] = STAGES,
+    rerank_depth: int = 20,
+    weights: tuple[float, float] | None = None,
+) -> dict[str, Any]:
+    q = catalog.question(key, query_id) if query_id is not None else None
+    if query_id is not None and q is None:
+        raise KeyError(f"no English query {query_id} in {key}")
+    query_text = (query or (q["query"] if q else "")).strip()
+    if not query_text:
+        raise ValueError("a question is needed: pass query or query_id")
+    gold: dict[int, int] = {p["corpus_id"]: p["score"] for p in q["pages"]} if q else {}
+    st = status(key)
+    lists, out = compute(key, query_text, stages, rerank_depth, weights, st)
+
     index = pages.page_index(key)
+
     for name in STAGES:
         if name not in stages or name not in lists:
             continue
@@ -149,6 +178,7 @@ def run(
                 "page": e.get("page"),
                 "grade": gold.get(cid, 0) if gold else None,
                 "ranks": {c: _rank_of(cid, lists[c]) for c in lists},
+                "scores": {c: _score_of(cid, lists[c]) for c in lists},
             }
             if name in ("text", "fused", "reranked"):
                 meta = pages.page_meta(key, cid)
@@ -186,6 +216,14 @@ def _rank_of(cid: int, ranked: list[tuple[int, float]]) -> int | None:
     for i, (c, _) in enumerate(ranked, start=1):
         if c == cid:
             return i
+    return None
+
+
+def _score_of(cid: int, ranked: list[tuple[int, float]]) -> float | None:
+    """The page's score in one stage's list (BM25, MaxSim, RRF or reranker); None if absent."""
+    for c, score in ranked:
+        if c == cid:
+            return round(score, 4) if score != float("-inf") else None
     return None
 
 

@@ -323,6 +323,8 @@ details.docs{margin-top:var(--s4)}
 .statusline{margin-top:0}
 .statusline .status{margin-right:var(--s3)}
 .askrow input[type=text]{flex:1 1 30rem}
+.pickrow{margin-bottom:var(--s3)}
+.pickrow select{flex:1 1 30rem;min-width:0;max-width:100%}
 .stagetogs{margin-top:var(--s3)}
 .runrow{margin-top:var(--s4)}
 a.btn{display:inline-flex;align-items:center;text-decoration:none}
@@ -357,3 +359,47 @@ table.metrics td.num{min-width:7ch}
 .why dt{font:500 var(--t-2)/1.6 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
 .why dd{margin:0;color:var(--ink-2);overflow-wrap:anywhere}
 @media (max-width:640px){.why{grid-template-columns:minmax(0,1fr)}}
+
+/* M3: the Runs tab */
+.splitpanel{margin-top:var(--s5);max-width:var(--measure)}
+.splitpanel summary{cursor:pointer;color:var(--ink-2);font-size:var(--t-1)}
+.splitpanel .tw{max-width:520px}
+.seg{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.runkv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--s1) var(--s4);margin:var(--s4) 0 0}
+.runkv dt{font:500 var(--t-2)/1.6 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--faint)}
+.runkv dd{margin:0;overflow-wrap:anywhere}
+.row input.grow{flex:1 1 320px;min-width:0}
+td.good{color:var(--ok);font-weight:600}
+td.poor,span.poor{color:var(--amber)}
+.qh1{font-size:var(--t3)}
+table.runs td,table.qtable td{vertical-align:top}
+/* the runs list fits the page: the note and the configuration wrap, the numbers do not */
+table.fit th,table.fit td{padding:var(--s2) var(--s3)}
+table.fit thead th{white-space:normal}
+table.fit thead th.group{text-align:center;border-bottom:1px solid var(--line);padding-bottom:var(--s1)}
+table.fit .chip{white-space:normal;display:inline-block;line-height:1.3}
+table.fit .rankn{display:block}
+table.runs td.runcell{min-width:18ch}
+table.runs td.runcell div{margin-top:var(--s1);overflow-wrap:anywhere}
+table.runs td.cfgcell{min-width:12ch}
+a.nw,span.nw{white-space:nowrap}
+.goldstrip div.gold{cursor:default}
+@media (max-width:640px){.runkv{grid-template-columns:minmax(0,1fr)}}
+tr.ours-row td{background:var(--ok-soft)}
+.goldstrip div.gold>.small{overflow-wrap:anywhere;max-width:100%}
+.rule{max-width:var(--measure);margin-top:var(--s4);border-left:3px solid var(--accent);padding:var(--s2) var(--s4);background:var(--panel);border-radius:0 var(--r-sm) var(--r-sm) 0}
+
+/* busy: anything the user is waiting on pulses, so it never reads as static content */
+.busy{position:relative;overflow:hidden;display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin-top:var(--s4);padding:var(--s3) var(--s4) calc(var(--s3) + 3px);max-width:var(--measure);background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);color:var(--ink)}
+.busy-detail{flex-basis:100%;color:var(--ink-2)}
+.busy-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--accent);animation:busy-pulse 1.2s ease-in-out infinite}
+.busy-bar{position:absolute;left:0;bottom:0;height:3px;width:30%;background:var(--accent);animation:busy-slide 1.4s ease-in-out infinite}
+@keyframes busy-pulse{0%,100%{opacity:.35;transform:scale(.75)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes busy-slide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+@keyframes skel-fade{0%,100%{opacity:.35}50%{opacity:.8}}
+.stagecol.skel{border:1px solid var(--accent)}
+.stagecol.skel header b{display:flex;align-items:center;gap:var(--s2)}
+.skel-hit{height:64px;margin-top:var(--s2);border-radius:var(--r-sm);background:var(--accent-soft);border:1px solid var(--line-2);animation:skel-fade 1.4s ease-in-out infinite}
+.skel-hit:nth-child(2){animation-delay:.15s}.skel-hit:nth-child(3){animation-delay:.3s}.skel-hit:nth-child(4){animation-delay:.45s}
+.status.pulsing::before{animation:busy-pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.busy-bar{animation:none;width:100%;opacity:.4}.busy-dot,.status.pulsing::before{animation:skel-fade 2s ease-in-out infinite;transform:none}}

@@ -29,6 +29,15 @@ index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 
 index-visual-overnight: ## the full visual index for DATASET with MODEL (default evie), resumable, the Mac kept awake
 	caffeinate -is uv run vidoreloop index --dataset $(DATASET) --stage visual --model $(or $(MODEL),evie)
 
+split: ## write our fixed train / test split of DATASET's English questions (once; committed)
+	uv run vidoreloop split --dataset $(DATASET)
+
+eval: platform-status ## score a pipeline config on SPLIT (train; test needs FINAL=1): STAGES= DEPTH= WTEXT= WVISUAL= LIMIT= NOTE=
+	uv run vidoreloop eval --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(STAGES),--stages $(STAGES)) $(if $(DEPTH),--depth $(DEPTH)) $(if $(WTEXT),--w-text $(WTEXT)) $(if $(WVISUAL),--w-visual $(WVISUAL)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)")
+
+runs: ## every scored run, newest first
+	uv run vidoreloop runs
+
 dev: ## the API on :$(API_PORT), reloading on code changes (UI: cd frontend && npm run dev → :5175)
 	uv run vidoreloop serve --port $(API_PORT) --reload
 
@@ -55,4 +64,4 @@ lint: ## ruff + mypy (+ frontend design lint when node_modules exist)
 fmt: ## ruff format + fix
 	uv run ruff format src tests && uv run ruff check --fix src tests
 
-.PHONY: help setup datasets download stats pages index index-visual-overnight dev viewer platform-up platform-status smoke test lint fmt
+.PHONY: help setup datasets download stats pages index index-visual-overnight split eval runs dev viewer platform-up platform-status smoke test lint fmt

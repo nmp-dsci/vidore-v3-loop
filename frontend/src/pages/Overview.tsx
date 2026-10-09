@@ -3,18 +3,18 @@ import { type DatasetCard, datasetLabel, fmtN, useGet } from '../lib/api';
 import { Loading } from '../lib/ui';
 
 const BLURB: Record<string, string> = {
-  finance_en: '2024 10-K annual reports of six US banks. Tables carry most answers.',
-  pharmaceuticals: 'FDA / CDER slide decks, 2017–2021. The most charts and infographics.',
-  industrial: 'US Air Force technical orders: maintenance manuals with diagrams. The hardest set.',
-  hr: 'European Commission labour and employment reports, 2024. Charts and tables.',
-  computer_science: 'Two OpenStax textbooks. Most questions are answerable from memory.',
+  finance_en: '2024 10-K reports of six US banks, answered mostly from tables.',
+  pharmaceuticals: 'FDA / CDER slide decks (2017–2021), the most charts and infographics.',
+  industrial: 'US Air Force maintenance manuals with diagrams, the hardest set.',
+  hr: 'European Commission 2024 labour reports, full of charts and tables.',
+  computer_science: 'Two OpenStax textbooks, mostly answerable from memory.',
 };
 
 const MILESTONES: [string, string, 'ok' | 'warn' | 'no'][] = [
   ['M0', 'scaffold: pinned datasets, loader, NDCG@10, smoke, CI', 'ok'],
-  ['M1', 'this viewer: datasets, questions, reference answers, evidence pages with human boxes; the board', 'warn'],
-  ['M2', 'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + the RAG pipeline tab (its answer column lands in M4)', 'no'],
-  ['M3', 'retrieval scored on our finance_en split + Runs tab, our row on the Leaderboard', 'no'],
+  ['M1', 'this viewer: datasets, questions, reference answers, evidence pages with human boxes; the board', 'ok'],
+  ['M2', 'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + the RAG pipeline tab (its answer column lands in M4)', 'warn'],
+  ['M3', 'retrieval scored on our finance_en split + Runs tab, our row on the Leaderboard', 'warn'],
   ['M4', 'Claude answers, judge and reference audit + Review tab', 'no'],
   ['M5', 'the agent + Agent tab', 'no'],
   ['M6', 'the self-improving loop + Optimise tab', 'no'],
@@ -30,9 +30,7 @@ export function Overview() {
         Five English corpora of real PDFs, where the answer often sits in <em>a table, chart or diagram</em>
       </h1>
       <p className="lead">
-        Each question comes with human-graded relevant pages, human boxes around the evidence, and a reference answer.
-        Review them here before anything is built on top. The plan is{' '}
-        <code>.lavish/s00_vidore-v3-research-plan.html</code>; the first dataset is finance.
+        Every question has human-graded pages, evidence boxes and a reference answer to review before anything is built on top.
       </p>
       {!data ? (
         <Loading error={error} what="datasets" />
@@ -58,8 +56,7 @@ export function Overview() {
         </div>
       )}
       <p className="small muted">
-        “Answerable blind” is the share of questions at least one of six LLMs answered with no documents (arXiv
-        2601.08620 Table 22): a high share tests model memory, not the system.
+        “Answerable blind” is the share of questions an LLM answered with no documents (arXiv 2601.08620 Table 22).
       </p>
 
       <h2>Milestones — each ships a backend and the tab that shows it</h2>

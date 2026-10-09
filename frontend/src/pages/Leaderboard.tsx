@@ -1,7 +1,19 @@
-import { type Board, datasetLabel, useGet } from '../lib/api';
+import { Link } from 'react-router-dom';
+import { type Board, type OurRow, type Stage, STAGES, STAGE_LABEL, datasetLabel, pct1, useGet } from '../lib/api';
 import { Loading } from '../lib/ui';
 
 const TOP_MODELS = 15;
+
+const ourShortKind = (s: Stage) =>
+  ({ text: 'text', visual: 'visual LI', fused: 'visual LI + text', reranked: 'visual LI + text + reranker' })[s];
+function ourKind(s: Stage, o: OurRow) {
+  const visual = o.models.visual?.split('/')[1] ?? 'visual';
+  const [wt, wv] = o.config.weights;
+  if (s === 'text') return 'BM25 on the OCR text';
+  if (s === 'visual') return visual;
+  const fused = `${visual} + BM25, fused ${wt}:${wv}`;
+  return s === 'fused' ? fused : `${fused}, zerank-2 on the top ${o.config.rerank_depth}`;
+}
 
 /** `/leaderboard` — the two retrieval boards and the paper's answer and grounding tables. */
 export function Leaderboard() {
@@ -23,9 +35,7 @@ export function Leaderboard() {
         An agent that re-reads the pages leads retrieval at <em>74.6 NDCG@10</em>; no board scores answers
       </h1>
       <p className="lead">
-        Retrieval has two boards: the ViDoRe pipeline board and MTEB's single-model board. Both are shown on English
-        queries, where they agree (nemotron-colembed-vl-8b-v2 scores 69.1 on each). Answer accuracy and grounding exist
-        only in the paper. Our own rows arrive in M3 (retrieval) and M4 (answers).
+        Two retrieval boards (ViDoRe pipelines and MTEB single models) on English queries, plus the paper's answer and grounding tables.
       </p>
 
       <dl className="kinds">
@@ -65,10 +75,39 @@ export function Leaderboard() {
                 <td className="small">{p.latency ?? '—'}</td>
               </tr>
             ))}
+            {b.ours.flatMap((o) =>
+              STAGES.filter((s) => o.ndcg_10[s] != null).map((s) => (
+                <tr key={`${o.run_id}-${s}`} className="ours-row">
+                  <td className="sub wrap">
+                    <Link to={`/runs/${o.run_id}`}>ours · {STAGE_LABEL[s][0]}</Link>
+                    <div className="small muted">
+                      {ourKind(s, o)} · our test split, {o.n} questions
+                    </div>
+                  </td>
+                  <td>{ourShortKind(s)}</td>
+                  {b.datasets.map((d) => (
+                    <td key={d} className="num">
+                      {d === o.dataset ? pct1(o.ndcg_10[s]) : '—'}
+                    </td>
+                  ))}
+                  <td className="num muted">—</td>
+                  <td className="small">local, Apple M1 Pro</td>
+                </tr>
+              )),
+            )}
           </tbody>
         </table>
       </div>
-      <p className="small muted">NDCG@10 over pages, English queries. Source: github.com/illuin-tech/vidore-benchmark results/metrics (last entry 2026-03-13).</p>
+      <p className="small muted">NDCG@10 on English queries, from illuin-tech/vidore-benchmark (last entry 2026-03-13).</p>
+      {b.ours.length > 0 ? (
+        <p className="small muted">
+          Our rows are scored once on our test half, so they are close to, not exactly, like for like.
+        </p>
+      ) : (
+        <p className="small muted">
+          Our rows appear once a configuration chosen on train is scored on test.
+        </p>
+      )}
 
       <h2>Single models — MTEB ViDoRe(v3), top {TOP_MODELS} of {b.models.length}</h2>
       <div className="tw">
@@ -101,9 +140,8 @@ export function Leaderboard() {
         </table>
       </div>
       <p className="small muted">
-        English-query NDCG@10 from embeddings-benchmark/results (2026-09-26), committed as{' '}
-        <code>docs/research/mteb_vidore3_scores_2026-09-28.json</code>. The official MTEB number averages six query
-        languages and ten datasets, so it runs lower.
+        English-query NDCG@10 from embeddings-benchmark/results (2026-09-26), saved in{' '}
+        <code>docs/research/mteb_vidore3_scores_2026-09-28.json</code>.
       </p>
 
       <h2>Answers — the paper's end-to-end table</h2>
@@ -135,7 +173,7 @@ export function Leaderboard() {
           </tbody>
         </table>
       </div>
-      <p className="small muted">% judged correct. Judge: {b.answers.judge}. arXiv 2601.08620 v2 Table 3; the no-document row from Table 22.</p>
+      <p className="small muted">% judged correct by {b.answers.judge} (arXiv 2601.08620 v2, Tables 3 and 22).</p>
 
       <h2>Grounding — boxes around the evidence</h2>
       <div className="tw">
@@ -162,7 +200,7 @@ export function Leaderboard() {
           </tbody>
         </table>
       </div>
-      <p className="small muted">{b.grounding.metric}. arXiv 2601.08620 v2 Tables 20–21.</p>
+      <p className="small muted">{b.grounding.metric} (arXiv 2601.08620 v2, Tables 20–21).</p>
     </>
   );
 }

@@ -1,8 +1,9 @@
 """The API behind the viewer, and the viewer itself when `frontend/dist` exists.
 
-Every route reads the pinned datasets (through the local cache) or a committed
-file. No route calls a model and none writes, except the page cache, which fills
-itself from the Hub the first time a page is opened.
+Most routes read the pinned datasets (through the local cache) or a committed
+file. Two do more: `POST /api/search` runs the retrieval models (M2), and
+`POST /api/runs` starts a scored run in a background thread of this process (M3),
+which writes its folder under `runs/`. No route calls a paid model.
 """
 
 from __future__ import annotations
@@ -30,6 +31,20 @@ class SearchIn(BaseModel):
     query_id: int | None = None
     stages: list[str] = ["text", "visual", "fused", "reranked"]
     rerank_depth: int = 20
+
+
+class RunIn(BaseModel):
+    """A scored run (M3): a pipeline configuration on one split."""
+
+    dataset: str
+    split: str = "train"
+    stages: list[str] = ["text", "visual", "fused", "reranked"]
+    rerank_depth: int = 20
+    weights: list[float] = [1.0, 1.0]
+    note: str = ""
+    limit: int | None = None
+    final: bool = False
+    force: bool = False
 
 
 def _dataset(key: str) -> registry.Dataset:
@@ -158,10 +173,165 @@ def create_app() -> FastAPI:
 
     @app.get("/api/leaderboard")
     def leaderboard() -> dict[str, Any]:
-        return board.leaderboard()
+        from vidore_loop.eval import runs
+
+        return {**board.leaderboard(), "ours": _ours(runs.list_runs())}
+
+    @app.get("/api/split/{key}")
+    def split_info(key: str) -> dict[str, Any]:
+        _dataset(key)
+        from vidore_loop.eval import split
+
+        try:
+            doc = split.load(key)
+        except FileNotFoundError as e:
+            raise HTTPException(404, str(e)) from e
+        by_q = {int(q["query_id"]): q for q in catalog.queries(key)}
+        strata: dict[str, dict[str, int]] = {}
+        for which in split.SPLITS:
+            for qid in doc[which]:
+                name = split.stratum(by_q[int(qid)])
+                strata.setdefault(name, {"train": 0, "test": 0})[which] += 1
+        return {
+            "dataset": key,
+            "seed": doc["seed"],
+            "stratified_by": doc["stratified_by"],
+            "n": doc["n"],
+            "fingerprint": split.fingerprint(key),
+            "strata": [{"stratum": k, **v} for k, v in sorted(strata.items())],
+        }
+
+    @app.get("/api/runs")
+    def list_runs() -> list[dict[str, Any]]:
+        from vidore_loop.eval import runs
+
+        return [{k: v for k, v in r.items() if k != "slices"} for r in runs.list_runs()]
+
+    @app.post("/api/runs")
+    def start_run(body: RunIn) -> dict[str, Any]:
+        _dataset(body.dataset)
+        from vidore_loop.eval import runs
+        from vidore_loop.retrieval import pipeline
+
+        if len(body.weights) != 2:
+            raise HTTPException(422, "weights are [text, visual]")
+        cfg = runs.RunConfig(
+            dataset=body.dataset,
+            split=body.split,
+            stages=tuple(st for st in body.stages if st in pipeline.STAGES),
+            rerank_depth=max(1, min(body.rerank_depth, 50)),
+            weights=(body.weights[0], body.weights[1]),
+            note=body.note,
+            limit=body.limit or None,
+        )
+        try:
+            return {"run_id": runs.start(cfg, final=body.final, force=body.force)}
+        except runs.TestSplitGuardError as e:
+            raise HTTPException(409, str(e)) from e
+        except runs.RunBusyError as e:
+            raise HTTPException(409, str(e)) from e
+        except (ValueError, FileNotFoundError) as e:
+            raise HTTPException(422, str(e)) from e
+
+    @app.get("/api/runs/{run_id}")
+    def get_run(run_id: str) -> dict[str, Any]:
+        from vidore_loop.eval import runs
+
+        try:
+            return runs.get(run_id)
+        except KeyError as e:
+            raise HTTPException(404, f"no run {run_id}") from e
+
+    @app.get("/api/runs/{run_id}/queries")
+    def run_queries(run_id: str) -> list[dict[str, Any]]:
+        from vidore_loop.eval import runs
+
+        try:
+            recs = runs.queries(run_id)
+        except KeyError as e:
+            raise HTTPException(404, f"no run {run_id}") from e
+        keep = ("ndcg_10", "recall_10", "first_rank", "first_full_rank", "hit_full_10")
+        return [
+            {
+                "query_id": r["query_id"],
+                "query": r["query"],
+                "query_types": r["query_types"],
+                "content_type": r["content_type"],
+                "query_format": r["query_format"],
+                "author": "person" if r["query_generator"] == "human" else "synthetic",
+                "n_gold": len(r["gold"]),
+                "n_full": sum(1 for g in r["gold"].values() if g == 2),
+                "stages": {st: {k: v["metrics"][k] for k in keep} for st, v in r["stages"].items()},
+            }
+            for r in recs
+        ]
+
+    @app.get("/api/runs/{run_id}/queries/{query_id}")
+    def run_query(run_id: str, query_id: int) -> dict[str, Any]:
+        from vidore_loop.eval import runs
+
+        try:
+            recs = runs.queries(run_id)
+            doc = runs.get(run_id)
+        except KeyError as e:
+            raise HTTPException(404, f"no run {run_id}") from e
+        rec = next((r for r in recs if r["query_id"] == query_id), None)
+        if rec is None:
+            raise HTTPException(404, f"query {query_id} is not in run {run_id}")
+        key = doc["dataset"]
+        index = pages.page_index(key)
+        gold = {int(c): g for c, g in rec["gold"].items()}
+
+        def page(cid: int, rank: int | None = None) -> dict[str, Any]:
+            e = index.get(cid, {})
+            return {
+                "corpus_id": cid,
+                "rank": rank,
+                "doc_id": e.get("doc_id"),
+                "page": e.get("page"),
+                "grade": gold.get(cid, 0),
+            }
+
+        stages = {}
+        for st, v in rec["stages"].items():
+            ranking = v["ranking"]
+            pos = {cid: i for i, cid in enumerate(ranking, start=1)}
+            stages[st] = {
+                **{k: v[k] for k in v if k != "ranking"},
+                "top": [page(cid, i) for i, cid in enumerate(ranking[:10], start=1)],
+                "gold_ranks": {str(cid): pos.get(cid) for cid in gold},
+            }
+        return {
+            **{k: rec[k] for k in rec if k not in ("stages", "gold")},
+            "run_id": run_id,
+            "dataset": key,
+            "gold": [page(c) for c in sorted(gold, key=lambda c: (-gold[c], c))],
+            "stages": stages,
+        }
 
     _mount_frontend(app)
     return app
+
+
+def _ours(all_runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Our leaderboard rows: every finished final run on the test split, newest first."""
+    out = []
+    for r in all_runs:
+        if r.get("split") != "test" or not r.get("final") or r.get("status") != "finished":
+            continue
+        out.append(
+            {
+                "run_id": r["run_id"],
+                "dataset": r["dataset"],
+                "label": r["label"],
+                "n": r["n"],
+                "models": r["models"],
+                "config": r["config"],
+                "ndcg_10": {s: m["ndcg_10"]["mean"] for s, m in (r.get("summary") or {}).items()},
+                "costs": r.get("costs"),
+            }
+        )
+    return out
 
 
 def _mount_frontend(app: FastAPI) -> None:
@@ -180,4 +350,5 @@ def _mount_frontend(app: FastAPI) -> None:
         candidate = (FRONTEND_DIST / path).resolve()
         if path and candidate.is_file() and FRONTEND_DIST.resolve() in candidate.parents:
             return FileResponse(candidate)
-        return FileResponse(index)
+        # the bundles are content-hashed; index.html must be re-checked so a rebuild shows up
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})

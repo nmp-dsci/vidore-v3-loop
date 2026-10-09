@@ -24,8 +24,7 @@ export function Datasets() {
         Pick a corpus, then read its questions <em>against the evidence</em>
       </h1>
       <p className="lead">
-        English queries only. Each question opens beside its list with the reference answer, the human answers it was
-        merged from, and every relevant page with the annotators' boxes drawn on it.
+        English questions only; open one to see its reference answer and the annotators' boxes on every relevant page.
       </p>
       <DatasetChips />
       {!data ? (
@@ -182,8 +181,8 @@ export function Dataset() {
         <section className="qopen" aria-label="the open question">
           {open == null ? (
             <p className="empty">
-              Open a question on the left. <span className="mono">j</span> and <span className="mono">k</span> step
-              through the filtered list.
+              Open a question on the left; <span className="mono">j</span> and <span className="mono">k</span> step
+              through the list.
             </p>
           ) : (
             <QuestionView

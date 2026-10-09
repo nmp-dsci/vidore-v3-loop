@@ -11,10 +11,10 @@ const NAV: [string, string][] = [
   ['/', 'Overview'],
   ['/datasets', 'Datasets & questions'],
   ['/pipeline', 'RAG pipeline'],
+  ['/runs', 'Runs'],
   ['/leaderboard', 'Leaderboard'],
 ];
 const LATER: [string, string][] = [
-  ['Runs', 'M3'],
   ['Review', 'M4'],
   ['Agent', 'M5'],
   ['Optimise', 'M6'],
@@ -53,10 +53,8 @@ export function Shell() {
         <Outlet />
       </main>
       <footer>
-        Questions, answers, relevance grades and boxes are read from the pinned ViDoRe V3 datasets on the Hugging
-        Face Hub (<code>src/vidore_loop/data/registry.py</code>); board numbers from <code>docs/research/</code>.
-        Page images: SEC and FDA (public domain), USAF technical orders (distribution A), European Commission and
-        OpenStax (CC BY 4.0). Build <code>{health?.code_sha ?? '…'}</code>.{' '}
+        Data from the pinned ViDoRe V3 datasets; page images from SEC and FDA (public domain), USAF (distribution A),
+        European Commission and OpenStax (CC BY 4.0) · build <code>{health?.code_sha ?? '…'}</code> ·{' '}
         <a href="https://github.com/nmp-dsci/vidore-v3-loop">Source</a> ·{' '}
         <a href="https://huggingface.co/blog/QuentinJG/introducing-vidore-v3">ViDoRe V3</a>.
       </footer>

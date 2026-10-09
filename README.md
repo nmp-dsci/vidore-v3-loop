@@ -74,5 +74,5 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
 | M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | done |
-| M2 retrieval pipeline + RAG pipeline tab | built, in review: BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
-| M3 retrieval scored + Runs | built, in review: finance_en split 155/154; on train every text weight lowered NDCG@10 and the reranker (depth 20) did not beat visual alone (74.8, 75.4 vs 75.8), so the champion is fusion with text weight 0. Scored once on test: **NDCG@10 70.0** (text alone 45.2) |
+| M2 retrieval pipeline + RAG pipeline tab | done (reviewed 2026-10-09): BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
+| M3 retrieval scored + Runs | done (reviewed 2026-10-09): finance_en split 155/154; on train every text weight lowered NDCG@10 and the reranker (depth 20) did not beat visual alone (74.8, 75.4 vs 75.8), so the champion is fusion with text weight 0. Scored once on test: **NDCG@10 70.0** (text alone 45.2) |

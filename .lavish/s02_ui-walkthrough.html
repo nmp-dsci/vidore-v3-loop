@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewer Walkthrough</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — colour, type and space come from house.css */
+  .live{ background:var(--panel); border:1px solid var(--accent); border-radius:var(--r); padding:var(--s5); margin-top:var(--s5);
+         box-shadow:0 0 0 1px var(--accent-soft) inset; }
+  .live h2{ margin-bottom:var(--s2); }
+  .picks{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:var(--s2); margin:var(--s3) 0; }
+  .pick{ display:flex; gap:var(--s2); align-items:flex-start; border:1px solid var(--line-2); border-radius:var(--r-sm);
+         padding:var(--s2) var(--s3); background:var(--bg); cursor:pointer; font-size:var(--t-1); }
+  .pick:has(input:checked){ border-color:var(--accent); background:var(--accent-wash); }
+  .pick input{ margin-top:4px; accent-color:var(--accent); flex:none; }
+  .pick b{ color:var(--ink); }
+  .pick .d{ display:block; color:var(--muted); font-size:var(--t-2); }
+  .liverow{ display:flex; flex-wrap:wrap; gap:var(--s3); align-items:center; margin-top:var(--s3); }
+  .liverow input[type=text]{ flex:1 1 260px; width:auto; }
+  .liverow select{ font:inherit; font-size:var(--t-1); background:var(--bg); color:var(--ink); border:1px solid var(--line-2);
+         border-radius:var(--r-sm); padding:var(--s1) var(--s2); }
+  a.go{ display:inline-block; font-weight:600; font-size:var(--t-1); padding:var(--s2) var(--s4); border-radius:var(--r-sm);
+        background:var(--accent); color:var(--accent-ink); text-decoration:none; }
+  a.go:hover{ filter:brightness(1.08); }
+  .urlpeek{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); overflow-wrap:anywhere; margin-top:var(--s2); }
+  .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--line-3); margin-right:6px; vertical-align:middle; }
+  .dot.up{ background:var(--accent); } .dot.down{ background:var(--red); }
+
+  .walk{ display:grid; gap:var(--s7); margin-top:var(--s5); }
+  .wstep{ display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:var(--s5); align-items:start; }
+  .wstep.wide{ grid-template-columns:minmax(0,1fr); }
+  @media (max-width:900px){ .wstep{ grid-template-columns:minmax(0,1fr); } }
+  .wstep .num{ font-family:var(--mono); font-size:var(--t-2); color:var(--accent); letter-spacing:var(--track-label); text-transform:uppercase; }
+  .wstep h3{ font-family:var(--serif); font-weight:400; font-size:var(--t2); margin:var(--s1) 0 var(--s2); }
+  .wstep .route{ display:flex; flex-wrap:wrap; gap:var(--s2); align-items:center; margin-bottom:var(--s3); }
+  .wstep ul{ padding-left:var(--s4); margin:0 0 var(--s3); font-size:var(--t-1); }
+  .wstep li{ margin:4px 0; }
+  .try{ font-size:var(--t-1); border-left:3px solid var(--accent); padding:var(--s1) var(--s3); background:var(--accent-wash);
+        border-radius:0 var(--r-sm) var(--r-sm) 0; margin-bottom:var(--s3); }
+  .built{ font-size:var(--t-2); color:var(--muted); }
+  .built code{ font-size:var(--t-2); }
+  .shot{ display:block; border:1px solid var(--line-2); border-radius:var(--r); overflow:hidden; background:var(--band); }
+  .shot img{ display:block; width:100%; height:auto; }
+  .shot.tall{ max-height:720px; overflow-y:auto; }
+  a.open{ font-size:var(--t-2); font-family:var(--mono); }
+
+  .rank-in{ color:var(--accent); font-weight:600; }
+  .rank-out{ color:var(--red); }
+  td.bad{ color:var(--red); }
+
+  .review td select, .review td input{ font:inherit; font-size:var(--t-2); background:var(--bg); color:var(--ink);
+        border:1px solid var(--line-2); border-radius:var(--r-sm); padding:2px var(--s1); width:100%; }
+  .review td:first-child{ white-space:nowrap; }
+</style>
+</head>
+<body>
+<main>
+
+<span class="eyebrow">vidore-v3-loop · M2 review · the viewer, step by step</span>
+<h1>Walk the viewer, then <em>run a live search</em></h1>
+<p class="lede">Everything M0–M2 built is visible in the viewer at <code>localhost:8083</code>. This page walks through it screen
+by screen with real screenshots taken today, and the panel below opens any finance question in the live viewer so you can
+watch all four retrieval stages run.</p>
+
+<div class="verdict">
+  <div class="stat accent"><div class="n">2,942</div><div class="l">finance pages in the visual index (EVIE-4.5B), complete</div></div>
+  <div class="stat accent"><div class="n">72.9</div><div class="l">visual NDCG@10 over all 309 English questions; the board lists EVIE at 72.3</div></div>
+  <div class="stat"><div class="n">0.25 → 0.95</div><div class="l">q181's NDCG@10 from keyword search to the reranker: answer page #7 → #1</div></div>
+  <div class="stat amber"><div class="n">64.4</div><div class="l">fusion scores below visual alone: the first thing M3 has to fix</div></div>
+</div>
+
+<!-- ===================================================================== -->
+<section id="live" style="border-top:0;margin-top:var(--s6);padding-top:0">
+<div class="live">
+  <span class="eyebrow">live search · opens the real viewer in a new tab</span>
+  <h2>Run a question through every stage</h2>
+  <p class="sub" style="margin-bottom:0"><span class="dot" id="vdot"></span><span id="vstate">checking the viewer on localhost:8083…</span></p>
+
+  <div class="picks" role="radiogroup" aria-label="question">
+    <label class="pick"><input type="radio" name="q" value="181" checked><span><b>q181 · the reranker rescue</b><span class="d">Morgan Stanley deposits. Answer page #7 → #3 → #4 → <b>#1</b></span><span class="d">instant (already scored)</span></span></label>
+    <label class="pick"><input type="radio" name="q" value="17"><span><b>q17 · visual wins, fusion buries it</b><span class="d">BofA preferred stock. Keyword #19, visual <b>#1</b>, fused #5</span><span class="d">instant</span></span></label>
+    <label class="pick"><input type="radio" name="q" value="142"><span><b>q142 · a chart</b><span class="d">Morgan Stanley revenue split. Keyword #11, visual <b>#2</b></span><span class="d">instant</span></span></label>
+    <label class="pick"><input type="radio" name="q" value="40"><span><b>q40 · stock-return chart</b><span class="d">Citigroup vs S&amp;P 500 financials. Keyword #3, visual <b>#1</b>, reranked #1</span><span class="d">instant</span></span></label>
+    <label class="pick"><input type="radio" name="q" value="id"><span><b>Any question by id</b><span class="d">ids as listed on the Datasets tab (they aren't contiguous)</span><input type="text" id="qid" inputmode="numeric" placeholder="e.g. 5" style="margin-top:4px"></span></label>
+    <label class="pick"><input type="radio" name="q" value="free"><span><b>Your own words</b><span class="d">no gold pages, so no metrics: you judge the hits</span><input type="text" id="qfree" placeholder="e.g. Wells Fargo CET1 ratio 2024" style="margin-top:4px"></span></label>
+  </div>
+  <div class="liverow">
+    <label class="small">rerank the top
+      <select id="depth"><option value="10">10 pages</option><option value="20" selected>20 pages</option><option value="50">50 pages</option></select>
+    </label>
+    <a class="go" id="golink" href="http://localhost:8083/pipeline?dataset=finance_en&amp;qid=181" target="_blank" rel="noopener">Open in the viewer ↗</a>
+  </div>
+  <div class="urlpeek" id="urlpeek">http://localhost:8083/pipeline?dataset=finance_en&amp;qid=181</div>
+  <p class="small" style="margin-top:var(--s3);max-width:var(--measure)">Finance only: it's the one dataset with both indexes built. A question nobody has run
+  before takes about a minute at depth 20 (the reranker reads each new page in ≈3.2 s); after that it's cached and instant. If the
+  viewer was restarted, the first visual search also loads EVIE (≈30 s). It opens in a new tab because this review page runs in
+  a sandbox that would block the viewer's own API calls inside a frame.</p>
+</div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="walk">
+  <span class="eyebrow">the walkthrough · 12 stops</span>
+  <h2>Every screen, in the order you'd use it</h2>
+  <p class="sub">Each stop has the screenshot, what each part means, one thing to try, and where it lives in the code. The
+  "open live" links go to the same screen in the running viewer.</p>
+
+  <div class="walk">
+
+  <!-- S1 -->
+  <div class="wstep" id="s1">
+    <div>
+      <span class="num">S1 · Overview</span>
+      <h3>What the project is, and where it stands</h3>
+      <div class="route"><code>/</code><a class="open" href="http://localhost:8083/" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>The five English corpora as cards: questions, pages, documents, and "answerable blind" (how often a model answers with no documents at all — high means the dataset tests memory, not retrieval).</li>
+        <li>The milestone table. I updated it today: <b>M1 done</b>, <b>M2 in review</b> (it still said M2 "designed").</li>
+        <li>The badge top right, "read only · no Claude": nothing in M0–M2 calls a model you pay for.</li>
+      </ul>
+      <p class="built">Built in <code>frontend/src/pages/Overview.tsx</code>; numbers from <code>/api/datasets</code>.</p>
+    </div>
+    <a class="shot tall" href="assets/ui/overview.png" target="_blank"><img src="assets/ui/overview.png" alt="Overview: dataset cards and the milestone table"></a>
+  </div>
+
+  <!-- S2 -->
+  <div class="wstep" id="s2">
+    <div>
+      <span class="num">S2 · Datasets &amp; questions</span>
+      <h3>Pick a corpus</h3>
+      <div class="route"><code>/datasets</code><a class="open" href="http://localhost:8083/datasets" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>One row per English dataset, with the <b>pinned revision</b> each is loaded at: the numbers can't drift if the Hub dataset changes.</li>
+        <li>The footer names the licences of the page images (SEC and FDA filings are public domain, the rest CC BY 4.0 or distribution A).</li>
+      </ul>
+      <p class="built">Built in <code>pages/Datasets.tsx</code> (<code>Datasets</code>); revisions in <code>src/vidore_loop/data/registry.py</code>.</p>
+    </div>
+    <a class="shot" href="assets/ui/datasets.png" target="_blank"><img src="assets/ui/datasets.png" alt="The datasets table"></a>
+  </div>
+
+  <!-- S3 -->
+  <div class="wstep" id="s3">
+    <div>
+      <span class="num">S3 · One corpus's questions</span>
+      <h3>Filter 309 finance questions</h3>
+      <div class="route"><code>/datasets/finance_en</code><a class="open" href="http://localhost:8083/datasets/finance_en" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>Four summary cards: questions (215 written by people, 94 synthetic), relevant pages per question, documents, and how many references have been hand-checked.</li>
+        <li>Filters on the left: search text or a query id, <b>type</b> (extractive, numerical, multi-hop…), <b>content</b> (Table, Chart, Text…), <b>format</b>, <b>author</b>, and <b>hand check</b>.</li>
+        <li>Every row shows its type, content and how many pages answer it.</li>
+      </ul>
+      <p class="try"><b>Try:</b> content = Chart (20 questions), then press <kbd>j</kbd> / <kbd>k</kbd> to step through them without the mouse.</p>
+      <p class="built">Built in <code>pages/Datasets.tsx</code> (<code>Dataset</code>) and <code>lib/filter.ts</code> (unit-tested).</p>
+    </div>
+    <a class="shot tall" href="assets/ui/dataset.png" target="_blank"><img src="assets/ui/dataset.png" alt="The finance question list with filters"></a>
+  </div>
+
+  <!-- S4 -->
+  <div class="wstep" id="s4">
+    <div>
+      <span class="num">S4 · One question</span>
+      <h3>The question, its answer, and the evidence pages</h3>
+      <div class="route"><code>/datasets/finance_en/181</code><a class="open" href="http://localhost:8083/datasets/finance_en/181" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>The question with its tags, and <b>the reference answer</b> plus the human answer(s) it was merged from.</li>
+        <li><b>Hand check</b>: my own check of the reference against the page. Here it <i>holds</i>; two of the five demo references I checked were wrong (pharma q313, hr q189).</li>
+        <li><b>Evidence</b>: every relevant page, graded <span class="badge ok">full · 2</span> (holds the whole answer) or <span class="badge warn">part · 1</span>. Each opens large with the <b>annotators' boxes</b> drawn on it; <b>OCR text</b> shows the page's text as the keyword channel reads it.</li>
+        <li><b>Run retrieval on this question →</b> jumps to the RAG pipeline tab with this question loaded.</li>
+      </ul>
+      <p class="built">Built in <code>pages/Datasets.tsx</code> and <code>lib/page.tsx</code> (<code>PageView</code>: image, SVG boxes, OCR toggle).</p>
+    </div>
+    <a class="shot tall" href="assets/ui/question.png" target="_blank"><img src="assets/ui/question.png" alt="Question q181 with reference answer and evidence"></a>
+  </div>
+
+  <!-- S5 -->
+  <div class="wstep wide" id="s5">
+    <div>
+      <span class="num">S5 · RAG pipeline: the controls</span>
+      <h3>One question, four stages, scored against the gold pages</h3>
+      <div class="route"><code>/pipeline?dataset=finance_en&amp;qid=181</code><a class="open" href="http://localhost:8083/pipeline?dataset=finance_en&qid=181" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li><b>The status line</b>: text index ● · visual index ● EVIE-4.5B · 2,942 pages · reranker ready. Green means complete; it said "(partial)" until this morning.</li>
+        <li><b>The four stages</b>, each a toggle: <b>A · text</b> (BM25 keyword search on the OCR text) · <b>B · visual</b> (EVIE reads the page image) · <b>C · fused</b> (the two lists merged by rank) · <b>D · reranked</b> (zerank-2 rereads the top of the fused list).</li>
+        <li><b>Rerank the top</b> 10, 20 or 50 pages: deeper is slower the first time and can rescue pages fusion pushed down.</li>
+        <li>The URL holds the question, so every run is a link you can share or bookmark.</li>
+      </ul>
+    </div>
+    <a class="shot" href="assets/ui/p_controls.png" target="_blank"><img src="assets/ui/p_controls.png" alt="Pipeline controls: status line, stage toggles, rerank depth, question card"></a>
+  </div>
+
+  <!-- S6 -->
+  <div class="wstep" id="s6">
+    <div>
+      <span class="num">S6 · The gold strip</span>
+      <h3>Where each stage put each right page</h3>
+      <ul>
+        <li>One thumbnail per gold page, with its grade, and its rank under A, B, C and D. Green = in the top 10.</li>
+        <li>For q181 the full-answer page goes <b>#7 → #3 → #4 → #1</b>. The part-answer page goes #29 → #5 → <b>#11</b> → #3: fusion pushes it out of the top 10 and the reranker brings it back.</li>
+        <li>Coverage at a glance, including pages no stage found ("—").</li>
+      </ul>
+      <p class="built"><code>GoldStrip</code> in <code>pages/Pipeline.tsx</code>.</p>
+    </div>
+    <a class="shot" href="assets/ui/p_gold.png" target="_blank"><img src="assets/ui/p_gold.png" alt="Gold strip with per-stage ranks"></a>
+  </div>
+
+  <!-- S7 -->
+  <div class="wstep" id="s7">
+    <div>
+      <span class="num">S7 · The metrics table</span>
+      <h3>Every retrieval metric, per stage</h3>
+      <ul>
+        <li><b>NDCG@10</b> (the leaderboard's metric), <b>Recall@1/5/10/50/100</b>, <b>Complete@10/50</b> (every gold page found), <b>Full-answer hit@5/10</b>, <b>Precision@5/10</b>, <b>MRR</b>, first gold and first full-answer rank, <b>MAP@10</b>, and each stage's latency.</li>
+        <li>Each row says what it measures in plain words.</li>
+        <li>One function computes these here and in M3's runs, and its NDCG@10, MAP@10, Recall@5/100, Precision@10 and MRR are checked against <code>pytrec_eval</code> (the standard TREC scorer) in the tests.</li>
+      </ul>
+      <p class="built"><code>MetricsTable</code> in <code>pages/Pipeline.tsx</code>; maths in <code>src/vidore_loop/eval/metrics.py</code> (<code>report</code>).</p>
+    </div>
+    <a class="shot tall" href="assets/ui/p_metrics.png" target="_blank"><img src="assets/ui/p_metrics.png" alt="Metrics table, four stages"></a>
+  </div>
+
+  <!-- S8 -->
+  <div class="wstep wide" id="s8">
+    <div>
+      <span class="num">S8 · The four columns</span>
+      <h3>Each stage's top 10, side by side</h3>
+      <ul>
+        <li>Every hit shows its rank, a thumbnail, document and page, and its grade: <span class="badge ok">full · 2</span> <span class="badge warn">part · 1</span> <span class="badge">not gold</span>.</li>
+        <li>Text and fused hits list the <b>question words BM25 matched</b> on the page. q181's top keyword hits are <i>other banks'</i> deposit tables: they match "deposits" and "uninsured" but not Morgan Stanley.</li>
+        <li>The reranker's header says how many pages it scored now vs read from its cache.</li>
+      </ul>
+      <p class="try"><b>Try:</b> turn a stage off with its toggle; the columns, the table and the gold strip all follow.</p>
+    </div>
+    <a class="shot tall" href="assets/ui/p_columns.png" target="_blank"><img src="assets/ui/p_columns.png" alt="Four stage columns of hits"></a>
+  </div>
+
+  <!-- S9 -->
+  <div class="wstep" id="s9">
+    <div>
+      <span class="num">S9 · What each stage changed</span>
+      <h3>Gold pages gained and lost</h3>
+      <ul>
+        <li>Which gold pages entered or left the top 10 at each step, by corpus id.</li>
+        <li>q181: fusion <b>lost</b> page 2225 (the part-answer page) that visual had in its top 10; the reranker <b>won it back</b>.</li>
+      </ul>
+      <p class="built"><code>Deltas</code> in <code>pages/Pipeline.tsx</code>; computed in <code>retrieval/pipeline.py</code>.</p>
+    </div>
+    <a class="shot" href="assets/ui/p_deltas.png" target="_blank"><img src="assets/ui/p_deltas.png" alt="Deltas table"></a>
+  </div>
+
+  <!-- S10 -->
+  <div class="wstep" id="s10">
+    <div>
+      <span class="num">S10 · Open a hit</span>
+      <h3>Why it ranked where it did, and the page itself</h3>
+      <ul>
+        <li>Click any hit or gold thumbnail: its <b>rank in every stage</b>, the <b>question words found on the page</b>, and whether it's gold.</li>
+        <li>Below, the page large, with the annotators' boxes. Here, Morgan Stanley's 10-K p.119, the box around the <b>Deposits</b> table: total 376,007, not FDIC-insured 77,656.</li>
+      </ul>
+      <p class="built"><code>WhyRanked</code> + <code>PageView</code>.</p>
+    </div>
+    <a class="shot tall" href="assets/ui/p_open.png" target="_blank"><img src="assets/ui/p_open.png" alt="Open hit: ranks per stage, matched words, page with box"></a>
+  </div>
+
+  <!-- S11 -->
+  <div class="wstep" id="s11">
+    <div>
+      <span class="num">S11 · Your own words</span>
+      <h3>Free-text search, no gold</h3>
+      <div class="route"><code>/pipeline?dataset=finance_en&amp;q=…</code><a class="open" href="http://localhost:8083/pipeline?dataset=finance_en&q=Wells%20Fargo%20CET1%20ratio%202024" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>Type anything in the box and press Run. With no gold pages there's no strip and no metrics: you judge the hits.</li>
+        <li>"Wells Fargo CET1 ratio 2024": keyword search mixes in Citigroup and JPMorgan pages; visual's top 7 are all Wells Fargo; the reranker settles on Wells Fargo p.137 and p.139.</li>
+      </ul>
+    </div>
+    <a class="shot tall" href="assets/ui/p_free.png" target="_blank"><img src="assets/ui/p_free.png" alt="Free-text search results"></a>
+  </div>
+
+  <!-- S12 -->
+  <div class="wstep" id="s12">
+    <div>
+      <span class="num">S12 · Leaderboard</span>
+      <h3>Where the field is</h3>
+      <div class="route"><code>/leaderboard</code><a class="open" href="http://localhost:8083/leaderboard" target="_blank" rel="noopener">open live ↗</a></div>
+      <ul>
+        <li>The ViDoRe pipeline board (best: an agentic retriever at 74.6 mean, 75.9 on finance) and MTEB's single-model board on English queries.</li>
+        <li>A glossary of the "kind" column: visual / text, LI (late interaction), dense, + reranker, + LLM agent.</li>
+        <li>Our own row arrives in M3, scored on our split.</li>
+      </ul>
+      <p class="built"><code>pages/Leaderboard.tsx</code>; data in <code>docs/research/</code>.</p>
+    </div>
+    <a class="shot tall" href="assets/ui/leaderboard.png" target="_blank"><img src="assets/ui/leaderboard.png" alt="Leaderboard tables"></a>
+  </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="stories">
+  <span class="eyebrow">three questions worth running</span>
+  <h2>What the stages do, question by question</h2>
+  <p class="sub">Rank of the first full-answer page, and NDCG@10, at each stage. Measured today at rerank depth 20.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Question</th><th>A · text</th><th>B · visual</th><th>C · fused</th><th>D · reranked</th><th>What it shows</th></tr></thead>
+      <tbody>
+        <tr><td><a href="http://localhost:8083/pipeline?dataset=finance_en&qid=181" target="_blank" rel="noopener">q181</a> MS deposits</td><td class="n">#7 · 25.3</td><td class="n">#3 · 52.7</td><td class="n">#4 · 32.7</td><td class="n rank-in">#1 · 95.0</td><td>keyword search matches other banks' deposit tables; the reranker reads the page and fixes it</td></tr>
+        <tr><td><a href="http://localhost:8083/pipeline?dataset=finance_en&qid=17" target="_blank" rel="noopener">q17</a> BofA preferred</td><td class="n">#19 · 0.0</td><td class="n rank-in">#1 · 100</td><td class="n">#5 · 23.7</td><td class="n">#1 · 61.3</td><td>visual is perfect; fusion drops one gold page to #50, below the reranker's top 20, so it never comes back</td></tr>
+        <tr><td><a href="http://localhost:8083/pipeline?dataset=finance_en&qid=142" target="_blank" rel="noopener">q142</a> MS revenue chart</td><td class="n">#11 · 0.0</td><td class="n rank-in">#2 · 63.1</td><td class="n">#5 · 38.7</td><td class="n">#2 · 63.1</td><td>a chart question: the words aren't in the OCR, the picture is</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="all309">
+  <span class="eyebrow">not in the UI yet · lands in M3's Runs tab</span>
+  <h2>All 309 English finance questions</h2>
+  <p class="sub">The viewer scores one question at a time. This is every question at once, run from a script this morning (no
+  reranker: at ≈3 s a page that's hours on this Mac). These are the test questions, so they're reported, never tuned on.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Stage</th><th>NDCG@10</th><th>Recall@10</th><th>Recall@50</th><th>Full-answer in top 10</th><th>All gold in top 50</th><th>MRR</th></tr></thead>
+      <tbody>
+        <tr><td>A · keyword (BM25)</td><td class="n">50.2</td><td class="n">56.9%</td><td class="n">80.9%</td><td class="n">58.6%</td><td class="n">59.9%</td><td class="n">0.60</td></tr>
+        <tr><td class="rec"><b>B · visual (EVIE)</b></td><td class="n rec"><b>72.9</b></td><td class="n rec">76.1%</td><td class="n rec">91.7%</td><td class="n rec">68.3%</td><td class="n rec">77.0%</td><td class="n rec">0.84</td></tr>
+        <tr><td>C · fused (RRF, equal weights)</td><td class="n bad">64.4</td><td class="n">70.0%</td><td class="n">89.8%</td><td class="n">66.0%</td><td class="n">72.5%</td><td class="n">0.74</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warn">
+    <p><b>The finding to carry into M3.</b> Equal-weight fusion lets the weaker keyword list pull visual down by 8.5 points, and
+    q17 shows the mechanism. Weighting the channels, fusing deeper, or reranking more of the pool should recover it; that gets
+    tuned on a train/dev split, not on these 309.</p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="scope">
+  <span class="eyebrow">what's built, what isn't</span>
+  <h2>So you know what you're not looking at</h2>
+  <div class="split">
+    <div class="card">
+      <h4>In the viewer now</h4>
+      <ul class="tight">
+        <li>All 5 English datasets: questions, answers, evidence pages, human boxes, OCR</li>
+        <li>Finance: keyword index, complete visual index, reranker with a score cache</li>
+        <li>Per-question metrics against gold, per stage; free-text search</li>
+        <li>The leaderboard, with a glossary</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Not yet</h4>
+      <ul class="tight">
+        <li><b>Answers</b>: no model writes an answer yet (M4). The pipeline stops at the retrieved pages.</li>
+        <li><b>Runs</b>: whole-dataset scores and our leaderboard row (M3); the table above is a script, not a tab.</li>
+        <li><b>Other datasets' indexes</b>: pharma, industrial, HR and CS have no search index yet, so the pipeline tab shows a "build it" note for them.</li>
+        <li>Not committed: today's Overview fix, the viewer's GPU lock, and these pages.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="review">
+  <span class="eyebrow">your review</span>
+  <h2>Mark each stop</h2>
+  <p class="sub">Pick a verdict per stop and add a note where something's off. Nothing is sent until you press the button;
+  I'll answer every stop you mark.</p>
+  <form class="q review" data-lavish-question="ui-review" onsubmit="event.preventDefault(); const rows=[...event.currentTarget.querySelectorAll('tr[data-id]')].map(tr=>({id:tr.dataset.id,label:tr.dataset.label,verdict:tr.querySelector('select').value,note:tr.querySelector('input').value.trim()})).filter(r=>r.verdict!=='not checked'||r.note); if(!rows.length){document.getElementById('rv-state').textContent='mark at least one stop first';return;} window.lavish&&window.lavish.queuePrompt('UI walkthrough review: act on every marked stop (fix issues, answer notes) and return an item-by-item receipt. Account for every submitted ID before reporting completion.',{tag:'tracked-batch',text:'Review of '+rows.length+' viewer stops',element:event.currentTarget,data:{items:rows}}); document.getElementById('rv-state').textContent='queued: '+rows.length+' stops. Press Send to Agent';">
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Stop</th><th>Screen</th><th style="width:150px">Verdict</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr data-id="S1" data-label="Overview"><td class="k">S1</td><td>Overview</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S1"></td></tr>
+          <tr data-id="S2" data-label="Datasets table"><td class="k">S2</td><td>Datasets table</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S2"></td></tr>
+          <tr data-id="S3" data-label="Question list and filters"><td class="k">S3</td><td>Question list &amp; filters</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S3"></td></tr>
+          <tr data-id="S4" data-label="One question with evidence"><td class="k">S4</td><td>One question &amp; evidence</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S4"></td></tr>
+          <tr data-id="S5" data-label="Pipeline controls"><td class="k">S5</td><td>Pipeline controls</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S5"></td></tr>
+          <tr data-id="S6" data-label="Gold strip"><td class="k">S6</td><td>Gold strip</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S6"></td></tr>
+          <tr data-id="S7" data-label="Metrics table"><td class="k">S7</td><td>Metrics table</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S7"></td></tr>
+          <tr data-id="S8" data-label="Stage columns"><td class="k">S8</td><td>Stage columns</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S8"></td></tr>
+          <tr data-id="S9" data-label="Deltas"><td class="k">S9</td><td>Gained / lost</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S9"></td></tr>
+          <tr data-id="S10" data-label="Open hit"><td class="k">S10</td><td>Open a hit</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S10"></td></tr>
+          <tr data-id="S11" data-label="Free-text search"><td class="k">S11</td><td>Free-text search</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S11"></td></tr>
+          <tr data-id="S12" data-label="Leaderboard"><td class="k">S12</td><td>Leaderboard</td><td><select><option>not checked</option><option>looks right</option><option>issue</option></select></td><td><input type="text" aria-label="note S12"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="row"><button type="submit">Queue my review</button><span class="queued" id="rv-state"></span></div>
+  </form>
+</section>
+
+</main>
+<script>
+  const BASE = 'http://localhost:8083';
+  const $ = (id) => document.getElementById(id);
+  function url() {
+    const pick = document.querySelector('input[name=q]:checked').value;
+    const depth = $('depth').value;
+    if (pick === 'free') {
+      const t = $('qfree').value.trim();
+      return t ? `${BASE}/pipeline?dataset=finance_en&q=${encodeURIComponent(t)}&depth=${depth}` : null;
+    }
+    const id = pick === 'id' ? $('qid').value.trim() : pick;
+    return /^\d+$/.test(id) ? `${BASE}/pipeline?dataset=finance_en&qid=${id}&depth=${depth}` : null;
+  }
+  function refresh() {
+    const u = url();
+    const a = $('golink');
+    if (u) { a.href = u; a.removeAttribute('aria-disabled'); a.style.opacity = ''; $('urlpeek').textContent = u; }
+    else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); a.style.opacity = '0.5'; $('urlpeek').textContent = 'type a question id or your own words'; }
+  }
+  document.querySelectorAll('input[name=q]').forEach((r) => r.addEventListener('change', refresh));
+  ['qid', 'qfree'].forEach((id) => $(id).addEventListener('input', () => {
+    document.querySelector(`input[name=q][value=${id === 'qid' ? 'id' : 'free'}]`).checked = true; refresh();
+  }));
+  $('depth').addEventListener('change', refresh);
+  refresh();
+  // is the viewer up? an image needs no CORS, so load a known page image
+  (function ping() {
+    const img = new Image();
+    const t = setTimeout(() => { img.src = ''; down(); }, 6000);
+    img.onload = () => { clearTimeout(t); $('vdot').className = 'dot up'; $('vstate').textContent = 'the viewer is running on localhost:8083'; };
+    img.onerror = () => { clearTimeout(t); down(); };
+    function down() { $('vdot').className = 'dot down'; $('vstate').innerHTML = 'the viewer isn’t answering on localhost:8083. Start it with <code>make viewer</code> in the repo'; }
+    img.src = `${BASE}/api/pages/finance_en/2037/image?ping=${Date.now()}`;
+  })();
+</script>
+</body>
+</html>

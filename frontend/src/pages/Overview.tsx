@@ -19,7 +19,7 @@ const MILESTONES: [string, string, 'ok' | 'warn' | 'no'][] = [
     'ok',
   ],
   ['M3', 'retrieval scored on our finance_en split + Runs tab, our row on the Leaderboard', 'ok'],
-  ['M4', 'Claude answers, judge and gold-answer audit + Review tab', 'warn'],
+  ['M4', 'Claude answers, judge and gold-answer audit + Review tab; scored on our split', 'ok'],
   ['M5', 'the agent + Agent tab', 'no'],
   ['M6', 'the self-improving loop + Optimise tab', 'no'],
   ['M7', 'grounding: our boxes against the human boxes', 'no'],

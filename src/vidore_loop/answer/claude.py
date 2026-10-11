@@ -35,6 +35,7 @@ MODELS: dict[str, str] = {
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 RETRIES = 3
+MAX_RESET_WAITS = 3
 RETRY_WAIT_S = (2.0, 6.0, 15.0)
 MAX_WAIT_S = 6 * 3600
 
@@ -203,7 +204,10 @@ async def _query(
             rep.cache_read = int(u.get("cache_read_input_tokens", 0))
             rep.cost_usd = msg.total_cost_usd
             if msg.is_error:
-                rep.error = f"{msg.subtype}: {(msg.errors or [''])[0]}"[:500]
+                detail = (msg.errors or [msg.result or ""])[0]
+                rep.error = f"{msg.subtype}: {detail}"[:500]
+                texts.clear()
+                continue
             rep.structured = getattr(msg, "structured_output", None)
             if not texts and rep.structured is not None:
                 texts.append(json.dumps(rep.structured))
@@ -245,6 +249,7 @@ def ask(
     model = resolve(model)
     last = Reply("", model=model)
     attempt = 0
+    waits = 0
     while attempt < RETRIES:
         loop = asyncio.new_event_loop()
         try:
@@ -257,6 +262,11 @@ def ask(
             return last
         wait = seconds_until_reset(last.error or "")
         if wait is not None:
+            waits += 1
+            if waits > MAX_RESET_WAITS:
+                raise ClaudeError(
+                    f"no reply from {model} after {MAX_RESET_WAITS} session-limit waits: {last.error}"
+                )
             print(
                 f"[claude] subscription limit; waiting {wait // 60} min for the reset", flush=True
             )

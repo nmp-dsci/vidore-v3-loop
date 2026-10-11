@@ -283,3 +283,59 @@ def test_answers_are_reused_when_claude_would_see_the_same_pages(fake: Path) -> 
 def _tokens(calls: int) -> dict[str, Any]:
     # the fake answer costs 10 in / 1 out / $0.01, the fake judge 5 in / 1 out / $0
     return {"input_tokens": 15 * calls // 2, "output_tokens": calls, "cost_usd": 0.01 * calls / 2}
+
+
+def test_a_source_run_must_be_finished_full_and_cover_the_split(fake: Path) -> None:
+    rid = runs.get(next(iter(sorted(p.name for p in (fake / "runs").iterdir()))))["run_id"]
+    path = fake / "runs" / rid / "run.json"
+    good = json.loads(path.read_text())
+    cfg = answers.AnswerConfig("finance_en", "train", source_run=rid)
+    answers.plan(cfg)
+
+    path.write_text(json.dumps({**good, "status": "interrupted"}))
+    with pytest.raises(ValueError, match="finished"):
+        answers.plan(cfg)
+    path.write_text(json.dumps({**good, "config": {**good["config"], "limit": 3}}))
+    with pytest.raises(ValueError, match="finished"):
+        answers.plan(cfg)
+
+    path.write_text(json.dumps(good))
+    q = fake / "runs" / rid / "queries.jsonl"
+    q.write_text("\n".join(q.read_text().splitlines()[:4]) + "\n")
+    with pytest.raises(ValueError, match="no ranking"):
+        answers.plan(cfg)
+
+
+def _install_query(monkeypatch: pytest.MonkeyPatch, replies: list[claude.Reply]) -> list[int]:
+    calls: list[int] = []
+
+    async def fake_query(*a: Any, **k: Any) -> claude.Reply:
+        calls.append(1)
+        return replies[min(len(calls), len(replies)) - 1]
+
+    monkeypatch.setattr(claude, "_query", fake_query)
+    monkeypatch.setattr(claude.time, "sleep", lambda s: None)
+    return calls
+
+
+def test_an_errored_reply_is_retried_not_returned(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BILLING", "subscription")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    bad = claude.Reply("", error="error_max_turns: partial")
+    calls = _install_query(monkeypatch, [bad, claude.Reply("fine")])
+    assert claude.ask("s", []).text == "fine" and len(calls) == 2
+    calls = _install_query(monkeypatch, [bad])
+    with pytest.raises(claude.ClaudeError, match="error_max_turns"):
+        claude.ask("s", [])
+    assert len(calls) == claude.RETRIES
+
+
+def test_session_limit_waits_are_capped(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BILLING", "subscription")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    calls = _install_query(
+        monkeypatch, [claude.Reply("", error="session limit reached, resets soon")]
+    )
+    with pytest.raises(claude.ClaudeError, match="session-limit"):
+        claude.ask("s", [])
+    assert len(calls) == claude.MAX_RESET_WAITS + 1

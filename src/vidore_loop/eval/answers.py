@@ -112,10 +112,15 @@ def _source(cfg: AnswerConfig) -> tuple[str | None, str | None, dict[int, list[i
         raise ValueError(f"{rid} is a {doc.get('dataset')} {doc.get('split')} run, not {cfg.split}")
     if cfg.source_stage not in doc["config"]["stages"]:
         raise ValueError(f"{rid} has no {cfg.source_stage} stage")
+    if doc.get("status") != "finished" or doc["config"].get("limit"):
+        raise ValueError(f"{rid} is not a finished, full retrieval run")
     rankings = {
         int(r["query_id"]): list(r["stages"][cfg.source_stage]["ranking"])
         for r in runs.queries(rid)
     }
+    missing = [q for q in split.ids(cfg.dataset, cfg.split) if q not in rankings]
+    if missing:
+        raise ValueError(f"{rid} has no ranking for {len(missing)} questions of the split")
     return rid, str(doc["fingerprint"]), rankings
 
 

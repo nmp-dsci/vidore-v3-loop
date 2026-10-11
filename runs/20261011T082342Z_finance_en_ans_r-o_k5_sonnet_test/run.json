@@ -1,0 +1,349 @@
+{
+ "run_id": "20261011T082342Z_finance_en_ans_r-o_k5_sonnet_test",
+ "kind": "answer",
+ "dataset": "finance_en",
+ "split": "test",
+ "final": true,
+ "config": {
+  "dataset": "finance_en",
+  "split": "test",
+  "modes": [
+   "retrieved",
+   "oracle"
+  ],
+  "k": 5,
+  "source_run": "20261011T081741Z_finance_en_w0-1_norr_test",
+  "source_stage": "fused",
+  "modality": "image+text",
+  "model": "sonnet",
+  "effort": "medium",
+  "judge_model": "opus",
+  "judge_effort": "medium",
+  "workers": 4,
+  "note": "baseline on the 50/50 split v3: Sonnet 5 from the fused top 5 and from the human pages; v2 answers reused",
+  "limit": null
+ },
+ "label": "ans_r-o_k5_sonnet",
+ "fingerprint": "e38b89a77307",
+ "models": {
+  "answer": "claude-sonnet-5",
+  "effort": "medium",
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "answer": "95b81f8c",
+  "judge": "cc617078"
+ },
+ "billing": "subscription",
+ "split_seed": 300,
+ "split_fingerprint": "59392325bcfe",
+ "code_sha": "2617486-dirty",
+ "started_at": "2026-10-11T08:23:42+00:00",
+ "n": 154,
+ "status": "finished",
+ "pid": 99460,
+ "finished_at": "2026-10-11T08:27:41+00:00",
+ "progress": {
+  "done": 154,
+  "n": 154,
+  "seconds": 238.9
+ },
+ "summary": {
+  "retrieved": {
+   "raw": {
+    "mean": 0.6948051948051948,
+    "n": 154
+   },
+   "audited": {
+    "mean": 0.6948051948051948,
+    "n": 154
+   },
+   "verdicts": {
+    "Correct": 107,
+    "Partially Correct": 30,
+    "Incorrect": 17
+   },
+   "errors": 0,
+   "answer_tokens": 23084,
+   "ms": 4432,
+   "full_given": {
+    "mean": 0.9090909090909091,
+    "n": 110
+   },
+   "correct_when_full_given": {
+    "mean": 0.87,
+    "n": 100
+   },
+   "correct_when_full_missed": {
+    "mean": 0.4,
+    "n": 10
+   }
+  },
+  "oracle": {
+   "raw": {
+    "mean": 0.7402597402597403,
+    "n": 154
+   },
+   "audited": {
+    "mean": 0.7402597402597403,
+    "n": 154
+   },
+   "verdicts": {
+    "Correct": 114,
+    "Partially Correct": 25,
+    "Incorrect": 15
+   },
+   "errors": 0,
+   "answer_tokens": 22723,
+   "ms": 4459
+  },
+  "retrieval_cost": {
+   "raw": 0.045454545454545525,
+   "audited": 0.045454545454545525
+  }
+ },
+ "seconds": 238.9,
+ "slices": {
+  "query type": [
+   {
+    "value": "extractive",
+    "n": 67,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7910447761194029,
+      "n": 67
+     },
+     "oracle": {
+      "mean": 0.8059701492537313,
+      "n": 67
+     }
+    }
+   },
+   {
+    "value": "numerical",
+    "n": 50,
+    "modes": {
+     "retrieved": {
+      "mean": 0.78,
+      "n": 50
+     },
+     "oracle": {
+      "mean": 0.82,
+      "n": 50
+     }
+    }
+   },
+   {
+    "value": "open-ended",
+    "n": 27,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5925925925925926,
+      "n": 27
+     },
+     "oracle": {
+      "mean": 0.7407407407407407,
+      "n": 27
+     }
+    }
+   },
+   {
+    "value": "compare-contrast",
+    "n": 26,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5,
+      "n": 26
+     },
+     "oracle": {
+      "mean": 0.6153846153846154,
+      "n": 26
+     }
+    }
+   },
+   {
+    "value": "boolean",
+    "n": 24,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7916666666666666,
+      "n": 24
+     },
+     "oracle": {
+      "mean": 0.7083333333333334,
+      "n": 24
+     }
+    }
+   },
+   {
+    "value": "enumerative",
+    "n": 16,
+    "modes": {
+     "retrieved": {
+      "mean": 0.4375,
+      "n": 16
+     },
+     "oracle": {
+      "mean": 0.5,
+      "n": 16
+     }
+    }
+   },
+   {
+    "value": "multi-hop",
+    "n": 12,
+    "modes": {
+     "retrieved": {
+      "mean": 0.4166666666666667,
+      "n": 12
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 12
+     }
+    }
+   }
+  ],
+  "content": [
+   {
+    "value": "Text",
+    "n": 146,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6917808219178082,
+      "n": 146
+     },
+     "oracle": {
+      "mean": 0.7397260273972602,
+      "n": 146
+     }
+    }
+   },
+   {
+    "value": "Table",
+    "n": 90,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6222222222222222,
+      "n": 90
+     },
+     "oracle": {
+      "mean": 0.7222222222222222,
+      "n": 90
+     }
+    }
+   },
+   {
+    "value": "Chart",
+    "n": 12,
+    "modes": {
+     "retrieved": {
+      "mean": 0.9166666666666666,
+      "n": 12
+     },
+     "oracle": {
+      "mean": 0.9166666666666666,
+      "n": 12
+     }
+    }
+   },
+   {
+    "value": "Infographic",
+    "n": 3,
+    "modes": {
+     "retrieved": {
+      "mean": 1.0,
+      "n": 3
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 3
+     }
+    }
+   }
+  ],
+  "format": [
+   {
+    "value": "question",
+    "n": 95,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7157894736842105,
+      "n": 95
+     },
+     "oracle": {
+      "mean": 0.7368421052631579,
+      "n": 95
+     }
+    }
+   },
+   {
+    "value": "instruction",
+    "n": 36,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6388888888888888,
+      "n": 36
+     },
+     "oracle": {
+      "mean": 0.7222222222222222,
+      "n": 36
+     }
+    }
+   },
+   {
+    "value": "keyword",
+    "n": 23,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6956521739130435,
+      "n": 23
+     },
+     "oracle": {
+      "mean": 0.782608695652174,
+      "n": 23
+     }
+    }
+   }
+  ],
+  "author": [
+   {
+    "value": "person",
+    "n": 107,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7383177570093458,
+      "n": 107
+     },
+     "oracle": {
+      "mean": 0.7850467289719626,
+      "n": 107
+     }
+    }
+   },
+   {
+    "value": "synthetic",
+    "n": 47,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5957446808510638,
+      "n": 47
+     },
+     "oracle": {
+      "mean": 0.6382978723404256,
+      "n": 47
+     }
+    }
+   }
+  ]
+ },
+ "totals": {
+  "calls": 216,
+  "input_tokens": 2534343,
+  "output_tokens": 47241,
+  "cost_usd": 11.57,
+  "reused": 200
+ },
+ "mlflow_run_id": "d36a7cf1394f4320a29666e46e1d8c01"
+}

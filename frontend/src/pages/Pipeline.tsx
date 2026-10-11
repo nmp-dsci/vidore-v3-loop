@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  type Health,
   type Hit,
+  type LiveAnswer,
   type Metrics,
   type Question,
   type QueryRow,
@@ -17,11 +19,13 @@ import {
 } from '../lib/api';
 import { PageView } from '../lib/page';
 import { Busy, DatasetChips, Loading } from '../lib/ui';
+import { AnswerText, VerdictChip } from './Review';
 
 /**
- * `/pipeline?dataset=&qid=` or `?q=` — one question through the retrieval half of the RAG
- * pipeline (M2): every stage's top 10, scored against the gold pages when the question has
- * them. M4 adds the answer column. The URL holds the question, so a run is a link.
+ * `/pipeline?dataset=&qid=` or `?q=` — one question through the RAG pipeline: every
+ * retrieval stage's top 10, scored against the gold pages when the question has them (M2),
+ * then, on request, Claude's answer from the last stage's top 5, judged against the
+ * reference (M4). The URL holds the question, so a run is a link.
  */
 export function Pipeline() {
   const [sp] = useSearchParams();
@@ -151,7 +155,7 @@ export function Pipeline() {
           </span>
           <p className="qbig">{question.data.query}</p>
           <p className="small">
-            <b>Reference answer:</b> {question.data.answer}
+            <b>Gold answer:</b> {question.data.answer}
           </p>
         </div>
       )}
@@ -178,6 +182,7 @@ export function Pipeline() {
           {res.gold.length === 0 && (
             <p className="small muted">Free-text questions have no gold pages, so judge the hits yourself.</p>
           )}
+          <AnswerPanel dataset={dataset} qid={qid} qtext={qtext} res={res} stages={shown} />
           <div
             className="stagecols"
             style={{
@@ -570,5 +575,84 @@ function SkeletonCols({ stages }: { stages: Stage[] }) {
         </section>
       ))}
     </div>
+  );
+}
+
+/** The end of the pipeline: Claude answers from the last stage's top 5, on request (it uses the subscription). */
+function AnswerPanel({
+  dataset,
+  qid,
+  qtext,
+  res,
+  stages,
+}: {
+  dataset: string;
+  qid: string | null;
+  qtext: string;
+  res: SearchOut;
+  stages: Stage[];
+}) {
+  const health = useGet<Health>('/api/health');
+  const [ans, setAns] = useState<LiveAnswer | null>(null);
+  const [since, setSince] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const last = stages[stages.length - 1];
+  const top = (last ? (res.stages[last]?.hits ?? []) : []).slice(0, 5).map((h) => h.corpus_id);
+  const key = `${dataset}|${qid}|${qtext}|${last}|${top.join(',')}`;
+  useEffect(() => {
+    setAns(null);
+    setErr(null);
+    setSince(null);
+  }, [key]);
+  if (!health.data?.claude.available || !last || top.length === 0) return null;
+  const go = () => {
+    setSince(Date.now());
+    setErr(null);
+    post<LiveAnswer>('/api/answer', {
+      dataset,
+      query_id: qid ? Number(qid) : null,
+      query: qid ? null : qtext,
+      corpus_ids: top,
+    })
+      .then(setAns)
+      .catch((e: Error) => setErr(e.message))
+      .finally(() => setSince(null));
+  };
+  return (
+    <section aria-label="the answer">
+      <h2>Answer</h2>
+      {!ans && since == null && (
+        <div className="row">
+          <button type="button" className="btn" onClick={go}>
+            <span>
+              Ask Claude to answer from the top {top.length} of {STAGE_LABEL[last][0]}
+            </span>
+          </button>
+          <span className="small muted">One call on the subscription, about 25k tokens.</span>
+        </div>
+      )}
+      {since != null && <Busy label="Claude is reading the pages" since={since} />}
+      {err && <p className="small warn-note">{err}</p>}
+      {ans && (
+        <div className="answercard">
+          <span className="label">
+            {ans.usage.model} · {ans.usage.input_tokens.toLocaleString('en-AU')} tokens ·{' '}
+            {(ans.usage.ms / 1000).toFixed(1)} s{ans.judge ? '' : ' · free text, so not judged'}
+          </span>
+          <AnswerText text={ans.answer} />
+          {ans.judge && (
+            <>
+              <VerdictChip v={ans.judge.verdict} />
+              <p className="small">
+                <b>Gold answer:</b> {ans.reference}
+              </p>
+              <p className="small muted">
+                <b>Judge:</b> {ans.judge.explanation}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

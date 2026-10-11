@@ -29,11 +29,14 @@ index: ## build DATASET's retrieval index, STAGE=text|visual|reranker (LIMIT=50 
 index-visual-overnight: ## the full visual index for DATASET with MODEL (default evie), resumable, the Mac kept awake
 	caffeinate -is uv run vidoreloop index --dataset $(DATASET) --stage visual --model $(or $(MODEL),evie)
 
-split: ## write our fixed train / test split of DATASET's English questions (once; committed)
-	uv run vidoreloop split --dataset $(DATASET)
+split: ## write our fixed train / test split of DATASET's English questions (once; committed); EXTEND=1 deals the holdout in
+	uv run vidoreloop split --dataset $(DATASET) $(if $(filter 1,$(EXTEND)),--extend)
 
 eval: platform-status ## score a pipeline config on SPLIT (train; test needs FINAL=1): STAGES= DEPTH= WTEXT= WVISUAL= LIMIT= NOTE=
 	uv run vidoreloop eval --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(STAGES),--stages $(STAGES)) $(if $(DEPTH),--depth $(DEPTH)) $(if $(WTEXT),--w-text $(WTEXT)) $(if $(WVISUAL),--w-visual $(WVISUAL)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)")
+
+answers: platform-status ## Claude answers SPLIT from our top 5 and from the human pages, judged (subscription): MODES= K= LIMIT= MODEL= FINAL=1 RESUME= NOTE=
+	uv run vidoreloop answer --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(MODES),--modes $(MODES)) $(if $(K),--k $(K)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(MODEL),--model $(MODEL)) $(if $(RESUME),--resume $(RESUME)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)")
 
 runs: ## every scored run, newest first
 	uv run vidoreloop runs

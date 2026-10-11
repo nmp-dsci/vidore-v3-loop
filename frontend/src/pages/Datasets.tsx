@@ -24,7 +24,7 @@ export function Datasets() {
         Pick a corpus, then read its questions <em>against the evidence</em>
       </h1>
       <p className="lead">
-        English questions only; open one to see its reference answer and the annotators' boxes on every relevant page.
+        English questions only; open one to see its gold answer and the annotators' boxes on every relevant page.
       </p>
       <DatasetChips />
       {!data ? (
@@ -76,7 +76,8 @@ export function Dataset() {
   const filters = filtersFrom(sp);
   const rows = useMemo(() => (list.data ? filterQueries(list.data, filters) : []), [list.data, sp.toString()]); // eslint-disable-line react-hooks/exhaustive-deps
   const open = qid ? Number(qid) : null;
-  const setFilters = (f: Filters) => nav(`/datasets/${key}${open != null ? `/${open}` : ''}${filtersTo(f)}`, { replace: true });
+  const setFilters = (f: Filters) =>
+    nav(`/datasets/${key}${open != null ? `/${open}` : ''}${filtersTo(f)}`, { replace: true });
   const go = (id: number) => nav(`/datasets/${key}/${id}${loc.search}`);
 
   // keep the open question in view in its list, on a deep link as much as on j / k
@@ -125,15 +126,30 @@ export function Dataset() {
               onChange={(e) => setFilters({ ...filters, text: e.target.value })}
               aria-label="search questions"
             />
-            <Pick label="type" value={filters.type} opts={types} onChange={(v) => setFilters({ ...filters, type: v })} />
+            <Pick
+              label="type"
+              value={filters.type}
+              opts={types}
+              onChange={(v) => setFilters({ ...filters, type: v })}
+            />
             <Pick
               label="content"
               value={filters.content}
               opts={contents}
               onChange={(v) => setFilters({ ...filters, content: v })}
             />
-            <Pick label="format" value={filters.format} opts={formats} onChange={(v) => setFilters({ ...filters, format: v })} />
-            <Pick label="author" value={filters.author} opts={authors} onChange={(v) => setFilters({ ...filters, author: v })} />
+            <Pick
+              label="format"
+              value={filters.format}
+              opts={formats}
+              onChange={(v) => setFilters({ ...filters, format: v })}
+            />
+            <Pick
+              label="author"
+              value={filters.author}
+              opts={authors}
+              onChange={(v) => setFilters({ ...filters, author: v })}
+            />
             <Pick
               label="hand check"
               value={filters.check}
@@ -169,7 +185,7 @@ export function Dataset() {
                     <span className="qmeta">
                       {q.query_types.join(' · ')} · {q.content_type.filter((c) => !c.startsWith('N/A')).join(', ')} ·{' '}
                       {q.n_pages} {q.n_pages === 1 ? 'page' : 'pages'}
-                      {q.hand_check && <> · reference {q.hand_check}</>}
+                      {q.hand_check && <> · gold answer {q.hand_check}</>}
                     </span>
                   </Link>
                 </li>
@@ -234,19 +250,23 @@ function DatasetHead({ d }: { d: DatasetDetail }) {
         {datasetLabel(d.key)}: {fmtN(s.n_queries)} English questions over <em>{fmtN(d.pages)} pages</em>
       </h1>
       <div className="kpis">
-        <Kpi n={fmtN(s.n_queries)} b={`English questions; ${human} written by people, ${s.n_queries - human} synthetic`} />
-        <Kpi n={String(s.pages_per_query.median)} b={`relevant pages per question, median (mean ${s.pages_per_query.mean}, max ${s.pages_per_query.max})`} />
+        <Kpi
+          n={fmtN(s.n_queries)}
+          b={`English questions; ${human} written by people, ${s.n_queries - human} synthetic`}
+        />
+        <Kpi
+          n={String(s.pages_per_query.median)}
+          b={`relevant pages per question, median (mean ${s.pages_per_query.mean}, max ${s.pages_per_query.max})`}
+        />
         <Kpi n={String(d.documents.length)} b={`documents, ${fmtN(d.pages)} pages`} />
         <Kpi
           n={`${s.hand_checked}`}
-          b={`references hand-checked of ${fmtN(s.n_queries)}; the full audit is M4`}
+          b={`gold answers hand-checked of ${fmtN(s.n_queries)}; the full audit is M4`}
           tone={s.hand_checked ? 'warn' : undefined}
         />
       </div>
       <details className="docs">
-        <summary>
-          The {d.documents.length} documents, their licences, and the dataset's revision
-        </summary>
+        <summary>The {d.documents.length} documents, their licences, and the dataset's revision</summary>
         <p className="small muted">
           <code>{d.repo_id}</code> at <code>{d.revision.slice(0, 7)}</code>; the paper's end-to-end runs used{' '}
           <code>{d.paper_revision.slice(0, 7)}</code>.
@@ -275,7 +295,9 @@ function DatasetHead({ d }: { d: DatasetDetail }) {
                   <td className="mono">{doc.doc_year}</td>
                   <td className="num">{doc.pages}</td>
                   <td>{doc.visual_types.join(', ')}</td>
-                  <td className="wrap small">{doc.license.length > 90 ? `${doc.license.slice(0, 88)}…` : doc.license}</td>
+                  <td className="wrap small">
+                    {doc.license.length > 90 ? `${doc.license.slice(0, 88)}…` : doc.license}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -343,13 +365,11 @@ function QuestionView({
       </div>
 
       <dl className="answer">
-        <dt>reference answer</dt>
+        <dt>gold answer</dt>
         <dd className="ref">{q.answer}</dd>
         {raws.length > 0 && (
           <>
-            <dt>
-              {raws.length === 1 ? 'the human answer' : `the ${raws.length} human answers`} it was merged from
-            </dt>
+            <dt>{raws.length === 1 ? 'the human answer' : `the ${raws.length} human answers`} it was merged from</dt>
             <dd>
               <ol className="raws">
                 {raws.map((r, i) => (
@@ -381,8 +401,7 @@ function QuestionView({
       </dl>
 
       <h3>
-        Evidence — {q.pages.length} relevant {q.pages.length === 1 ? 'page' : 'pages'}, {q.n_full} with the full
-        answer
+        Evidence — {q.pages.length} relevant {q.pages.length === 1 ? 'page' : 'pages'}, {q.n_full} with the full answer
       </h3>
       <div className="thumbs" role="tablist" aria-label="relevant pages">
         {q.pages.map((p) => (

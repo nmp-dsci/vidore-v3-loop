@@ -12,10 +12,10 @@ const NAV: [string, string][] = [
   ['/datasets', 'Datasets & questions'],
   ['/pipeline', 'RAG pipeline'],
   ['/runs', 'Runs'],
+  ['/review', 'Review'],
   ['/leaderboard', 'Leaderboard'],
 ];
 const LATER: [string, string][] = [
-  ['Review', 'M4'],
   ['Agent', 'M5'],
   ['Optimise', 'M6'],
 ];
@@ -44,8 +44,15 @@ export function Shell() {
               </span>
             ))}
           </nav>
-          <span className="mode" title="reads the pinned datasets and committed files; retrieval runs open models locally; never calls Claude">
-            {health ? 'read only · no Claude' : '…'}
+          <span
+            className={`mode ${health?.claude.available ? 'live' : ''}`}
+            title={
+              health?.claude.available
+                ? 'Claude answers only when you ask, on the subscription'
+                : `no Claude: ${health?.claude.detail ?? ''}`
+            }
+          >
+            {!health ? '…' : health.claude.available ? 'Claude · subscription' : 'no Claude'}
           </span>
         </div>
       </header>

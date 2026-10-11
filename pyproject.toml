@@ -21,6 +21,7 @@ dependencies = [
   "pillow>=11.0",
   "bm25s>=0.3.11",
   "pystemmer>=3.1.0",
+  "claude-agent-sdk>=0.2.160",
 ]
 
 [project.optional-dependencies]
@@ -66,7 +67,7 @@ packages = ["vidore_loop"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*", "bm25s.*", "Stemmer", "torch.*", "sentence_transformers.*"]
+module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*", "bm25s.*", "Stemmer", "torch.*", "sentence_transformers.*", "claude_agent_sdk.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 

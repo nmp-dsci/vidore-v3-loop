@@ -58,8 +58,8 @@ export function DatasetChips({ current, hrefFor }: { current?: string; hrefFor?:
 export function CheckChip({ verdict }: { verdict: 'holds' | 'off' | null | undefined }) {
   if (!verdict) return null;
   return verdict === 'holds' ? (
-    <span className="chip ok">● reference holds</span>
+    <span className="chip ok">● gold answer holds</span>
   ) : (
-    <span className="chip warn">◐ reference off</span>
+    <span className="chip warn">◐ gold answer off</span>
   );
 }

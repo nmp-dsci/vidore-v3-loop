@@ -1,0 +1,362 @@
+{
+ "run_id": "20261011T024554Z_finance_en_ans_r-o_k5_sonnet_train",
+ "kind": "answer",
+ "dataset": "finance_en",
+ "split": "train",
+ "final": false,
+ "config": {
+  "dataset": "finance_en",
+  "split": "train",
+  "modes": [
+   "retrieved",
+   "oracle"
+  ],
+  "k": 5,
+  "source_run": "20261011T024306Z_finance_en_w0-1_norr_train",
+  "source_stage": "fused",
+  "modality": "image+text",
+  "model": "sonnet",
+  "effort": "medium",
+  "judge_model": "opus",
+  "judge_effort": "medium",
+  "workers": 4,
+  "note": "baseline on the 100/100 split v2: Sonnet 5 from the fused top 5 and from the human pages",
+  "limit": null
+ },
+ "label": "ans_r-o_k5_sonnet",
+ "fingerprint": "567d5a151f0e",
+ "models": {
+  "answer": "claude-sonnet-5",
+  "effort": "medium",
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "answer": "95b81f8c",
+  "judge": "cc617078"
+ },
+ "billing": "subscription",
+ "split_seed": 300,
+ "split_fingerprint": "0ae786627182",
+ "code_sha": "2617486-dirty",
+ "started_at": "2026-10-11T02:45:54+00:00",
+ "n": 100,
+ "status": "finished",
+ "pid": 10507,
+ "finished_at": "2026-10-11T02:52:44+00:00",
+ "progress": {
+  "done": 100,
+  "n": 100,
+  "seconds": 409.9
+ },
+ "summary": {
+  "retrieved": {
+   "raw": {
+    "mean": 0.65,
+    "n": 100
+   },
+   "audited": {
+    "mean": 0.65,
+    "n": 100
+   },
+   "verdicts": {
+    "Correct": 65,
+    "Partially Correct": 27,
+    "Incorrect": 8
+   },
+   "errors": 0,
+   "answer_tokens": 22477,
+   "ms": 4297,
+   "full_given": {
+    "mean": 0.9466666666666667,
+    "n": 75
+   },
+   "correct_when_full_given": {
+    "mean": 0.7746478873239436,
+    "n": 71
+   },
+   "correct_when_full_missed": {
+    "mean": 0.0,
+    "n": 4
+   }
+  },
+  "oracle": {
+   "raw": {
+    "mean": 0.74,
+    "n": 100
+   },
+   "audited": {
+    "mean": 0.74,
+    "n": 100
+   },
+   "verdicts": {
+    "Correct": 74,
+    "Partially Correct": 20,
+    "Incorrect": 6
+   },
+   "errors": 0,
+   "answer_tokens": 22128,
+   "ms": 4415
+  },
+  "retrieval_cost": {
+   "raw": 0.08999999999999997,
+   "audited": 0.08999999999999997
+  }
+ },
+ "seconds": 409.9,
+ "slices": {
+  "query type": [
+   {
+    "value": "extractive",
+    "n": 43,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7441860465116279,
+      "n": 43
+     },
+     "oracle": {
+      "mean": 0.7441860465116279,
+      "n": 43
+     }
+    }
+   },
+   {
+    "value": "numerical",
+    "n": 32,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6875,
+      "n": 32
+     },
+     "oracle": {
+      "mean": 0.78125,
+      "n": 32
+     }
+    }
+   },
+   {
+    "value": "open-ended",
+    "n": 18,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5555555555555556,
+      "n": 18
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 18
+     }
+    }
+   },
+   {
+    "value": "compare-contrast",
+    "n": 17,
+    "modes": {
+     "retrieved": {
+      "mean": 0.23529411764705882,
+      "n": 17
+     },
+     "oracle": {
+      "mean": 0.47058823529411764,
+      "n": 17
+     }
+    }
+   },
+   {
+    "value": "boolean",
+    "n": 16,
+    "modes": {
+     "retrieved": {
+      "mean": 0.9375,
+      "n": 16
+     },
+     "oracle": {
+      "mean": 0.9375,
+      "n": 16
+     }
+    }
+   },
+   {
+    "value": "enumerative",
+    "n": 11,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7272727272727273,
+      "n": 11
+     },
+     "oracle": {
+      "mean": 0.7272727272727273,
+      "n": 11
+     }
+    }
+   },
+   {
+    "value": "multi-hop",
+    "n": 9,
+    "modes": {
+     "retrieved": {
+      "mean": 0.4444444444444444,
+      "n": 9
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 9
+     }
+    }
+   }
+  ],
+  "content": [
+   {
+    "value": "Text",
+    "n": 94,
+    "modes": {
+     "retrieved": {
+      "mean": 0.648936170212766,
+      "n": 94
+     },
+     "oracle": {
+      "mean": 0.7446808510638298,
+      "n": 94
+     }
+    }
+   },
+   {
+    "value": "Table",
+    "n": 51,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5882352941176471,
+      "n": 51
+     },
+     "oracle": {
+      "mean": 0.7254901960784313,
+      "n": 51
+     }
+    }
+   },
+   {
+    "value": "Chart",
+    "n": 6,
+    "modes": {
+     "retrieved": {
+      "mean": 0.8333333333333334,
+      "n": 6
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 6
+     }
+    }
+   },
+   {
+    "value": "Image",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 1
+     }
+    }
+   },
+   {
+    "value": "Infographic",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 1
+     }
+    }
+   }
+  ],
+  "format": [
+   {
+    "value": "question",
+    "n": 60,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7,
+      "n": 60
+     },
+     "oracle": {
+      "mean": 0.7166666666666667,
+      "n": 60
+     }
+    }
+   },
+   {
+    "value": "instruction",
+    "n": 25,
+    "modes": {
+     "retrieved": {
+      "mean": 0.56,
+      "n": 25
+     },
+     "oracle": {
+      "mean": 0.8,
+      "n": 25
+     }
+    }
+   },
+   {
+    "value": "keyword",
+    "n": 15,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6,
+      "n": 15
+     },
+     "oracle": {
+      "mean": 0.7333333333333333,
+      "n": 15
+     }
+    }
+   }
+  ],
+  "author": [
+   {
+    "value": "person",
+    "n": 70,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7285714285714285,
+      "n": 70
+     },
+     "oracle": {
+      "mean": 0.7857142857142857,
+      "n": 70
+     }
+    }
+   },
+   {
+    "value": "synthetic",
+    "n": 30,
+    "modes": {
+     "retrieved": {
+      "mean": 0.4666666666666667,
+      "n": 30
+     },
+     "oracle": {
+      "mean": 0.6333333333333333,
+      "n": 30
+     }
+    }
+   }
+  ]
+ },
+ "totals": {
+  "calls": 400,
+  "input_tokens": 4826281,
+  "output_tokens": 88806,
+  "cost_usd": 21.95
+ },
+ "mlflow_run_id": "f2daf4faf5c940139a2a80421f1c2fae"
+}

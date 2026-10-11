@@ -54,6 +54,8 @@ make index DATASET=finance_en STAGE=reranker  # downloads zerank-2 (≈8 GB)
 make split DATASET=finance_en                 # our train/test split, once (committed)
 make eval DATASET=finance_en WTEXT=0.25       # score a config on train → runs/ + MLflow (runs inside the viewer when it is up)
 make eval DATASET=finance_en SPLIT=test FINAL=1  # the chosen config, once, on test
+make answers DATASET=finance_en LIMIT=5       # Claude answers (retrieved / oracle), judged → runs/ + MLflow (subscription)
+make answers DATASET=finance_en RESUME=<run>  # carry on an interrupted answer run
 make runs                                     # every scored run
 make test · make lint
 ```
@@ -75,4 +77,5 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
 | M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | done |
 | M2 retrieval pipeline + RAG pipeline tab | done (reviewed 2026-10-09): BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
-| M3 retrieval scored + Runs | done (reviewed 2026-10-09): finance_en split 155/154; on train every text weight lowered NDCG@10 and the reranker (depth 20) did not beat visual alone (74.8, 75.4 vs 75.8), so the champion is fusion with text weight 0. Scored once on test: **NDCG@10 70.0** (text alone 45.2) |
+| M3 retrieval scored + Runs | done (reviewed 2026-10-09). Split v3 (2026-10-11): 155 train / 154 test, v2's random 100 / 100 grown to 50/50 with seed 300 (`make split EXTEND=1`). On split v1 every text weight lowered NDCG@10 and the reranker did not beat visual alone, so the champion is fusion with text weight 0. Baseline on v3: **NDCG@10 74.7 train, 71.1 test** (text alone 51.9 / 48.4) |
+| M4 answers + judge + audit + Review | baseline scored on split v3 (2026-10-11): Sonnet 5 answers from our fused top 5 and from the human pages, judged by Opus 5.5 on the paper's prompt. Train **65.8% / 74.8%** (retrieved / oracle), test **69.5% / 74.0%**; earlier answers are reused when Claude would see the same pages. Next: audit gold answers and label 40 judge calls on the Review tab |

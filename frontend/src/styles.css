@@ -403,3 +403,33 @@ tr.ours-row td{background:var(--ok-soft)}
 .skel-hit:nth-child(2){animation-delay:.15s}.skel-hit:nth-child(3){animation-delay:.3s}.skel-hit:nth-child(4){animation-delay:.45s}
 .status.pulsing::before{animation:busy-pulse 1.2s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){.busy-bar{animation:none;width:100%;opacity:.4}.busy-dot,.status.pulsing::before{animation:skel-fade 2s ease-in-out infinite;transform:none}}
+
+/* M4: answers, verdicts and the Review tab */
+.chip.bad{border-color:var(--ink-2);color:var(--ink)}
+.verdict{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--s1) var(--s2)}
+.glyph{font-family:var(--mono);color:var(--muted)}
+.glyph.good{color:var(--ok)}
+.glyph.poor{color:var(--amber)}
+.glyph sup{font-size:var(--t-2);margin-left:2px;color:var(--accent)}
+span.good{color:var(--ok)}
+.anscols{display:grid;gap:var(--s3);margin-top:var(--s5);align-items:start}
+@media (max-width:1100px){.anscols{grid-template-columns:minmax(0,1fr) !important}}
+.anscol header{gap:var(--s1)}
+.answer-text{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);margin:var(--s3) 0 var(--s2)}
+.judgerow{margin-top:var(--s2);align-items:center}
+.givenpages{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s3)}
+.given{display:grid;gap:2px;width:64px;padding:2px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);cursor:pointer;font:inherit;text-align:center}
+.given:hover,.given.on{border-color:var(--accent)}
+.given img{width:100%;aspect-ratio:17/22;object-fit:cover;object-position:top;border-radius:2px;display:block}
+.refcard.disputed{box-shadow:var(--shadow),inset 3px 0 0 var(--amber)}
+.refcard details{margin-top:var(--s2)}
+.qnav{gap:var(--s4);align-items:baseline}
+.answercard{margin-top:var(--s5);background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow),inset 0 0 0 1.5px var(--accent);padding:var(--s4) var(--s5);max-width:var(--measure)}
+.answercard .answer-text{font-size:var(--t1)}
+.mode.live{border-color:var(--accent);color:var(--accent)}
+/* the standard setup table on every run page */
+table.setup th[scope=rowgroup]{vertical-align:top;text-align:left;font:500 var(--t-2)/1.3 var(--mono);text-transform:uppercase;letter-spacing:var(--track-label);color:var(--accent);padding:var(--s2) var(--s3);border-bottom:1px solid var(--line);width:1%;white-space:nowrap}
+table.setup tr.secstart td,table.setup tr.secstart th{border-top:2px solid var(--line-2)}
+table.setup tr:first-child td,table.setup tr:first-child th{border-top:0}
+table.setup td{overflow-wrap:anywhere}
+table.setup td.nw{width:1%}

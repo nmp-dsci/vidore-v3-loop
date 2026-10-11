@@ -1,25 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 /** English datasets, in the order the plan ranks them (s00 §3): commercial value first. */
-export const DATASETS = [
-  "finance_en",
-  "pharmaceuticals",
-  "industrial",
-  "hr",
-  "computer_science",
-] as const;
+export const DATASETS = ['finance_en', 'pharmaceuticals', 'industrial', 'hr', 'computer_science'] as const;
 export type DatasetKey = (typeof DATASETS)[number];
 
 const LABELS: Record<string, string> = {
-  finance_en: "Finance",
-  pharmaceuticals: "Pharmaceuticals",
-  industrial: "Industrial",
-  hr: "HR",
-  computer_science: "Computer science",
+  finance_en: 'Finance',
+  pharmaceuticals: 'Pharmaceuticals',
+  industrial: 'Industrial',
+  hr: 'HR',
+  computer_science: 'Computer science',
 };
 export const datasetLabel = (k: string) => LABELS[k] ?? k;
 
-export type Health = { status: string; code_sha: string; datasets: string[] };
+export type Health = {
+  status: string;
+  code_sha: string;
+  datasets: string[];
+  claude: { available: boolean; detail: string };
+};
 
 export type DatasetCard = {
   key: string;
@@ -74,7 +73,7 @@ export type QueryRow = {
   query_generator: string;
   n_pages: number;
   n_full: number;
-  hand_check: "holds" | "off" | null;
+  hand_check: 'holds' | 'off' | null;
 };
 
 export type Box = {
@@ -93,7 +92,7 @@ export type RelPage = {
 export type HandCheck = {
   dataset: string;
   query_id: number;
-  verdict: "holds" | "off";
+  verdict: 'holds' | 'off';
   checked_answer: string;
   note: string;
   checked_by: string;
@@ -152,13 +151,13 @@ export type Board = {
   };
   about: string;
   ours: OurRow[];
+  ours_answers: OurAnswerRow[];
 };
 
 export async function get<T>(url: string): Promise<T> {
   const r = await fetch(url);
   const j = await r.json().catch(() => ({}));
-  if (!r.ok)
-    throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
+  if (!r.ok) throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
   return j as T;
 }
 
@@ -182,10 +181,7 @@ export function useGet<T>(url: string | null): {
     set({ data: null, error: null, loading: true });
     get<T>(url)
       .then((d) => alive && set({ data: d, error: null, loading: false }))
-      .catch(
-        (e: Error) =>
-          alive && set({ data: null, error: e.message, loading: false }),
-      );
+      .catch((e: Error) => alive && set({ data: null, error: e.message, loading: false }));
     return () => {
       alive = false;
     };
@@ -193,30 +189,28 @@ export function useGet<T>(url: string | null): {
   return state;
 }
 
-export const pageImage = (key: string, corpusId: number) =>
-  `/api/pages/${key}/${corpusId}/image`;
-export const fmtN = (n: number) => n.toLocaleString("en-AU");
+export const pageImage = (key: string, corpusId: number) => `/api/pages/${key}/${corpusId}/image`;
+export const fmtN = (n: number) => n.toLocaleString('en-AU');
 
 export async function post<T>(url: string, body: unknown): Promise<T> {
   const r = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok)
-    throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
+  if (!r.ok) throw new Error((j as { detail?: string }).detail ?? `${r.status} ${url}`);
   return j as T;
 }
 
 /** Retrieval (M2): one question through the stages. */
-export const STAGES = ["text", "visual", "fused", "reranked"] as const;
+export const STAGES = ['text', 'visual', 'fused', 'reranked'] as const;
 export type Stage = (typeof STAGES)[number];
 export const STAGE_LABEL: Record<Stage, [string, string]> = {
-  text: ["A · text", "BM25S on the OCR markdown"],
-  visual: ["B · visual", "late interaction on the page image"],
-  fused: ["C · fused", "reciprocal rank fusion → 50"],
-  reranked: ["D · reranked", "zerank-2 rereads the top of the fused list"],
+  text: ['A · text', 'BM25S on the OCR markdown'],
+  visual: ['B · visual', 'late interaction on the page image'],
+  fused: ['C · fused', 'reciprocal rank fusion → 50'],
+  reranked: ['D · reranked', 'zerank-2 rereads the top of the fused list'],
 };
 
 export type Metrics = {
@@ -292,10 +286,14 @@ export type RetrievalStatus = {
 export type Mean = { mean: number | null; n: number };
 export type RankStat = { median: number | null; found: number; n: number };
 export type StageSummary = Record<string, Mean | RankStat>;
+export type SetupRow = { k: string; v: string; link?: string; mono?: boolean };
+export type SetupSection = { section: string; rows: SetupRow[] };
+
 export type RunMeta = {
   run_id: string;
+  setup?: SetupSection[];
   dataset: string;
-  split: "train" | "test";
+  split: 'train' | 'test';
   final: boolean;
   label: string;
   config: {
@@ -321,7 +319,7 @@ export type RunMeta = {
   started_at: string;
   finished_at: string | null;
   seconds?: number;
-  status: "running" | "finished" | "failed" | "interrupted";
+  status: 'running' | 'finished' | 'failed' | 'interrupted';
   error?: string;
   progress: { done: number; n: number; seconds?: number };
   n: number;
@@ -404,18 +402,134 @@ export type SplitInfo = {
   dataset: string;
   seed: number;
   stratified_by: string;
-  n: { train: number; test: number };
+  n: { train: number; test: number; holdout: number };
   fingerprint: string;
-  strata: { stratum: string; train: number; test: number }[];
+  strata: { stratum: string; train: number; test: number; holdout: number }[];
 };
 export type OurRow = {
   run_id: string;
   dataset: string;
   label: string;
   n: number;
-  models: RunMeta["models"];
-  config: RunMeta["config"];
+  models: RunMeta['models'];
+  config: RunMeta['config'];
   ndcg_10: Partial<Record<Stage, number | null>>;
 };
-export const pct1 = (x: number | null | undefined) =>
-  x == null ? "—" : (x * 100).toFixed(1);
+export const pct1 = (x: number | null | undefined) => (x == null ? '—' : (x * 100).toFixed(1));
+
+// ---- M4: answers, the judge, the audit ----------------------------------------
+
+export const MODES = ['retrieved', 'oracle'] as const;
+export type Mode = (typeof MODES)[number];
+export const MODE_LABEL: Record<Mode, [string, string]> = {
+  retrieved: ['retrieved', 'the top 5 pages of our retrieval'],
+  oracle: ['oracle', 'the human-marked pages: the ceiling'],
+};
+export type Verdict = 'Correct' | 'Partially Correct' | 'Incorrect';
+export type ModeSummary = {
+  raw: Mean;
+  audited: Mean;
+  verdicts: Record<Verdict, number>;
+  errors: number;
+  answer_tokens: number | null;
+  ms: number | null;
+  full_given?: Mean;
+  correct_when_full_given?: Mean;
+  correct_when_full_missed?: Mean;
+};
+export type AnswerSummary = Partial<Record<Mode, ModeSummary>> & {
+  retrieval_cost?: { raw: number | null; audited: number | null };
+};
+export type AnswerRun = {
+  run_id: string;
+  setup?: SetupSection[];
+  kind: 'answer';
+  dataset: string;
+  split: string;
+  final: boolean;
+  status: string;
+  n: number;
+  label: string;
+  started_at: string;
+  finished_at: string | null;
+  progress: { done: number; n: number; seconds?: number };
+  error?: string;
+  config: {
+    modes: Mode[];
+    k: number;
+    source_run: string | null;
+    source_stage: string;
+    modality: string;
+    note: string;
+    limit: number | null;
+  };
+  models: { answer: string; effort: string; judge: string; judge_effort: string };
+  summary: AnswerSummary | null;
+  audited?: AnswerSummary;
+  totals?: { calls: number; input_tokens: number; output_tokens: number; cost_usd: number };
+  calibration?: { labelled: number; agree: number; target: number };
+  disputed?: number;
+  mlflow_run_id?: string | null;
+};
+export type AnswerRow = {
+  query_id: number;
+  query: string;
+  query_types: string[];
+  n_full: number;
+  reference: 'disputed' | 'holds' | null;
+  modes: Partial<
+    Record<
+      Mode,
+      {
+        verdict: Verdict | null;
+        correct: boolean | null;
+        person: boolean | null;
+        full_given?: boolean;
+        error?: string;
+      }
+    >
+  >;
+};
+export type GivenPage = { corpus_id: number; doc_id: string | null; page: number | null; grade: number };
+export type JudgeLabel = { correct: boolean; judge_correct: boolean; agrees: boolean; note: string; at: string };
+export type ModeAnswer = {
+  answer: string | null;
+  verdict: Verdict | null;
+  correct: boolean | null;
+  explanation?: string;
+  error?: string;
+  full_given?: boolean;
+  pages: GivenPage[];
+  label: JudgeLabel | null;
+  usage?: { answer: Usage; judge: Usage };
+};
+export type Usage = { input_tokens: number; output_tokens: number; ms: number; cost_usd: number | null; model: string };
+export type ReferenceState = { status: 'disputed' | 'holds'; note: string; by: string; at: string; source: string };
+export type AnswerQuestion = {
+  run_id: string;
+  dataset: string;
+  query_id: number;
+  query: string;
+  answer: string;
+  raw_answers: string[];
+  query_types: string[];
+  reference: ReferenceState | null;
+  gold: GivenPage[];
+  modes: Partial<Record<Mode, ModeAnswer>>;
+  prev: number | null;
+  next: number | null;
+};
+export type LiveAnswer = {
+  answer: string;
+  pages: number[] | null;
+  usage: Usage;
+  reference?: string;
+  judge?: { verdict: Verdict; correct: boolean; explanation: string; usage: Usage };
+};
+export type OurAnswerRow = {
+  run_id: string;
+  dataset: string;
+  n: number;
+  models: { answer: string; judge: string };
+  accuracy: Partial<Record<Mode, number | null>>;
+};

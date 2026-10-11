@@ -4,6 +4,7 @@ import { Overview } from './pages/Overview';
 import { Dataset, Datasets } from './pages/Datasets';
 import { Leaderboard } from './pages/Leaderboard';
 import { Pipeline } from './pages/Pipeline';
+import { Review, ReviewQuestion, ReviewRun } from './pages/Review';
 import { Run, RunQuestion, Runs } from './pages/Runs';
 
 /**
@@ -24,6 +25,9 @@ export const routes: RouteObject[] = [
       { id: 'runs', path: '/runs', element: <Runs /> },
       { id: 'run', path: '/runs/:runId', element: <Run /> },
       { id: 'run-question', path: '/runs/:runId/:qid', element: <RunQuestion /> },
+      { id: 'review', path: '/review', element: <Review /> },
+      { id: 'review-run', path: '/review/:runId', element: <ReviewRun /> },
+      { id: 'review-question', path: '/review/:runId/:qid', element: <ReviewQuestion /> },
       { id: 'leaderboard', path: '/leaderboard', element: <Leaderboard /> },
       { id: 'missing', path: '*', element: <p className="empty">No page here. Try the Datasets tab.</p> },
     ],

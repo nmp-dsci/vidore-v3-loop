@@ -35,18 +35,23 @@ export function Leaderboard() {
         An agent that re-reads the pages leads retrieval at <em>74.6 NDCG@10</em>; no board scores answers
       </h1>
       <p className="lead">
-        Two retrieval boards (ViDoRe pipelines and MTEB single models) on English queries, plus the paper's answer and grounding tables.
+        Two retrieval boards (ViDoRe pipelines and MTEB single models) on English queries, plus the paper's answer and
+        grounding tables.
       </p>
 
       <dl className="kinds">
         <dt>visual / text</dt>
         <dd>what the model reads: the page image (tables and charts as laid out), or the page's OCR text only</dd>
         <dt>LI</dt>
-        <dd>late interaction: one vector per image patch or word; each question word is matched to its best patch (MaxSim)</dd>
+        <dd>
+          late interaction: one vector per image patch or word; each question word is matched to its best patch (MaxSim)
+        </dd>
         <dt>dense</dt>
         <dd>one vector per page, compared with one vector for the question</dd>
         <dt>+ reranker · + LLM agent</dt>
-        <dd>a second model rereads the top 50–100 and reorders them; an agent also rewrites the query and searches again</dd>
+        <dd>
+          a second model rereads the top 50–100 and reorders them; an agent also rewrites the query and searches again
+        </dd>
       </dl>
 
       <h2>Pipelines — the ViDoRe pipeline board</h2>
@@ -98,18 +103,20 @@ export function Leaderboard() {
           </tbody>
         </table>
       </div>
-      <p className="small muted">NDCG@10 on English queries, from illuin-tech/vidore-benchmark (last entry 2026-03-13).</p>
+      <p className="small muted">
+        NDCG@10 on English queries, from illuin-tech/vidore-benchmark (last entry 2026-03-13).
+      </p>
       {b.ours.length > 0 ? (
         <p className="small muted">
           Our rows are scored once on our test half, so they are close to, not exactly, like for like.
         </p>
       ) : (
-        <p className="small muted">
-          Our rows appear once a configuration chosen on train is scored on test.
-        </p>
+        <p className="small muted">Our rows appear once a configuration chosen on train is scored on test.</p>
       )}
 
-      <h2>Single models — MTEB ViDoRe(v3), top {TOP_MODELS} of {b.models.length}</h2>
+      <h2>
+        Single models — MTEB ViDoRe(v3), top {TOP_MODELS} of {b.models.length}
+      </h2>
       <div className="tw">
         <table>
           <thead>
@@ -170,6 +177,26 @@ export function Leaderboard() {
                 ))}
               </tr>
             ))}
+            {(b.ours_answers ?? []).flatMap((o) =>
+              (['retrieved', 'oracle'] as const)
+                .filter((m) => o.accuracy[m] != null)
+                .map((m) => (
+                  <tr key={`${o.run_id}-${m}`} className="ours-row">
+                    <td className="sub">
+                      <Link to={`/review/${o.run_id}`}>ours · {m === 'retrieved' ? 'our top 5' : 'oracle'}</Link>
+                    </td>
+                    <td>image + text</td>
+                    <td>{o.models.answer}</td>
+                    {b.datasets.map((d) => (
+                      <td key={d} className="num">
+                        {d === o.dataset ? `${((o.accuracy[m] ?? 0) * 100).toFixed(1)}%` : '—'}
+                      </td>
+                    ))}
+                    <td className="num">—</td>
+                    <td className="num">—</td>
+                  </tr>
+                )),
+            )}
           </tbody>
         </table>
       </div>

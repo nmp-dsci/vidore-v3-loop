@@ -39,26 +39,65 @@ def _questions(n: int = 20) -> list[dict[str, Any]]:
 
 
 def test_split_is_deterministic_balanced_and_disjoint() -> None:
-    qs = _questions(21)
-    a, b = split.make(qs), split.make(qs)
+    qs = _questions(41)
+    size = {"train": 12, "test": 12}
+    a, b = split.make(qs, size=size), split.make(qs, size=size)
     assert a == b
-    assert not set(a["train"]) & set(a["test"])
-    assert sorted(a["train"] + a["test"]) == list(range(21))
-    assert (len(a["train"]), len(a["test"])) == (11, 10)
+    assert not set(a["train"]) & set(a["test"]) and not set(a["test"]) & set(a["holdout"])
+    assert sorted(a["train"] + a["test"] + a["holdout"]) == list(range(41))
+    assert (len(a["train"]), len(a["test"]), len(a["holdout"])) == (12, 12, 17)
     by_id = {q["query_id"]: split.stratum(q) for q in qs}
     tr, te = Counter(by_id[i] for i in a["train"]), Counter(by_id[i] for i in a["test"])
     assert all(abs(tr[s] - te[s]) <= 1 for s in set(by_id.values()))
-    assert split.make(qs, seed=1) != a  # the seed matters
+    assert split.make(qs, seed=1, size=size) != a  # the seed matters
+    with pytest.raises(ValueError):
+        split.make(qs, size={"train": 30, "test": 30})
+
+
+def test_the_holdout_is_never_scored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(split, "SPLITS_DIR", tmp_path)
+    monkeypatch.setattr(split, "SIZE", {"train": 3, "test": 3})
+    monkeypatch.setattr(catalog, "queries", lambda key: _questions(10))
+    doc = split.write("finance_en")
+    assert doc["n"] == {"train": 3, "test": 3, "holdout": 4}
+    assert sorted(split.assignment("finance_en").values()).count("holdout") == 4
+    with pytest.raises(ValueError):
+        split.ids("finance_en", "holdout")
+    with pytest.raises(ValueError):
+        runs.plan(runs.RunConfig("finance_en", "holdout", stages=("visual",)))
 
 
 def test_split_file_is_written_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(split, "SPLITS_DIR", tmp_path)
+    monkeypatch.setattr(split, "SIZE", {"train": 4, "test": 4})
     monkeypatch.setattr(catalog, "queries", lambda key: _questions(8))
     doc = split.write("finance_en")
-    assert doc["n"] == {"train": 4, "test": 4} and doc["seed"] == split.SEED
+    assert doc["n"] == {"train": 4, "test": 4, "holdout": 0} and doc["seed"] == split.SEED
     assert split.ids("finance_en", "test") == doc["test"]
     with pytest.raises(FileExistsError):
         split.write("finance_en")
+
+
+def test_the_split_grows_to_50_50_without_moving_a_scored_question(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(split, "SPLITS_DIR", tmp_path)
+    monkeypatch.setattr(split, "SIZE", {"train": 6, "test": 6})
+    qs = _questions(31)
+    monkeypatch.setattr(catalog, "queries", lambda key: qs)
+    before = split.write("finance_en")
+    after = split.extend("finance_en")
+    assert set(before["train"]) <= set(after["train"]) and set(before["test"]) <= set(after["test"])
+    assert after["holdout"] == [] and after["version"] == split.VERSION + 1
+    assert sorted(after["train"] + after["test"]) == list(range(31))
+    assert abs(len(after["train"]) - len(after["test"])) <= 1
+    by_id = {q["query_id"]: split.stratum(q) for q in qs}
+    tr, te = Counter(by_id[i] for i in after["train"]), Counter(by_id[i] for i in after["test"])
+    assert all(abs(tr[s] - te[s]) <= 1 for s in set(by_id.values()))
+    archived = tmp_path / "archive" / f"finance_en.v{split.VERSION}.json"
+    assert json.loads(archived.read_text())["holdout"] == before["holdout"]
+    with pytest.raises(ValueError):  # nothing left to deal
+        split.extend("finance_en")
 
 
 # ---- fusion weights -------------------------------------------------------------
@@ -82,6 +121,7 @@ def fake(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     qs = _questions(20)
     by_id = {q["query_id"]: q for q in qs}
     monkeypatch.setattr(split, "SPLITS_DIR", tmp_path / "splits")
+    monkeypatch.setattr(split, "SIZE", {"train": 10, "test": 10})
     monkeypatch.setattr(catalog, "queries", lambda key: qs)
     monkeypatch.setattr(catalog, "question", lambda key, qid: by_id.get(qid))
     monkeypatch.setenv("VIDORE_RUNS_DIR", str(tmp_path / "runs"))
@@ -182,7 +222,7 @@ def test_runs_api_lists_drills_and_puts_final_runs_on_the_board(
     ours = app_module._ours(runs.list_runs())
     assert [o["run_id"] for o in ours] == [test]
     info = c.get("/api/split/finance_en").json()
-    assert info["n"] == {"train": 10, "test": 10}
+    assert info["n"] == {"train": 10, "test": 10, "holdout": 0}
     assert sum(s["train"] + s["test"] for s in info["strata"]) == 20
     r = c.post("/api/runs", json={"dataset": "finance_en", "split": "test", "stages": list(stages)})
     assert r.status_code == 409 and "final" in r.json()["detail"]

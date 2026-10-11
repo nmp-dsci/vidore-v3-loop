@@ -12,10 +12,14 @@ const BLURB: Record<string, string> = {
 
 const MILESTONES: [string, string, 'ok' | 'warn' | 'no'][] = [
   ['M0', 'scaffold: pinned datasets, loader, NDCG@10, smoke, CI', 'ok'],
-  ['M1', 'this viewer: datasets, questions, reference answers, evidence pages with human boxes; the board', 'ok'],
-  ['M2', 'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + the RAG pipeline tab (its answer column lands in M4)', 'ok'],
+  ['M1', 'this viewer: datasets, questions, gold answers, evidence pages with human boxes; the board', 'ok'],
+  [
+    'M2',
+    'retrieval pipeline (BM25S, visual 4B, RRF, reranker) + the RAG pipeline tab (its answer column lands in M4)',
+    'ok',
+  ],
   ['M3', 'retrieval scored on our finance_en split + Runs tab, our row on the Leaderboard', 'ok'],
-  ['M4', 'Claude answers, judge and reference audit + Review tab', 'no'],
+  ['M4', 'Claude answers, judge and gold-answer audit + Review tab', 'warn'],
   ['M5', 'the agent + Agent tab', 'no'],
   ['M6', 'the self-improving loop + Optimise tab', 'no'],
   ['M7', 'grounding: our boxes against the human boxes', 'no'],
@@ -30,7 +34,8 @@ export function Overview() {
         Five English corpora of real PDFs, where the answer often sits in <em>a table, chart or diagram</em>
       </h1>
       <p className="lead">
-        Every question has human-graded pages, evidence boxes and a reference answer to review before anything is built on top.
+        Every question has human-graded pages, evidence boxes and a gold answer to review before anything is built on
+        top.
       </p>
       {!data ? (
         <Loading error={error} what="datasets" />
@@ -75,7 +80,9 @@ export function Overview() {
                 <td className="sub mono">{m}</td>
                 <td className="wrap">{what}</td>
                 <td className="nw">
-                  <span className={`status ${st}`}>{st === 'ok' ? 'done' : st === 'warn' ? 'in review' : 'designed'}</span>
+                  <span className={`status ${st}`}>
+                    {st === 'ok' ? 'done' : st === 'warn' ? 'in review' : 'designed'}
+                  </span>
                 </td>
               </tr>
             ))}

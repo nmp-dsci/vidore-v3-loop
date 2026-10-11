@@ -17,6 +17,7 @@ import {
   pct1,
   useGet,
 } from '../lib/api';
+import { SetupTable } from '../lib/setup';
 import { Loading } from '../lib/ui';
 
 /** Every metric a run averages, in the order the RAG pipeline tab lists them. */
@@ -97,7 +98,8 @@ export function Runs() {
     <>
       <p className="label">Runs · retrieval scored over our split (M3)</p>
       <h1>
-        Every configuration, scored on <em>155 train questions</em>; the chosen one, once, on test
+        Every configuration, scored on <em>{split ? split.n.train : 100} train questions</em>; the chosen one, once, on
+        test
       </h1>
       <p className="lead">
         Each run scores a whole split; configurations are compared on train and only the chosen one is scored on test,
@@ -183,8 +185,9 @@ function SplitPanel({ s }: { s: SplitInfo }) {
   return (
     <details className="splitpanel">
       <summary>
-        The split: <b>{s.n.train}</b> train · <b>{s.n.test}</b> test of {s.dataset}'s {s.n.train + s.n.test} English
-        questions · seed {s.seed} · stratified by {s.stratified_by} ({s.strata.length} groups) · file {s.fingerprint}
+        The split: <b>{s.n.train}</b> train · <b>{s.n.test}</b> test · <b>{s.n.holdout}</b> holdout, never scored, of{' '}
+        {s.dataset}'s {s.n.train + s.n.test + s.n.holdout} English questions · seed {s.seed} · stratified by{' '}
+        {s.stratified_by} ({s.strata.length} groups) · file {s.fingerprint}
       </summary>
       <div className="tw">
         <table className="fit">
@@ -193,6 +196,7 @@ function SplitPanel({ s }: { s: SplitInfo }) {
               <th>query types</th>
               <th className="num">train</th>
               <th className="num">test</th>
+              <th className="num">holdout</th>
             </tr>
           </thead>
           <tbody>
@@ -201,6 +205,7 @@ function SplitPanel({ s }: { s: SplitInfo }) {
                 <td>{g.stratum.replaceAll('+', ' + ')}</td>
                 <td className="num">{g.train}</td>
                 <td className="num">{g.test}</td>
+                <td className="num">{g.holdout}</td>
               </tr>
             ))}
           </tbody>
@@ -228,33 +233,9 @@ export function Run() {
       <div className="row">
         <SplitChip r={r} />
         <StatusChip r={r} />
-        <span className="small muted">
-          {r.n} questions · started {when(r.started_at)}
-          {r.seconds != null && ` · ${Math.round(r.seconds / 60)} min`} · code {r.code_sha} · config {r.fingerprint}
-        </span>
       </div>
-      {r.config.note && <p className="small">{r.config.note}</p>}
       {r.error && <p className="empty">Failed: {r.error}</p>}
-      <dl className="kv small runkv">
-        <dt>visual model</dt>
-        <dd className="mono">
-          {r.models.visual} ({r.models.visual_dim}-d)
-        </dd>
-        <dt>reranker</dt>
-        <dd className="mono">{r.models.reranker ?? '—'}</dd>
-        <dt>pools</dt>
-        <dd>
-          each channel's top {r.channel_k} → fused top {r.fused_k} (RRF k = {r.rrf_k})
-        </dd>
-        <dt>split</dt>
-        <dd>
-          seed {r.split_seed} · file {r.split_fingerprint}
-        </dd>
-        <dt>MLflow</dt>
-        <dd className="mono">
-          {r.mlflow_run_id ? `vidore-v3-loop/evals · ${r.mlflow_run_id}` : (r.mlflow_error ?? 'not logged yet')}
-        </dd>
-      </dl>
+      <SetupTable setup={r.setup} />
       {r.summary && <SummaryTable r={r} stages={stages} />}
       {r.costs && <Costs r={r} stages={stages} />}
       {r.slices && <Slices slices={r.slices} stages={stages} />}
@@ -414,9 +395,7 @@ function Slices({
           </tbody>
         </table>
       </div>
-      <p className="small muted">
-        A question with two types counts in both rows, so small groups move a lot.
-      </p>
+      <p className="small muted">A question with two types counts in both rows, so small groups move a lot.</p>
     </>
   );
 }

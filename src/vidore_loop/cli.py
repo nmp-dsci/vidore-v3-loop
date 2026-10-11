@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -137,13 +138,18 @@ def smoke() -> None:
 
 
 @app.command("split")
-def make_split(dataset: str = typer.Option(..., help="a dataset key")) -> None:
-    """Write our fixed train / test split of a dataset's English questions (once)."""
+def make_split(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    extend: bool = typer.Option(False, help="deal the holdout into train and test (50/50)"),
+) -> None:
+    """Write our fixed train / test split of a dataset's English questions (once), or grow it."""
     from vidore_loop.eval import split
 
-    doc = split.write(registry.get(dataset).key)
+    key = registry.get(dataset).key
+    doc = split.extend(key) if extend else split.write(key)
+    n = doc["n"]
     console.print(
-        f"{split.path(doc['dataset'])}: train {doc['n']['train']} · test {doc['n']['test']}"
+        f"{split.path(key)}: train {n['train']} · test {n['test']} · holdout {n.get('holdout', 0)}"
     )
 
 
@@ -251,17 +257,104 @@ def evaluate(
         console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
 
 
+@app.command("answer")
+def answer_run(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    split_name: str = typer.Option("train", "--split", help="train | test (test needs --final)"),
+    modes: str = typer.Option("retrieved,oracle", help="settings: retrieved, oracle"),
+    k: int = typer.Option(5, help="pages given in the retrieved setting"),
+    source_run: str = typer.Option(
+        "", help="the retrieval run to answer from (default: latest with the viewer's weights)"
+    ),
+    model: str = typer.Option("sonnet", help="the answering model: haiku | sonnet | opus | an id"),
+    judge_model: str = typer.Option("opus", help="the judge model"),
+    workers: int = typer.Option(4, help="questions answered at once"),
+    final: bool = typer.Option(False, help="answer the test split, once"),
+    force: bool = typer.Option(False, help="repeat a configuration already scored on test"),
+    limit: int = typer.Option(0, help="answer only the first N questions (a smoke; train only)"),
+    resume: str = typer.Option("", help="carry on an interrupted answer run by its id"),
+    reuse: bool = typer.Option(
+        True, help="copy answers already given the same pages under the same setup"
+    ),
+    note: str = typer.Option("", help="why this run exists"),
+) -> None:
+    """Answer every question of a split in each setting with Claude (subscription), then judge.
+
+    Writes a run folder under runs/ and logs it to MLflow. Calls Claude about twice per
+    question per setting: check the subscription has room before a full split."""
+    from vidore_loop.eval import answers
+
+    cfg = answers.AnswerConfig(
+        dataset=registry.get(dataset).key,
+        split=split_name,
+        modes=tuple(m.strip() for m in modes.split(",") if m.strip()),
+        k=k,
+        source_run=source_run or None,
+        model=model,
+        judge_model=judge_model,
+        workers=workers,
+        note=note,
+        limit=limit or None,
+    )
+    rid = answers.execute(
+        cfg,
+        final=final,
+        force=force,
+        resume=resume or None,
+        reuse=reuse,
+        on_progress=lambda d, n: console.print(f"{d}/{n}", end="\r"),
+    )
+    doc = runs_get(rid)
+    console.print(f"\n{rid}: {doc['status']}")
+    t = Table("setting", "accuracy", "Correct", "Partial", "Incorrect", "errors", "tokens/answer")
+    for m, row in (doc.get("summary") or {}).items():
+        if m == "retrieval_cost":
+            continue
+        v = row["verdicts"]
+        acc = row["raw"]["mean"]
+        t.add_row(
+            m,
+            "—" if acc is None else f"{acc * 100:.1f}% of {row['raw']['n']}",
+            str(v["Correct"]),
+            str(v["Partially Correct"]),
+            str(v["Incorrect"]),
+            str(row["errors"]),
+            str(row["answer_tokens"] or "—"),
+        )
+    console.print(t)
+    tot = doc.get("totals") or {}
+    console.print(
+        f"{tot.get('calls', 0)} calls · {tot.get('reused', 0)} answers reused · "
+        f"{tot.get('input_tokens', 0):,} input tokens · "
+        f"≈${tot.get('cost_usd', 0)} at per-token prices (the subscription pays)"
+    )
+    if doc.get("mlflow_error"):
+        console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
+
+
+def runs_get(rid: str) -> dict[str, Any]:
+    from vidore_loop.eval import runs
+
+    return runs.get(rid)
+
+
 @app.command("runs")
 def list_runs() -> None:
     """Every scored run, newest first."""
     from vidore_loop.eval import runs
 
-    t = Table("run", "split", "n", "status", "NDCG@10 per stage")
+    t = Table("run", "split", "n", "status", "per stage / setting")
     for r in runs.list_runs():
-        nd = " · ".join(
-            f"{s[0]} {m['ndcg_10']['mean']:.3f}" for s, m in (r.get("summary") or {}).items()
-        )
-        t.add_row(r["run_id"], r["split"], str(r["n"]), r["status"], nd)
+        summ = r.get("summary") or {}
+        if r.get("kind") == "answer":
+            cells = " · ".join(
+                f"{m} {v['raw']['mean'] * 100:.1f}%"
+                for m, v in summ.items()
+                if m != "retrieval_cost" and v["raw"]["mean"] is not None
+            )
+        else:
+            cells = " · ".join(f"{s[0]} {m['ndcg_10']['mean']:.3f}" for s, m in summ.items())
+        t.add_row(r["run_id"], r["split"], str(r["n"]), r["status"], cells)
     console.print(t)
 
 

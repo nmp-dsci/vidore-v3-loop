@@ -59,7 +59,7 @@ src/vidore_loop/
   eval/answers.py      an answer run → runs/<id>/ (run.json + answers.jsonl), resumable; raw and audited accuracy, MLflow
   data/audits.py       the Review tab's writes: disputed references, a person's label on a judged answer
 frontend/              React + Vite viewer (:5175 dev), orange tokens, design lint
-data/audits/           hand checks of reference answers, disputed references, judge labels (committed)
+data/audits/           hand checks of gold answers, disputed golds, judge labels (committed)
 docs/research/         the committed sources behind every board number
 tests/                 offline only
 data/splits/           our committed train/test cut

@@ -18,7 +18,7 @@ self-improving loop as [tau2-loop](https://github.com/nmp-dsci/tau2-loop) and
 | Layer | Metric | Ground truth |
 |---|---|---|
 | Retrieval | NDCG@10 over pages (graded 2 = full answer, 1 = required part) | human qrels |
-| Answer | % correct by an LLM judge against the reference answer | human answers merged by Qwen2.5-VL-32B |
+| Answer | % correct by an LLM judge against the gold answer | human answers merged by Qwen2.5-VL-32B |
 | Grounding | pixel IoU / F1 of cited bounding boxes | human boxes (inter-annotator F1 0.602) |
 
 ## Datasets

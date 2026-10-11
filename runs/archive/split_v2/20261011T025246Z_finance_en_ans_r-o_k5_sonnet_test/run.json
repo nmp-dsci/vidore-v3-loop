@@ -1,0 +1,348 @@
+{
+ "run_id": "20261011T025246Z_finance_en_ans_r-o_k5_sonnet_test",
+ "kind": "answer",
+ "dataset": "finance_en",
+ "split": "test",
+ "final": true,
+ "config": {
+  "dataset": "finance_en",
+  "split": "test",
+  "modes": [
+   "retrieved",
+   "oracle"
+  ],
+  "k": 5,
+  "source_run": "20261011T024429Z_finance_en_w0-1_norr_test",
+  "source_stage": "fused",
+  "modality": "image+text",
+  "model": "sonnet",
+  "effort": "medium",
+  "judge_model": "opus",
+  "judge_effort": "medium",
+  "workers": 4,
+  "note": "baseline on the 100/100 split v2: Sonnet 5 from the fused top 5 and from the human pages",
+  "limit": null
+ },
+ "label": "ans_r-o_k5_sonnet",
+ "fingerprint": "567d5a151f0e",
+ "models": {
+  "answer": "claude-sonnet-5",
+  "effort": "medium",
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "answer": "95b81f8c",
+  "judge": "cc617078"
+ },
+ "billing": "subscription",
+ "split_seed": 300,
+ "split_fingerprint": "0ae786627182",
+ "code_sha": "2617486-dirty",
+ "started_at": "2026-10-11T02:52:46+00:00",
+ "n": 100,
+ "status": "finished",
+ "pid": 17987,
+ "finished_at": "2026-10-11T02:59:37+00:00",
+ "progress": {
+  "done": 100,
+  "n": 100,
+  "seconds": 411.6
+ },
+ "summary": {
+  "retrieved": {
+   "raw": {
+    "mean": 0.73,
+    "n": 100
+   },
+   "audited": {
+    "mean": 0.73,
+    "n": 100
+   },
+   "verdicts": {
+    "Correct": 73,
+    "Partially Correct": 17,
+    "Incorrect": 10
+   },
+   "errors": 0,
+   "answer_tokens": 23116,
+   "ms": 4365,
+   "full_given": {
+    "mean": 0.9428571428571428,
+    "n": 70
+   },
+   "correct_when_full_given": {
+    "mean": 0.8787878787878788,
+    "n": 66
+   },
+   "correct_when_full_missed": {
+    "mean": 0.75,
+    "n": 4
+   }
+  },
+  "oracle": {
+   "raw": {
+    "mean": 0.72,
+    "n": 100
+   },
+   "audited": {
+    "mean": 0.72,
+    "n": 100
+   },
+   "verdicts": {
+    "Correct": 72,
+    "Partially Correct": 18,
+    "Incorrect": 10
+   },
+   "errors": 0,
+   "answer_tokens": 24054,
+   "ms": 4523
+  },
+  "retrieval_cost": {
+   "raw": -0.010000000000000009,
+   "audited": -0.010000000000000009
+  }
+ },
+ "seconds": 411.6,
+ "slices": {
+  "query type": [
+   {
+    "value": "extractive",
+    "n": 45,
+    "modes": {
+     "retrieved": {
+      "mean": 0.8,
+      "n": 45
+     },
+     "oracle": {
+      "mean": 0.7777777777777778,
+      "n": 45
+     }
+    }
+   },
+   {
+    "value": "numerical",
+    "n": 33,
+    "modes": {
+     "retrieved": {
+      "mean": 0.8181818181818182,
+      "n": 33
+     },
+     "oracle": {
+      "mean": 0.7878787878787878,
+      "n": 33
+     }
+    }
+   },
+   {
+    "value": "compare-contrast",
+    "n": 18,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5555555555555556,
+      "n": 18
+     },
+     "oracle": {
+      "mean": 0.6111111111111112,
+      "n": 18
+     }
+    }
+   },
+   {
+    "value": "open-ended",
+    "n": 18,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6666666666666666,
+      "n": 18
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 18
+     }
+    }
+   },
+   {
+    "value": "boolean",
+    "n": 15,
+    "modes": {
+     "retrieved": {
+      "mean": 0.8,
+      "n": 15
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 15
+     }
+    }
+   },
+   {
+    "value": "enumerative",
+    "n": 10,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5,
+      "n": 10
+     },
+     "oracle": {
+      "mean": 0.5,
+      "n": 10
+     }
+    }
+   },
+   {
+    "value": "multi-hop",
+    "n": 6,
+    "modes": {
+     "retrieved": {
+      "mean": 0.3333333333333333,
+      "n": 6
+     },
+     "oracle": {
+      "mean": 0.6666666666666666,
+      "n": 6
+     }
+    }
+   }
+  ],
+  "content": [
+   {
+    "value": "Text",
+    "n": 94,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7340425531914894,
+      "n": 94
+     },
+     "oracle": {
+      "mean": 0.723404255319149,
+      "n": 94
+     }
+    }
+   },
+   {
+    "value": "Table",
+    "n": 60,
+    "modes": {
+     "retrieved": {
+      "mean": 0.65,
+      "n": 60
+     },
+     "oracle": {
+      "mean": 0.7166666666666667,
+      "n": 60
+     }
+    }
+   },
+   {
+    "value": "Chart",
+    "n": 7,
+    "modes": {
+     "retrieved": {
+      "mean": 0.8571428571428571,
+      "n": 7
+     },
+     "oracle": {
+      "mean": 0.8571428571428571,
+      "n": 7
+     }
+    }
+   },
+   {
+    "value": "Infographic",
+    "n": 2,
+    "modes": {
+     "retrieved": {
+      "mean": 1.0,
+      "n": 2
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 2
+     }
+    }
+   }
+  ],
+  "format": [
+   {
+    "value": "question",
+    "n": 60,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7166666666666667,
+      "n": 60
+     },
+     "oracle": {
+      "mean": 0.7,
+      "n": 60
+     }
+    }
+   },
+   {
+    "value": "instruction",
+    "n": 24,
+    "modes": {
+     "retrieved": {
+      "mean": 0.75,
+      "n": 24
+     },
+     "oracle": {
+      "mean": 0.75,
+      "n": 24
+     }
+    }
+   },
+   {
+    "value": "keyword",
+    "n": 16,
+    "modes": {
+     "retrieved": {
+      "mean": 0.75,
+      "n": 16
+     },
+     "oracle": {
+      "mean": 0.75,
+      "n": 16
+     }
+    }
+   }
+  ],
+  "author": [
+   {
+    "value": "person",
+    "n": 70,
+    "modes": {
+     "retrieved": {
+      "mean": 0.7571428571428571,
+      "n": 70
+     },
+     "oracle": {
+      "mean": 0.7714285714285715,
+      "n": 70
+     }
+    }
+   },
+   {
+    "value": "synthetic",
+    "n": 30,
+    "modes": {
+     "retrieved": {
+      "mean": 0.6666666666666666,
+      "n": 30
+     },
+     "oracle": {
+      "mean": 0.6,
+      "n": 30
+     }
+    }
+   }
+  ]
+ },
+ "totals": {
+  "calls": 400,
+  "input_tokens": 5080117,
+  "output_tokens": 86808,
+  "cost_usd": 22.85
+ },
+ "mlflow_run_id": "477406ff6f4148e89ba1d81d2ef59dd5"
+}

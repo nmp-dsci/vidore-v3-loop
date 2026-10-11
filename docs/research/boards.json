@@ -1,0 +1,273 @@
+{
+ "_about": "Numbers shown on the Leaderboard tab besides the MTEB per-model file. English queries unless noted. Sources: pipeline board = github.com/illuin-tech/vidore-benchmark results/metrics (last entry 2026-03-13); paper = arXiv 2601.08620 v2 Tables 3, 20-22. Collected 2026-09-28.",
+ "datasets": [
+  "finance_en",
+  "pharmaceuticals",
+  "industrial",
+  "hr",
+  "computer_science"
+ ],
+ "pipelines": [
+  {
+   "name": "NeMo Retriever agentic (nemotron-colembed-vl-8b-v2 + Claude Opus 4.5)",
+   "kind": "visual LI + LLM agent",
+   "scores": [
+    75.9,
+    74.8,
+    63.4,
+    74.5,
+    84.5
+   ],
+   "mean": 74.6,
+   "latency": "\u2248136 s/query (NVIDIA blog, all 8 sets)"
+  },
+  {
+   "name": "jina-v4 text (NeMo OCR) + zerank-2",
+   "kind": "text + reranker",
+   "scores": [
+    74.2,
+    68.6,
+    58.9,
+    69.1,
+    83.5
+   ],
+   "mean": 70.9,
+   "latency": "\u22489.8 s/query (HR)"
+  },
+  {
+   "name": "nemotron-colembed-vl-8b-v2",
+   "kind": "visual LI",
+   "scores": [
+    69.9,
+    68.3,
+    58.8,
+    68.4,
+    80.1
+   ],
+   "mean": 69.1,
+   "latency": "\u22481.1 s/query (HR)"
+  },
+  {
+   "name": "llama-nemotron-embed-vl-1b + rerank-vl-1b",
+   "kind": "visual dense + VL reranker",
+   "scores": [
+    71.8,
+    68.5,
+    56.5,
+    65.7,
+    78.0
+   ],
+   "mean": 68.1,
+   "latency": "\u22486.2 s/query (HR)"
+  },
+  {
+   "name": "llama-nemotron-colembed-vl-3b-v2",
+   "kind": "visual LI",
+   "scores": [
+    69.4,
+    67.5,
+    56.7,
+    65.5,
+    78.6
+   ],
+   "mean": 67.5,
+   "latency": null
+  },
+  {
+   "name": "jina-v4 visual + jina-reranker-m0",
+   "kind": "visual + reranker",
+   "scores": [
+    68.0,
+    67.5,
+    58.3,
+    64.5,
+    78.8
+   ],
+   "mean": 67.4,
+   "latency": null
+  },
+  {
+   "name": "qwen3-embedding-8b (text)",
+   "kind": "text dense",
+   "scores": [
+    54.8,
+    62.4,
+    45.3,
+    52.3,
+    73.5
+   ],
+   "mean": 57.7,
+   "latency": null
+  },
+  {
+   "name": "mxbai-edge-colbert-32m (text)",
+   "kind": "text LI",
+   "scores": [
+    48.1,
+    62.4,
+    47.0,
+    52.6,
+    68.1
+   ],
+   "mean": 55.6,
+   "latency": null
+  }
+ ],
+ "answers": {
+  "columns": [
+   "finance_en",
+   "pharmaceuticals",
+   "industrial",
+   "hr",
+   "computer_science",
+   "hard",
+   "all_8"
+  ],
+  "judge": "GPT-5.2 (medium), binary correct / incorrect, % judged correct; \u03c3 0.22 pp over 5 judge runs",
+  "rows": [
+   {
+    "pages": "oracle",
+    "as": "image",
+    "generator": "Gemini 3 Pro",
+    "scores": [
+     70.6,
+     76.1,
+     68.2,
+     71.1,
+     86.5,
+     64.7,
+     72.6
+    ]
+   },
+   {
+    "pages": "oracle",
+    "as": "text",
+    "generator": "Gemini 3 Pro",
+    "scores": [
+     70.2,
+     71.4,
+     66.4,
+     72.3,
+     80.9,
+     62.3,
+     70.6
+    ]
+   },
+   {
+    "pages": "ColEmbed-3B-v2 top-5",
+    "as": "image",
+    "generator": "GPT-5.2",
+    "scores": [
+     59.5,
+     68.1,
+     61.5,
+     66.0,
+     86.5,
+     54.1,
+     66.7
+    ]
+   },
+   {
+    "pages": "hybrid visual + text top-5",
+    "as": "image + text",
+    "generator": "Gemini 3 Pro",
+    "scores": [
+     65.0,
+     65.9,
+     59.4,
+     64.8,
+     85.1,
+     54.7,
+     65.7
+    ]
+   },
+   {
+    "pages": "ColEmbed-3B-v2 top-5",
+    "as": "image",
+    "generator": "Gemini 3 Pro",
+    "scores": [
+     67.3,
+     62.9,
+     57.2,
+     65.4,
+     83.3,
+     54.5,
+     64.5
+    ]
+   },
+   {
+    "pages": "jina-v4 text + zerank-2 top-5",
+    "as": "text",
+    "generator": "Gemini 3 Pro",
+    "scores": [
+     66.0,
+     59.9,
+     60.4,
+     63.2,
+     80.9,
+     52.1,
+     64.9
+    ]
+   },
+   {
+    "pages": "none",
+    "as": "\u2014",
+    "generator": "GPT-5",
+    "scores": [
+     25.2,
+     50.8,
+     32.2,
+     29.9,
+     76.3,
+     null,
+     null
+    ]
+   }
+  ],
+  "answerable_blind_pct": [
+   31.7,
+   57.1,
+   38.9,
+   36.5,
+   86.5
+  ]
+ },
+ "grounding": {
+  "metric": "bounding-box F1 (Dice), best match across annotators",
+  "rows": [
+   {
+    "who": "human inter-annotator",
+    "scores": [
+     0.569,
+     0.72,
+     0.611,
+     0.594,
+     0.608
+    ],
+    "overall": 0.602
+   },
+   {
+    "who": "Qwen3-VL-30B-A3B",
+    "scores": [
+     0.05,
+     0.157,
+     0.066,
+     0.054,
+     0.058
+    ],
+    "overall": 0.089
+   },
+   {
+    "who": "Gemini 3 Pro",
+    "scores": [
+     0.036,
+     0.103,
+     0.035,
+     0.036,
+     0.055
+    ],
+    "overall": 0.065
+   }
+  ]
+ }
+}

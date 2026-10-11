@@ -28,3 +28,22 @@ jobs:
       - run: uv run ruff format --check src tests
       - run: uv run mypy
       - run: uv run pytest -q
+
+  frontend:
+    name: Frontend — types, design lint, tests, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint:design
+      - run: npm test
+      - run: npm run build

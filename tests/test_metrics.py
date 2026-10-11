@@ -32,3 +32,46 @@ def test_mean_over_queries_scores_missing_ranking_zero() -> None:
     qrels = {1: {10: 2}, 2: {20: 1}}
     assert mean_over_queries({1: [10]}, qrels) == pytest.approx(0.5)
     assert mean_over_queries({1: [10], 2: [20]}, qrels, metric="recall") == pytest.approx(1.0)
+
+
+def test_report_and_stage_delta_on_the_smoke_ranking() -> None:
+    from vidore_loop.eval.metrics import report, stage_delta
+
+    r = report(SMOKE_RANKING, SMOKE_QRELS)
+    assert r["first_rank"] == 1 and r["first_full_rank"] == 1
+    assert r["hit_full_5"] and not r["complete_10"]  # page 13 is never retrieved
+    assert r["precision_5"] == pytest.approx(2 / 5)
+    assert r["recall_100"] == pytest.approx(2 / 3)
+    assert stage_delta([99, 98], SMOKE_RANKING, SMOKE_QRELS) == {"gained": [11, 12], "lost": []}
+
+
+def test_every_metric_matches_pytrec_eval() -> None:
+    """Our implementations against trec_eval itself, on random graded qrels and rankings."""
+    import random
+
+    pytrec_eval = pytest.importorskip("pytrec_eval")
+    from vidore_loop.eval import metrics as m
+
+    rng = random.Random(300)
+    qrels: dict[str, dict[str, int]] = {}
+    run: dict[str, dict[str, float]] = {}
+    ours: dict[str, dict[str, float]] = {}
+    for q in range(40):
+        pool = rng.sample(range(500), 120)
+        rel = {cid: rng.choice([1, 1, 2]) for cid in rng.sample(pool, rng.randint(1, 8))}
+        ranking = rng.sample(pool, rng.randint(5, 110))
+        qrels[str(q)] = {str(c): g for c, g in rel.items()}
+        run[str(q)] = {str(c): float(len(ranking) - i) for i, c in enumerate(ranking)}  # no ties
+        ours[str(q)] = {
+            "ndcg_cut_10": m.ndcg_at_k(ranking, rel, 10),
+            "recall_5": m.recall_at_k(ranking, rel, 5),
+            "recall_100": m.recall_at_k(ranking, rel, 100),
+            "P_10": m.precision_at_k(ranking, rel, 10),
+            "recip_rank": m.reciprocal_rank(ranking, rel),
+            "map_cut_10": m.average_precision_at_k(ranking, rel, 10),
+        }
+    measures = {"ndcg_cut_10", "recall_5", "recall_100", "P_10", "recip_rank", "map_cut_10"}
+    theirs = pytrec_eval.RelevanceEvaluator(qrels, measures).evaluate(run)
+    for q, vals in ours.items():
+        for name, v in vals.items():
+            assert v == pytest.approx(theirs[q][name], abs=1e-4), (q, name)

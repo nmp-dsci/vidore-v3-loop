@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="vidore-v3-loop">
+  <!-- Field Guide tokens, literal because a favicon cannot read CSS variables: bg #F7F6F2, ink #1A1D1B, accent #A8440B -->
+  <rect width="64" height="64" rx="12" fill="#F7F6F2"/>
+  <!-- a page with a box drawn on it: the benchmark's evidence -->
+  <path d="M16 10h24l10 10v34H16z" fill="none" stroke="#1A1D1B" stroke-width="5" stroke-linejoin="round"/>
+  <rect x="22" y="30" width="22" height="14" rx="2" fill="none" stroke="#A8440B" stroke-width="4.5"/>
+</svg>

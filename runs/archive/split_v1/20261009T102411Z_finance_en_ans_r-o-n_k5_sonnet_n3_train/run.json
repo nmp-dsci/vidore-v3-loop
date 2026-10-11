@@ -1,0 +1,305 @@
+{
+ "run_id": "20261009T102411Z_finance_en_ans_r-o-n_k5_sonnet_n3_train",
+ "kind": "answer",
+ "dataset": "finance_en",
+ "split": "train",
+ "final": false,
+ "config": {
+  "dataset": "finance_en",
+  "split": "train",
+  "modes": [
+   "retrieved",
+   "oracle",
+   "none"
+  ],
+  "k": 5,
+  "source_run": "20261008T034729Z_finance_en_w0-1_d20_train",
+  "source_stage": "fused",
+  "modality": "image+text",
+  "model": "sonnet",
+  "effort": "medium",
+  "judge_model": "opus",
+  "judge_effort": "medium",
+  "workers": 3,
+  "note": "M4 smoke: the answer run path end to end",
+  "limit": 3
+ },
+ "label": "ans_r-o-n_k5_sonnet_n3",
+ "fingerprint": "5cfcf0336312",
+ "models": {
+  "answer": "claude-sonnet-5",
+  "effort": "medium",
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "answer": "11c59ac8",
+  "judge": "cc617078"
+ },
+ "billing": "subscription",
+ "split_seed": 300,
+ "split_fingerprint": "6bc2782ce74e",
+ "code_sha": "2617486-dirty",
+ "started_at": "2026-10-09T10:24:11+00:00",
+ "n": 3,
+ "status": "finished",
+ "pid": 83341,
+ "finished_at": "2026-10-09T10:24:51+00:00",
+ "progress": {
+  "done": 3,
+  "n": 3,
+  "seconds": 39.9
+ },
+ "summary": {
+  "retrieved": {
+   "raw": {
+    "mean": 0.3333333333333333,
+    "n": 3
+   },
+   "audited": {
+    "mean": 0.3333333333333333,
+    "n": 3
+   },
+   "verdicts": {
+    "Correct": 1,
+    "Partially Correct": 1,
+    "Incorrect": 1
+   },
+   "errors": 0,
+   "answer_tokens": 23581,
+   "ms": 8167,
+   "full_given": {
+    "mean": 1.0,
+    "n": 3
+   },
+   "correct_when_full_given": {
+    "mean": 0.3333333333333333,
+    "n": 3
+   },
+   "correct_when_full_missed": {
+    "mean": null,
+    "n": 0
+   }
+  },
+  "oracle": {
+   "raw": {
+    "mean": 0.3333333333333333,
+    "n": 3
+   },
+   "audited": {
+    "mean": 0.3333333333333333,
+    "n": 3
+   },
+   "verdicts": {
+    "Correct": 1,
+    "Partially Correct": 1,
+    "Incorrect": 1
+   },
+   "errors": 0,
+   "answer_tokens": 13334,
+   "ms": 5291
+  },
+  "none": {
+   "raw": {
+    "mean": 0.0,
+    "n": 3
+   },
+   "audited": {
+    "mean": 0.0,
+    "n": 3
+   },
+   "verdicts": {
+    "Correct": 0,
+    "Partially Correct": 0,
+    "Incorrect": 3
+   },
+   "errors": 0,
+   "answer_tokens": 763,
+   "ms": 2158
+  },
+  "retrieval_cost": {
+   "raw": 0.0,
+   "audited": 0.0
+  }
+ },
+ "seconds": 39.9,
+ "slices": {
+  "query type": [
+   {
+    "value": "boolean",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 1
+     }
+    }
+   },
+   {
+    "value": "numerical",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 1
+     }
+    }
+   },
+   {
+    "value": "open-ended",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 1.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 1
+     }
+    }
+   },
+   {
+    "value": "compare-contrast",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 1
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 1
+     }
+    }
+   }
+  ],
+  "content": [
+   {
+    "value": "Text",
+    "n": 3,
+    "modes": {
+     "retrieved": {
+      "mean": 0.3333333333333333,
+      "n": 3
+     },
+     "oracle": {
+      "mean": 0.3333333333333333,
+      "n": 3
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 3
+     }
+    }
+   },
+   {
+    "value": "Table",
+    "n": 2,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 2
+     },
+     "oracle": {
+      "mean": 0.5,
+      "n": 2
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 2
+     }
+    }
+   }
+  ],
+  "format": [
+   {
+    "value": "question",
+    "n": 2,
+    "modes": {
+     "retrieved": {
+      "mean": 0.5,
+      "n": 2
+     },
+     "oracle": {
+      "mean": 0.0,
+      "n": 2
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 2
+     }
+    }
+   },
+   {
+    "value": "instruction",
+    "n": 1,
+    "modes": {
+     "retrieved": {
+      "mean": 0.0,
+      "n": 1
+     },
+     "oracle": {
+      "mean": 1.0,
+      "n": 1
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 1
+     }
+    }
+   }
+  ],
+  "author": [
+   {
+    "value": "synthetic",
+    "n": 3,
+    "modes": {
+     "retrieved": {
+      "mean": 0.3333333333333333,
+      "n": 3
+     },
+     "oracle": {
+      "mean": 0.3333333333333333,
+      "n": 3
+     },
+     "none": {
+      "mean": 0.0,
+      "n": 3
+     }
+    }
+   }
+  ]
+ },
+ "totals": {
+  "calls": 18,
+  "input_tokens": 130222,
+  "output_tokens": 4775,
+  "cost_usd": 0.65
+ },
+ "mlflow_run_id": "7a9d8b39e2d24bfead96330760da8452"
+}

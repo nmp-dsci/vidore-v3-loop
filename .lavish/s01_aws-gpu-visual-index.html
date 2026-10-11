@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS GPU Visual Index</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .cmd{ position:relative; }
+  .cmd pre{ padding-right:72px; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .cmd .copy{ position:absolute; top:var(--s2); right:var(--s2); }
+  .cmd .where{ display:block; margin:var(--s2) 0 var(--s1); }
+  .step pre{ margin-top:var(--s2); }
+  .calc{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:var(--s4); align-items:start; }
+  .calc label{ display:block; font-size:var(--t-1); color:var(--muted); margin-bottom:var(--s1); }
+  .calc select,.calc input[type=range]{ width:100%; font:inherit; font-size:var(--t-1); accent-color:var(--accent);
+     background:var(--bg); color:var(--ink); border:1px solid var(--line-2); border-radius:var(--r-sm); padding:var(--s1); }
+  .calc output{ font-family:var(--mono); font-size:var(--t-1); color:var(--ink); }
+  .fig svg{ width:100%; display:block; }
+  .fig .node rect{ fill:var(--panel); stroke:var(--line-3); }
+  .fig .node.gpu rect{ stroke:var(--accent); fill:var(--accent-soft); }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:14px; }
+  .fig text.s{ fill:var(--muted); font-size:12px; font-family:var(--mono); }
+  .fig text.e{ fill:var(--accent); font-size:12px; font-family:var(--mono); }
+  .fig .edge{ stroke:var(--line-3); stroke-width:1.5; fill:none; }
+  .fig .edge.hot{ stroke:var(--accent); stroke-width:2.5; }
+  .bars{ display:grid; gap:var(--s2); }
+  .bar{ display:grid; grid-template-columns:minmax(0,190px) minmax(0,1fr) max-content; gap:var(--s3); align-items:center; font-size:var(--t-1); }
+  .bar .track{ height:14px; background:var(--band); border-radius:999px; overflow:hidden; border:1px solid var(--line); }
+  .bar .fill{ height:100%; background:var(--accent); border-radius:999px; }
+  .bar .fill.mac{ background:var(--line-3); }
+  .bar .fill.amber{ background:var(--amber); }
+  .bar .v{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); }
+  @media (max-width:560px){ .bar{ grid-template-columns:minmax(0,1fr) max-content; } .bar .track{ grid-column:1 / -1; grid-row:2; } }
+</style>
+</head>
+<body>
+<main>
+
+<span class="eyebrow">vidore-v3-loop · M2 · visual channel</span>
+<h1>Finish the visual index on an <em>AWS GPU</em></h1>
+<p class="lede">The Mac has done 750 of finance_en's 2,942 pages with EVIE-4.5B in about 5 hours. A single rented NVIDIA L4
+in Sydney should do all 2,942 in well under an hour for about a dollar or two, after which the instance is deleted and only
+the index files come home.</p>
+<div class="hero-meta">
+  <span class="badge rec">g6.xlarge · NVIDIA L4 24 GB</span>
+  <span class="badge">ap-southeast-2 (your profile's region)</span>
+  <span class="badge info">prices: AWS public price list, fetched 3 Oct 2026</span>
+  <span class="badge warn">run-time figures are estimates until the 50-page timing run</span>
+</div>
+
+<div class="verdict">
+  <div class="stat accent"><div class="n">≈ $1</div><div class="l">expected total; under $3 in the slow case</div></div>
+  <div class="stat accent"><div class="n">≈ 45 min</div><div class="l">expected wall clock, launch to terminate (slow case ≈ 2.5 h)</div></div>
+  <div class="stat"><div class="n">≈ 0.5 s</div><div class="l">expected per page on the L4, vs 9.6 s (clean) to 25.5 s (swapping) on the Mac</div></div>
+  <div class="stat amber"><div class="n">quota pending</div><div class="l">GPU quota was 0; an increase to 8 vCPUs in Sydney was requested on 7 Oct and is waiting on AWS</div></div>
+</div>
+
+<!-- ===================================================================== -->
+<section id="what">
+  <span class="eyebrow">1 · what happens</span>
+  <h2>One machine, rented for under an hour</h2>
+  <p class="sub">The GPU only does the slow part: turning each page image into EVIE's ~1,019 small vectors. Search, the
+  reranker and the viewer stay on the Mac and read the same files they read today.</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 860 300" role="img" aria-labelledby="flowT">
+      <title id="flowT">The Mac drives an EC2 GPU over SSH; the GPU pulls code and data from public sources and sends back only the index</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g id="n-mac" class="node"><title>Your Mac</title>
+        <rect x="20" y="105" width="200" height="96" rx="10"/>
+        <text x="40" y="138">Your Mac</text>
+        <text class="s" x="40" y="162">viewer · search · rerank</text>
+        <text class="s" x="40" y="182">750 pages already done</text>
+      </g>
+      <g id="n-gpu" class="node gpu"><title>EC2 g6.xlarge with one NVIDIA L4</title>
+        <rect x="330" y="95" width="220" height="116" rx="10"/>
+        <text x="350" y="128">EC2 g6.xlarge</text>
+        <text class="s" x="350" y="152">1 × NVIDIA L4, 24 GB</text>
+        <text class="s" x="350" y="172">Deep Learning Base AMI</text>
+        <text class="s" x="350" y="192">deleted at the end</text>
+      </g>
+      <g id="n-gh" class="node"><title>GitHub: nmp-dsci/vidore-v3-loop, branch project-init</title>
+        <rect x="650" y="20" width="190" height="70" rx="10"/>
+        <text x="670" y="50">GitHub</text>
+        <text class="s" x="670" y="72">code (project-init)</text>
+      </g>
+      <g id="n-hf" class="node"><title>Hugging Face Hub: the dataset at its pinned revision and the EVIE weights</title>
+        <rect x="650" y="200" width="190" height="80" rx="10"/>
+        <text x="670" y="230">Hugging Face</text>
+        <text class="s" x="670" y="250">pages (pinned rev)</text>
+        <text class="s" x="670" y="268">EVIE weights 9 GB</text>
+      </g>
+      <g id="e-ssh" style="color:var(--line-3)"><title>You drive it over SSH</title>
+        <path class="edge" d="M220,135 L328,135" marker-end="url(#ah)"/>
+        <text class="s" x="236" y="125">SSH</text>
+      </g>
+      <g id="e-back" style="color:var(--accent)"><title>Only the finished index files come back</title>
+        <path class="edge hot" d="M330,180 L222,180" marker-end="url(#ah)"/>
+        <text class="e" x="236" y="202">index 0.7 GB</text>
+      </g>
+      <g id="e-gh" style="color:var(--line-3)"><title>git clone</title>
+        <path class="edge" d="M648,58 C600,58 590,110 552,120" marker-end="url(#ah)"/>
+      </g>
+      <g id="e-hf" style="color:var(--line-3)"><title>page images and model weights download</title>
+        <path class="edge" d="M648,240 C600,240 590,195 552,188" marker-end="url(#ah)"/>
+      </g>
+    </svg>
+    <figcaption>Nothing private goes up: the code is your public repo, the pages are the public ViDoRe V3 dataset at the same
+    pinned revision the Mac uses, and EVIE is an open model. The page images are rebuilt on the GPU with the same code
+    and the same locked Pillow version, so the pages it reads match yours.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section id="speed">
+  <span class="eyebrow">2 · why it is so much faster</span>
+  <h2>Seconds per page</h2>
+  <p class="sub">EVIE is built on Qwen3.5, whose attention layers ship fast code for NVIDIA GPUs only. On the Mac it falls
+  back to slow generic code, and the Mac's GPU is ~20× smaller than an L4 for this kind of maths to begin with.</p>
+  <div class="bars" role="list">
+    <div class="bar" role="listitem"><span>Mac, swapping (measured)</span><span class="track"><span class="fill mac" style="width:100%"></span></span><span class="v">25.5 s</span></div>
+    <div class="bar" role="listitem"><span>Mac, memory free (measured)</span><span class="track"><span class="fill mac" style="width:37.6%"></span></span><span class="v">9.6 s</span></div>
+    <div class="bar" role="listitem"><span>L4, slow case (estimate)</span><span class="track"><span class="fill amber" style="width:5.9%"></span></span><span class="v">1.5 s</span></div>
+    <div class="bar" role="listitem"><span>L4, expected (estimate)</span><span class="track"><span class="fill" style="width:2%"></span></span><span class="v">≈ 0.5 s</span></div>
+  </div>
+  <div class="callout warn">
+    <p><b>How the estimate is made.</b> A page is ~1,019 image tokens through a 4.5B-parameter model, roughly 13 trillion
+    operations. The Mac's GPU peaks around 5 TFLOPS and measured 9.6 s; the L4 peaks around 120 TFLOPS in bf16. Scaling
+    the Mac's measured efficiency gives ≈ 0.4–0.5 s; the "slow case" allows for the fast kernels failing to install. Step 4
+    times 50 pages before the full run, so you see the real number after about a minute.</p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="instances">
+  <span class="eyebrow">3 · which machine</span>
+  <h2>Pick the smallest GPU with 24 GB and bf16</h2>
+  <p class="sub">EVIE needs ~9 GB of GPU memory in bf16 plus working space for each pair of pages. Every option below fits;
+  the L4 is the cheapest one that also runs bf16 natively. Prices are on-demand Linux per hour, from AWS's public price
+  list today; EC2 bills by the second.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Instance</th><th>GPU</th><th>CPU / RAM</th><th>Sydney</th><th>N. Virginia</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr id="i-g6"><td class="k rec">g6.xlarge</td><td class="rec">NVIDIA L4 · 24 GB</td><td class="rec">4 vCPU · 16 GiB</td><td class="n rec">$1.046</td><td class="n rec">$0.805</td><td class="rec"><span class="badge rec">pick this</span> newest, bf16, cheapest fit</td></tr>
+        <tr id="i-g5"><td class="k">g5.xlarge</td><td>NVIDIA A10G · 24 GB</td><td>4 vCPU · 16 GiB</td><td class="n">$1.308</td><td class="n">$1.006</td><td><span class="badge">fallback</span> if g6 has no capacity; spot ≈ $0.58 in Sydney</td></tr>
+        <tr id="i-g6e"><td class="k">g6e.xlarge</td><td>NVIDIA L40S · 48 GB</td><td>4 vCPU · 32 GiB</td><td class="n">not offered</td><td class="n">$1.861</td><td><span class="badge">overkill</span> faster, but the job is already short</td></tr>
+        <tr id="i-g4"><td class="k">g4dn.xlarge</td><td>NVIDIA T4 · 16 GB</td><td>4 vCPU · 16 GiB</td><td class="n">$0.684</td><td class="n">$0.526</td><td><span class="badge bad">avoid</span> no native bf16; slower and riskier</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Sydney costs ~30% more per hour than N. Virginia, which on this job is about 25 cents. Sydney keeps everything
+  in your profile's default region next to your existing ECR.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="cost">
+  <span class="eyebrow">4 · cost and run time</span>
+  <h2>Where the minutes go</h2>
+  <p class="sub">Most of the clock is setup, not encoding. The slow case assumes the fast kernels fail to build and every
+  download is slow.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Phase</th><th>What happens</th><th>Expected</th><th>Slow case</th></tr></thead>
+      <tbody>
+        <tr><td class="k">launch</td><td>instance boots, you SSH in</td><td class="n">3 min</td><td class="n">8 min</td></tr>
+        <tr><td class="k">install</td><td><code>uv sync --extra retrieval</code> (PyTorch with CUDA, ~3 GB)</td><td class="n">4 min</td><td class="n">10 min</td></tr>
+        <tr><td class="k">fast kernels</td><td>EVIE's NVIDIA-only attention code; one of them compiles</td><td class="n">5 min</td><td class="n">20 min</td></tr>
+        <tr><td class="k">pages</td><td>2,942 page images from the dataset at the pinned revision</td><td class="n">5 min</td><td class="n">15 min</td></tr>
+        <tr><td class="k">weights</td><td>EVIE-4.5B, 9 GB, on first use</td><td class="n">2 min</td><td class="n">8 min</td></tr>
+        <tr><td class="k">timing run</td><td>50 pages, to read the real seconds per page</td><td class="n">1 min</td><td class="n">3 min</td></tr>
+        <tr class="rec"><td class="k rec">encode</td><td class="rec">all 2,942 pages</td><td class="n rec">≈ 20 min</td><td class="n rec">≈ 75 min</td></tr>
+        <tr><td class="k">copy back</td><td>~0.7 GB of index files to the Mac</td><td class="n">2 min</td><td class="n">5 min</td></tr>
+        <tr><td class="k">teardown</td><td>terminate, delete the firewall rule and key</td><td class="n">1 min</td><td class="n">2 min</td></tr>
+        <tr><td class="k"><b>total</b></td><td><b>g6.xlarge in Sydney at $1.046/h</b></td><td class="n"><b>≈ 45 min · ≈ $0.80</b></td><td class="n"><b>≈ 2.4 h · ≈ $2.55</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Add pennies for the 100 GB disk (≈ $0.10 per GB-month, billed only while it exists) and for data transfer
+  out (~0.7 GB). Both are rounding errors next to the instance.</p>
+
+  <h3 style="margin-top:var(--s5)" id="mac">Or keep it on the Mac</h3>
+  <p class="sub">The Mac still has 2,192 pages to go and resumes where it stopped, so nothing is redone. Measured speeds,
+  not estimates: 9.6 s a page with memory free, 25.5 s a page swapping.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>On the Mac</th><th>Per page</th><th>finance_en (2,192 left)</th><th>All 5 English (12,219 left)</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>after a restart, Docker and most apps closed</td><td class="n">9.6 s</td><td class="n">≈ 5.8 h</td><td class="n">≈ 33 h</td><td>electricity; the Mac is unusable for heavy work meanwhile</td></tr>
+        <tr><td>as it is today (swapping)</td><td class="n">25.5 s</td><td class="n">≈ 15.5 h</td><td class="n">≈ 87 h</td><td>may stop itself if free memory drops below 15% (rerun to resume)</td></tr>
+        <tr class="rec"><td class="rec">AWS g6.xlarge, for comparison</td><td class="n rec">≈ 0.5 s</td><td class="n rec">≈ 45 min end to end</td><td class="n rec">≈ 2.5 h end to end</td><td class="rec">≈ $1 · ≈ $3</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Mac: <code>make index-visual-overnight DATASET=finance_en</code>. Best done overnight after a restart, with Docker
+  Desktop quit, as it can't go faster than 9.6 s a page however much memory is free.</p>
+
+  <h3 style="margin-top:var(--s5)">Try your own numbers</h3>
+  <div class="card">
+    <div class="calc">
+      <div>
+        <label for="c-inst">Instance</label>
+        <select id="c-inst">
+          <option value="1.046" selected>g6.xlarge · Sydney · $1.046/h</option>
+          <option value="0.805">g6.xlarge · N. Virginia · $0.805/h</option>
+          <option value="1.308">g5.xlarge · Sydney · $1.308/h</option>
+          <option value="0.581">g5.xlarge spot · Sydney · ≈ $0.58/h</option>
+          <option value="1.861">g6e.xlarge · N. Virginia · $1.861/h</option>
+        </select>
+      </div>
+      <div>
+        <label for="c-pages">Pages to encode</label>
+        <select id="c-pages">
+          <option value="2942" selected>finance_en, all 2,942 (recommended)</option>
+          <option value="2192">finance_en, the 2,192 left (upload the Mac's 750)</option>
+          <option value="12969">all 5 English datasets, 12,969</option>
+        </select>
+      </div>
+      <div>
+        <label for="c-spp">Seconds per page: <output id="c-spp-o">0.5</output></label>
+        <input id="c-spp" type="range" min="0.2" max="2" step="0.1" value="0.5">
+      </div>
+    </div>
+    <div class="verdict" style="margin-top:var(--s4)">
+      <div class="stat"><div class="n" id="c-enc">–</div><div class="l">encoding</div></div>
+      <div class="stat"><div class="n" id="c-wall">–</div><div class="l">wall clock incl. ~25 min setup</div></div>
+      <div class="stat accent"><div class="n" id="c-cost">–</div><div class="l">instance cost</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="steps">
+  <span class="eyebrow">5 · the steps</span>
+  <h2>From your terminal to a finished index</h2>
+  <p class="sub">Run them in order. <span class="badge">Mac</span> lines run in this repo on your Mac;
+  <span class="badge ok">GPU</span> lines run on the instance over SSH. Nothing costs money until step 2.</p>
+
+  <div class="steps">
+    <div class="step" id="s-login"><b>Log in to AWS and check the GPU quota</b>
+      New accounts often start with a GPU quota of <b>0</b>, and raising it is a support request that can take hours to a
+      day. This is the one thing to check first. The quota is in vCPUs; g6.xlarge needs 4.
+      <div class="cmd"><span class="where badge">Mac</span>
+<pre><code>aws sso login --profile AdministratorAccess-089783391188
+export AWS_PROFILE=AdministratorAccess-089783391188 AWS_REGION=ap-southeast-2
+
+# "Running On-Demand G and VT instances", in vCPUs: need ≥ 4
+aws service-quotas get-service-quota --service-code ec2 --quota-code L-DB2E81BA --query Quota.Value
+
+# if it says 0, ask for 8 (then wait for the approval email)
+aws service-quotas request-service-quota-increase --service-code ec2 --quota-code L-DB2E81BA --desired-value 8</code></pre><button class="copy ghost" type="button">copy</button></div>
+    </div>
+
+    <div class="step" id="s-launch"><b>Create a key, a firewall rule for your IP only, and launch</b>
+      The AMI is AWS's Deep Learning Base image (Ubuntu 22.04, NVIDIA driver and CUDA preinstalled). The instance is set to
+      <b>terminate itself when it shuts down</b>, which is what makes the safety timer in step 3 work. Everything is tagged
+      <code>project=vidore-v3-loop</code>.
+      <div class="cmd"><span class="where badge">Mac</span>
+<pre><code>aws ec2 create-key-pair --key-name vidore-gpu --query KeyMaterial --output text &gt; ~/.ssh/vidore-gpu.pem
+chmod 600 ~/.ssh/vidore-gpu.pem
+
+SG=$(aws ec2 create-security-group --group-name vidore-gpu-ssh \
+      --description "SSH from one IP for the vidore GPU run" --query GroupId --output text)
+aws ec2 authorize-security-group-ingress --group-id $SG --protocol tcp --port 22 \
+      --cidr $(curl -s https://checkip.amazonaws.com)/32
+
+AMI=$(aws ssm get-parameter --query Parameter.Value --output text \
+      --name /aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-ubuntu-22.04/latest/ami-id)
+
+ID=$(aws ec2 run-instances --image-id $AMI --instance-type g6.xlarge \
+      --key-name vidore-gpu --security-group-ids $SG \
+      --instance-initiated-shutdown-behavior terminate \
+      --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=100,VolumeType=gp3,DeleteOnTermination=true}' \
+      --tag-specifications 'ResourceType=instance,Tags=[{Key=project,Value=vidore-v3-loop},{Key=purpose,Value=visual-index}]' \
+                           'ResourceType=volume,Tags=[{Key=project,Value=vidore-v3-loop},{Key=purpose,Value=visual-index}]' \
+      --query 'Instances[0].InstanceId' --output text)
+aws ec2 wait instance-running --instance-ids $ID
+IP=$(aws ec2 describe-instances --instance-ids $ID \
+      --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+echo "$ID  $IP"        # the billing clock is now running</code></pre><button class="copy ghost" type="button">copy</button></div>
+      <span class="tag">If AWS says there's no g6 capacity, swap in <code>g5.xlarge</code>; nothing else changes.</span>
+    </div>
+
+    <div class="step" id="s-setup"><b>Set up the GPU box, with a safety timer</b>
+      The timer shuts the machine down after 4 hours no matter what, and because of step 2 a shutdown means
+      <b>terminate</b>: a forgotten instance can't bill you overnight. The two extra packages are EVIE's NVIDIA-only fast
+      code; if they fail to build, carry on, as it still runs on the GPU, only slower (the "slow case").
+      <div class="cmd"><span class="where badge ok">GPU</span>
+<pre><code>ssh -i ~/.ssh/vidore-gpu.pem ubuntu@$IP
+
+sudo shutdown -h +240                       # safety timer: gone in 4 h whatever happens
+nvidia-smi                                  # should show one NVIDIA L4
+
+curl -LsSf https://astral.sh/uv/install.sh | sh && source ~/.local/bin/env
+git clone -b project-init https://github.com/nmp-dsci/vidore-v3-loop && cd vidore-v3-loop
+uv sync --extra retrieval                   # same locked versions as the Mac (uv.lock)
+uv pip install --no-build-isolation flash-linear-attention causal-conv1d
+source .venv/bin/activate
+export HF_TOKEN=hf_...                      # optional: faster Hugging Face downloads; paste it here, never in a file
+tmux new -s idx                             # so a dropped SSH connection doesn't stop the run</code></pre><button class="copy ghost" type="button">copy</button></div>
+    </div>
+
+    <div class="step" id="s-time"><b>Fetch the pages, then time 50 of them</b>
+      <code>--limit 50</code> encodes only the first batch of 50, then writes <code>stats.json</code> with the real seconds per page.
+      Expect roughly 0.3–1.5. Anything above ~3 means the GPU isn't being used, so stop and tell me.
+      <div class="cmd"><span class="where badge ok">GPU</span>
+<pre><code>vidoreloop pages --dataset finance_en         # 2,942 page images at the pinned revision
+vidoreloop index --dataset finance_en --stage visual --model evie --limit 50
+cat data/cache/index/finance_en/visual/evie/stats.json      # look at seconds_per_page and "device": "cuda"</code></pre><button class="copy ghost" type="button">copy</button></div>
+    </div>
+
+    <div class="step" id="s-run"><b>Run the rest</b>
+      Same command without the limit. It skips the batch already done and carries on; if anything stops it, rerun the same
+      line and it resumes at the last finished batch of 50. On Linux the Mac's memory guard switches itself off.
+      <div class="cmd"><span class="where badge ok">GPU</span>
+<pre><code>vidoreloop index --dataset finance_en --stage visual --model evie
+cat data/cache/index/finance_en/visual/evie/stats.json      # want "pages": 2942, "complete": true</code></pre><button class="copy ghost" type="button">copy</button></div>
+      <span class="tag">I'd rebuild all 2,942 rather than upload the Mac's 750: it's ~6 more minutes (about 10 cents), one fewer
+      step, and every page then comes from the same machine.</span>
+    </div>
+
+    <div class="step" id="s-back"><b>Copy the index home and check it</b>
+      The Mac's 750-page index is moved aside rather than deleted, as a fallback. The viewer keeps the index in memory, so
+      it needs a restart to pick up the new one.
+      <div class="cmd"><span class="where badge">Mac</span>
+<pre><code>V=data/cache/index/finance_en/visual
+mv $V/evie $V/evie.mac-750                     # keep the old one until the new one checks out
+rsync -av -e "ssh -i ~/.ssh/vidore-gpu.pem" \
+      ubuntu@$IP:vidore-v3-loop/$V/evie/ $V/evie/
+cat $V/evie/stats.json                          # "pages": 2942, "complete": true
+# then restart the viewer: make viewer</code></pre><button class="copy ghost" type="button">copy</button></div>
+      <span class="tag">In the RAG pipeline tab the status line turns from "(partial)" to complete. Try q181: its Morgan Stanley
+      answer page could never appear in the visual column before.</span>
+    </div>
+
+    <div class="step" id="s-down"><b>Delete everything you created</b>
+      Terminating also deletes the disk. The last command should print nothing; if it lists anything, it is still billing.
+      <div class="cmd"><span class="where badge">Mac</span>
+<pre><code>aws ec2 terminate-instances --instance-ids $ID
+aws ec2 wait instance-terminated --instance-ids $ID
+aws ec2 delete-security-group --group-id $SG
+aws ec2 delete-key-pair --key-name vidore-gpu && rm ~/.ssh/vidore-gpu.pem
+
+# anything left with this project's tag that isn't terminated?
+aws ec2 describe-instances --filters Name=tag:project,Values=vidore-v3-loop \
+      Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId'
+aws ec2 describe-volumes --filters Name=tag:project,Values=vidore-v3-loop --query 'Volumes[].VolumeId'</code></pre><button class="copy ghost" type="button">copy</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="risks">
+  <span class="eyebrow">6 · what could go wrong</span>
+  <h2>Risks, and what already covers them</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Risk</th><th>Likelihood</th><th>What happens</th><th>Cover</th></tr></thead>
+      <tbody>
+        <tr><td>GPU quota is 0</td><td><span class="badge warn">likely on a new account</span></td><td>launch fails with a quota error; no cost</td><td>step 1 checks first; the request can take hours to a day</td></tr>
+        <tr><td>No g6 capacity in Sydney</td><td><span class="badge">occasional</span></td><td>launch fails; no cost</td><td>use g5.xlarge, or N. Virginia</td></tr>
+        <tr><td>Fast kernels fail to build</td><td><span class="badge">possible</span></td><td>still runs on the GPU, slower (≈ 1.5 s/page)</td><td>skip them; the slow case is still ~$2.50</td></tr>
+        <tr><td>Instance left running</td><td><span class="badge bad">the costly one</span></td><td>$1.05/h ≈ $25/day</td><td>4-hour self-terminate timer (step 3), tags, the leftover check (step 7)</td></tr>
+        <tr><td>SSH drops mid-run</td><td><span class="badge">possible</span></td><td>run keeps going inside tmux</td><td><code>tmux attach -t idx</code>; or rerun, it resumes</td></tr>
+        <tr><td>AWS login expires mid-run</td><td><span class="badge">likely if &gt; 1 h</span></td><td>the instance keeps working; you can't terminate</td><td>run <code>aws sso login</code> again before step 7</td></tr>
+        <tr><td>GPU pages differ from Mac pages</td><td><span class="badge ok">unlikely</span></td><td>index wouldn't match what the viewer shows</td><td>same pinned revision, same code, same locked Pillow; spot-check q181 in step 6</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="decide">
+  <span class="eyebrow">7 · your call</span>
+  <h2>Four choices before anything is launched</h2>
+  <p class="sub">The defaults are my recommendations. Nothing is launched or spent until you say go.</p>
+  <form class="q" data-lavish-question="aws-gpu-run" onsubmit="event.preventDefault(); const f=new FormData(event.currentTarget); const a={region:f.get('region'),scope:f.get('scope'),pricing:f.get('pricing'),how:f.get('how')}; const note=(f.get('note')||'').trim(); window.lavish&&window.lavish.queuePrompt('AWS GPU visual index run: region='+a.region+', scope='+a.scope+', pricing='+a.pricing+', how='+a.how+(note?'. Note: '+note:'')+'. Do not launch or spend until I confirm go.', {tag:'choice', text:'AWS GPU run: '+a.region+' · '+a.scope+' · '+a.pricing+' · '+a.how, element:event.currentTarget, data:{question:'aws-gpu-run', answer:a, note:note}}); document.getElementById('q-state').textContent='queued — press Send to Agent';">
+    <div class="qgrid">
+      <div>
+        <h3>Region</h3>
+        <label><input type="radio" name="region" value="Sydney ap-southeast-2" checked><span>Sydney <span class="badge rec">rec</span><span class="d">your profile's region; ~25 cents more on this job</span></span></label>
+        <label><input type="radio" name="region" value="N. Virginia us-east-1"><span>N. Virginia<span class="d">cheapest and more GPU capacity; separate quota to check</span></span></label>
+      </div>
+      <div>
+        <h3>Scope</h3>
+        <label><input type="radio" name="scope" value="finance_en only" checked><span>finance_en only <span class="badge rec">rec</span><span class="d">your one-dataset-at-a-time scope</span></span></label>
+        <label><input type="radio" name="scope" value="all 5 English datasets"><span>All 5 English datasets<span class="d">12,969 pages, ≈ +2 h and +$2 in the same session</span></span></label>
+      </div>
+      <div>
+        <h3>Pricing</h3>
+        <label><input type="radio" name="pricing" value="on-demand" checked><span>On-demand <span class="badge rec">rec</span><span class="d">can't be interrupted; the job is short</span></span></label>
+        <label><input type="radio" name="pricing" value="spot"><span>Spot<span class="d">≈ half price, can be reclaimed mid-run (the build resumes)</span></span></label>
+      </div>
+      <div>
+        <h3>How</h3>
+        <label><input type="radio" name="how" value="I write scripts/aws_gpu_index.sh" checked><span>I write a script <span class="badge rec">rec</span><span class="d">one command does steps 2–7, always terminates, you approve before it runs</span></span></label>
+        <label><input type="radio" name="how" value="you run the steps by hand"><span>You run the steps by hand<span class="d">copy each block from section 5</span></span></label>
+      </div>
+    </div>
+    <label for="q-note" style="display:block;margin-top:var(--s3)">Anything else</label>
+    <textarea id="q-note" name="note" rows="2" placeholder="optional"></textarea>
+    <div class="row"><button type="submit">Queue these answers</button><span class="queued" id="q-state"></span></div>
+  </form>
+</section>
+
+</main>
+<script>
+  // copy buttons on every command block
+  document.querySelectorAll('.cmd').forEach((box) => {
+    const btn = box.querySelector('.copy');
+    btn.addEventListener('click', async () => {
+      const text = box.querySelector('pre').innerText;
+      try { await navigator.clipboard.writeText(text); btn.textContent = 'copied'; }
+      catch { btn.textContent = 'select & copy'; }
+      setTimeout(() => (btn.textContent = 'copy'), 1500);
+    });
+  });
+  // the calculator
+  const $ = (id) => document.getElementById(id);
+  const SETUP_MIN = 25;
+  const fmtMin = (m) => (m < 90 ? Math.round(m) + ' min' : (m / 60).toFixed(1) + ' h');
+  function calc() {
+    const price = +$('c-inst').value, pages = +$('c-pages').value, spp = +$('c-spp').value;
+    $('c-spp-o').textContent = spp.toFixed(1);
+    const enc = (pages * spp) / 60;
+    const wall = enc + SETUP_MIN + (pages > 3000 ? 20 : 0);   // four more datasets' pages to fetch
+    $('c-enc').textContent = fmtMin(enc);
+    $('c-wall').textContent = fmtMin(wall);
+    $('c-cost').textContent = '$' + ((wall / 60) * price).toFixed(2);
+  }
+  ['c-inst', 'c-pages', 'c-spp'].forEach((id) => $(id).addEventListener('input', calc));
+  calc();
+</script>
+</body>
+</html>

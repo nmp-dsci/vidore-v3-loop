@@ -18,7 +18,7 @@ self-improving loop as [tau2-loop](https://github.com/nmp-dsci/tau2-loop) and
 | Layer | Metric | Ground truth |
 |---|---|---|
 | Retrieval | NDCG@10 over pages (graded 2 = full answer, 1 = required part) | human qrels |
-| Answer | % correct by an LLM judge against the reference answer | human answers merged by Qwen2.5-VL-32B |
+| Answer | % correct by an LLM judge against the gold answer | human answers merged by Qwen2.5-VL-32B |
 | Grounding | pixel IoU / F1 of cited bounding boxes | human boxes (inter-annotator F1 0.602) |
 
 ## Datasets
@@ -39,11 +39,24 @@ Each dataset is pinned to a Hub revision in `src/vidore_loop/data/registry.py`.
 ## Commands
 
 ```
-make setup                          # uv sync
+make setup                          # uv sync + npm ci
 make datasets                       # the table above, from the registry
 make download DATASET=hr            # queries, qrels, metadata → data/cache (add CORPUS=1 for page images)
 make stats DATASET=hr               # queries by language / type / format, qrels grades
 make smoke                          # zero-LLM run logged to the central MLflow
+make pages DATASET=finance_en       # prefetch its page images + OCR text (≈930 MB for finance; lazy otherwise)
+make viewer                         # build the UI and serve it with the API → http://127.0.0.1:8083
+make dev                            # API with reload on :8083; `cd frontend && npm run dev` → :5175
+make index DATASET=finance_en STAGE=text      # BM25S over the OCR text (seconds)
+uv sync --extra retrieval                     # torch + sentence-transformers, for the two stages below
+make index DATASET=finance_en STAGE=visual    # EVIE-4.5B over every page image (LIMIT=50 for a timing run)
+make index DATASET=finance_en STAGE=reranker  # downloads zerank-2 (≈8 GB)
+make split DATASET=finance_en                 # our train/test split, once (committed)
+make eval DATASET=finance_en WTEXT=0.25       # score a config on train → runs/ + MLflow (runs inside the viewer when it is up)
+make eval DATASET=finance_en SPLIT=test FINAL=1  # the chosen config, once, on test
+make answers DATASET=finance_en LIMIT=5       # Claude answers (retrieved / oracle), judged → runs/ + MLflow (subscription)
+make answers DATASET=finance_en RESUME=<run>  # carry on an interrupted answer run
+make runs                                     # every scored run
 make test · make lint
 ```
 
@@ -61,4 +74,8 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | Milestone | State |
 |---|---|
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
-| M1 research + plan (`.lavish/`) | in progress |
+| Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
+| M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | done |
+| M2 retrieval pipeline + RAG pipeline tab | done (reviewed 2026-10-09): BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
+| M3 retrieval scored + Runs | done (reviewed 2026-10-09). Split v3 (2026-10-11): 155 train / 154 test, v2's random 100 / 100 grown to 50/50 with seed 300 (`make split EXTEND=1`). On split v1 every text weight lowered NDCG@10 and the reranker did not beat visual alone, so the champion is fusion with text weight 0. Baseline on v3: **NDCG@10 74.7 train, 71.1 test** (text alone 51.9 / 48.4) |
+| M4 answers + judge + audit + Review | done (2026-10-11), scored on split v3: Sonnet 5 answers from our fused top 5 and from the human pages, judged by Opus 5.5 on the paper's prompt. Train **65.8% / 74.8%** (retrieved / oracle), test **69.5% / 74.0%**; earlier answers are reused when Claude would see the same pages. Carried open: the 40-label judge check and the gold-answer audit on the Review tab, due before M6 optimises against the judge |

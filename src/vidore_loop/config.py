@@ -24,6 +24,7 @@ SPLITS_DIR = DATA_DIR / "splits"
 AGENTS_DIR = ROOT / "agents"
 RUNS_DIR = ROOT / "runs"
 LOOP_DIR = ROOT / "loop"
+FRONTEND_DIST = ROOT / "frontend" / "dist"
 
 
 class Settings(BaseModel):

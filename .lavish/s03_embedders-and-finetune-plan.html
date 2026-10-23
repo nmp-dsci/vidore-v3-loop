@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embedders and Fine-tuning</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .hero-meta .badge, td .badge{ white-space:normal; }
+  .legend{ display:flex; flex-wrap:wrap; gap:var(--s2) var(--s4); font-size:var(--t-2); color:var(--muted); margin:0 0 var(--s2); }
+  .legend span{ display:inline-flex; align-items:center; gap:var(--s1); }
+  .legend svg{ width:14px; height:14px; }
+  .fig svg{ width:100%; display:block; }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:13px; }
+  .fig text.s{ fill:var(--muted); font-size:12px; font-family:var(--mono); }
+  .fig text.e{ fill:var(--accent); font-size:12px; font-family:var(--mono); }
+  .fig text.v{ fill:var(--ink-2); font-size:12px; font-family:var(--mono); }
+  .fig text.g{ fill:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .fig .grid line{ stroke:var(--line); stroke-width:1; }
+  .fig .axis line{ stroke:var(--line-3); }
+  .fig .ref{ stroke:var(--line-3); stroke-width:1.5; stroke-dasharray:4 4; }
+  .fig .mk-ours{ fill:var(--ink); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-prop{ fill:var(--accent); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-other{ fill:var(--line-3); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-nc{ fill:var(--panel); stroke-width:2; }
+  .fig .mk-nc.mk-other{ stroke:var(--line-3); }
+  .fig .hit{ fill:transparent; cursor:default; }
+  .fig .row:hover .hit{ fill:var(--accent-wash); }
+  .fig .node rect{ fill:var(--panel); stroke:var(--line-3); }
+  .fig .node.gpu rect{ stroke:var(--accent); fill:var(--accent-soft); }
+  .fig .node.vol rect{ fill:var(--band); stroke:var(--line-2); stroke-dasharray:4 3; }
+  .fig .node.learn rect{ stroke:var(--accent); fill:var(--accent-soft); }
+  .fig .node.fixed rect{ fill:var(--band); stroke:var(--line-2); }
+  .fig .edge{ stroke:var(--line-3); stroke-width:1.5; fill:none; }
+  .fig .edge.hot{ stroke:var(--accent); stroke-width:2.5; }
+  .tip{ position:fixed; pointer-events:none; z-index:10; background:var(--panel); color:var(--ink);
+        border:1px solid var(--line-3); border-radius:var(--r-sm); box-shadow:var(--shadow);
+        padding:var(--s2) var(--s3); font-size:var(--t-2); max-width:280px; display:none; }
+  .tip b{ display:block; font-family:var(--mono); }
+  .ladder{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:var(--s3); }
+  .ladder .card{ min-width:0; }
+  .ladder .card h3{ display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; }
+  .ladder .card .kv{ margin-top:var(--s2); }
+  td code, td .m{ font-family:var(--mono); font-size:var(--t-2); }
+  .mini{ font-size:var(--t-2); color:var(--muted); display:block; }
+  .copyall{ margin-top:var(--s4); display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; }
+  .copyall textarea{ margin-top:var(--s2); }
+  .src li{ font-size:var(--t-1); }
+</style>
+</head>
+<body>
+<main>
+
+<span class="eyebrow">vidore-v3-loop · branch ft-vllm-embed · plan, nothing built yet · revised after your note</span>
+<h1>One small visual model, then <em>train</em> a text embedder</h1>
+<p class="lede">Today EVIE-4.5B finds the pages on its own. It scores 71.1 NDCG@10 on our 154 test questions. The text channel,
+BM25S, scores 48.4, and fusion gives it no weight. This revision follows your note. We index one small visual model,
+pplx-embed-v2-late-0.6b, on the Mac. Then we fine-tune a text embedder on the 155 train questions so that text earns its
+fusion weight back.</p>
+<div class="hero-meta">
+  <span class="badge">finance_en only · English questions</span>
+  <span class="badge">split v3 · seed 300 · 155 train / 154 test</span>
+  <span class="badge info">boards: MTEB results repo and illuin's ViDoRe pipeline board</span>
+  <span class="badge info">GPU prices: modal.com/pricing, 23 Oct 2026</span>
+  <span class="badge warn">speeds and costs are estimates until the timing runs</span>
+</div>
+
+<div class="verdict">
+  <div class="stat"><div class="n">71.1</div><div class="l">test NDCG@10 today: EVIE-4.5B, visual only, 154 questions (train 74.7)</div></div>
+  <div class="stat amber"><div class="n">48.4</div><div class="l">test NDCG@10 of the text channel, BM25S, which fusion weights at 0 (train 51.9)</div></div>
+  <div class="stat"><div class="n">54.8</div><div class="l">best text-only embedder on finance_en: Qwen3-Embedding-8B, zero-shot, on the page markdown</div></div>
+  <div class="stat accent"><div class="n">≈ $3–5</div><div class="l">Modal spend through step B2 (≈ $5–8 with synthetic questions); everything else runs on the Mac</div></div>
+</div>
+
+<div class="callout">
+  <p><b>The short answer.</b> A text embedder is the cheaper and safer model to fine-tune. It re-encodes all 2,942 pages in
+  minutes, where the visual index took 11 hours. So both questions and pages can learn, and every cross-validation fold
+  gets a fresh index. The small visual model runs on the Mac for $0. Modal earns its place only for the cross-validation
+  sweep: 20 short runs in parallel for about $3–5. The open question is whether 155 questions can lift text from about 50
+  to the point where fusing it with EVIE pays.</p>
+</div>
+<div class="callout warn">
+  <p><b>What changed from the first draft.</b> Part A indexes one small visual model on the Mac instead of three.
+  Part B trains a text embedder instead of EVIE. The Modal estimate drops from ≈ $25–45 to ≈ $3–8. The 8–9B visual
+  models, Nemotron 3.5 and the visual fine-tuning ladder are parked.</p>
+</div>
+
+<!-- ===================================================================== -->
+<section id="now">
+  <span class="eyebrow">1 · where we are</span>
+  <h2>What we're improving on</h2>
+  <p class="sub">The champion configuration is visual only: fusion weights (0, 1) and no reranker, so the fused stage
+  equals the visual stage. Our EVIE index scores 72.9 over all 309 questions, against 72.3 on the board.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Stage, NDCG@10</th><th>Train (155)</th><th>Test (154)</th><th>Test recall@50</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td class="k">text · BM25S</td><td class="n">51.9</td><td class="n">48.4</td><td class="n">78.9%</td><td class="mini">BM25S over each page's title and OCR markdown</td></tr>
+        <tr class="rec"><td class="k rec">visual · EVIE-4.5B, 128-d</td><td class="n rec">74.7</td><td class="n rec">71.1</td><td class="n rec">90.1%</td><td class="rec mini">index built on the Mac: 2,942 pages, 11.2 h, 13.8 s a page</td></tr>
+        <tr><td class="k">fused · weights (0, 1)</td><td class="n">74.7</td><td class="n">71.1</td><td class="n">90.1%</td><td class="mini">same as visual</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Runs: <code>runs/20261011T081553Z_finance_en_w0-1_norr_train</code> and <code>…081741Z_…_test</code>. Answers on
+  the same split: retrieved 65.8% train / 69.5% test, oracle 74.8% / 74.0%.</p>
+  <div class="callout warn">
+    <p><b>Text adds little today.</b> On train, picking the better of BM25S and EVIE for each question would average 76.3,
+    against EVIE's 74.7. BM25S wins only 21 of 155 questions. Of the train gold pages, 82.1% are in EVIE's top 50, and adding
+    BM25S's top 50 raises that to only 84.2%. When <code>fuse.WEIGHTS</code> was chosen, every text weight above 0 lowered train
+    NDCG@10. The text channel has to get much better before fusion pays.</p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="board">
+  <span class="eyebrow">2 · the board, finance_en</span>
+  <h2>The gap the text channel has to close</h2>
+  <p class="sub">English-question NDCG@10 over all 309 finance_en questions. The visual rows come from MTEB's ViDoRe V3 task.
+  The text rows come from illuin's ViDoRe V3 pipeline board, where text retrievers read each page's markdown, plus our own
+  BM25S run. Hover a mark for details.</p>
+  <div class="legend" aria-hidden="true">
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--ink)"/></svg>ours today</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--accent)"/></svg>proposed</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--line-3)"/></svg>other</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" fill="none" stroke="var(--muted)" stroke-width="2"/></svg>hollow: non-commercial licence</span>
+    <span><svg viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" fill="var(--muted)"/></svg>square: one vector a page</span>
+    <span><svg viewBox="0 0 14 14"><path d="M7,1 L13,7 L7,13 L1,7 Z" fill="var(--muted)"/></svg>diamond: a pipeline with a reranker</span>
+  </div>
+  <figure class="fig" id="fig-board">
+    <svg viewBox="0 0 860 418" role="img" aria-labelledby="boardT">
+      <title id="boardT">finance_en NDCG@10, visual embedders against text retrievers, axis from 45 to 76</title>
+      <g class="grid">
+        <line x1="270" y1="28" x2="270" y2="362"/><line x1="358.7" y1="28" x2="358.7" y2="362"/>
+        <line x1="447.4" y1="28" x2="447.4" y2="362"/><line x1="536.1" y1="28" x2="536.1" y2="362"/>
+        <line x1="624.8" y1="28" x2="624.8" y2="362"/><line x1="713.5" y1="28" x2="713.5" y2="362"/>
+        <line x1="802.3" y1="28" x2="802.3" y2="362"/>
+      </g>
+      <g class="axis">
+        <line x1="270" y1="362" x2="820" y2="362"/>
+        <text class="s" x="270" y="382" text-anchor="middle">45</text><text class="s" x="358.7" y="382" text-anchor="middle">50</text>
+        <text class="s" x="447.4" y="382" text-anchor="middle">55</text><text class="s" x="536.1" y="382" text-anchor="middle">60</text>
+        <text class="s" x="624.8" y="382" text-anchor="middle">65</text><text class="s" x="713.5" y="382" text-anchor="middle">70</text>
+        <text class="s" x="802.3" y="382" text-anchor="middle">75</text>
+        <text class="s" x="545" y="406" text-anchor="middle">NDCG@10, English questions, finance_en (axis starts at 45)</text>
+      </g>
+      <g id="ref-pipe"><title>Best pipeline on the board: NeMo agentic, 75.9</title>
+        <line class="ref" x1="818.2" y1="28" x2="818.2" y2="362"/>
+        <text class="s" x="810" y="22" text-anchor="end">best pipeline · 75.9</text>
+      </g>
+
+      <text class="g" x="16" y="42">visual embedders · MTEB</text>
+      <g class="row" data-tip="perplexity-ai/pplx-embed-v2-late-9b|73.9 (v3.1: 74.5)|MIT · one vector per patch · 8.4B · needs Modal · parked"><rect class="hit" x="0" y="50" width="860" height="28"/>
+        <text x="16" y="68">pplx-embed-v2-late-9b</text><circle class="mk-other" cx="782.7" cy="64" r="6"/><text class="v" x="768" y="68" text-anchor="end">73.9</text></g>
+      <g class="row" data-tip="tencent/EVIE-4.5B (ours)|72.3 on the board · 72.9 on our index|Apache-2.0 · one vector per patch, 128-d cut · 4.5B · built on the Mac"><rect class="hit" x="0" y="78" width="860" height="28"/>
+        <text x="16" y="96">EVIE-4.5B · ours</text><circle class="mk-ours" cx="754.4" cy="92" r="6"/><text class="v" x="741" y="96" text-anchor="end">72.3</text></g>
+      <g class="row" data-tip="perplexity-ai/pplx-embed-v2-late-0.6b|72.2 (v3.1: 72.8)|MIT · one vector per patch, 128-d · 0.6B · runs on the Mac · proposed"><rect class="hit" x="0" y="106" width="860" height="28"/>
+        <text x="16" y="124">pplx-embed-v2-late-0.6b</text><circle class="mk-prop" cx="752.6" cy="120" r="6"/><text class="v" x="739" y="124" text-anchor="end">72.2</text></g>
+      <g class="row" data-tip="nvidia/nemotron-colembed-vl-8b-v2|69.6|CC-BY-NC-4.0 · one vector per patch · 8.8B · needs Modal · parked"><rect class="hit" x="0" y="134" width="860" height="28"/>
+        <text x="16" y="152">nemotron-colembed-vl-8b-v2</text><circle class="mk-nc mk-other" cx="706.5" cy="148" r="5.5"/><text class="v" x="693" y="152" text-anchor="end">69.6</text></g>
+      <g class="row" data-tip="nvidia/Nemotron-3.5-Embed-1B-BF16|63.9 (v3.1: 65.2)|OpenMDW-1.1 · one 2,048-d vector a page · 1.55B · parked"><rect class="hit" x="0" y="162" width="860" height="28"/>
+        <text x="16" y="180">Nemotron-3.5-Embed-1B</text><rect class="mk-other" x="599.8" y="170.5" width="11" height="11"/><text class="v" x="592" y="180" text-anchor="end">63.9</text></g>
+
+      <text class="g" x="16" y="212">text retrievers · page markdown</text>
+      <g class="row" data-tip="jina-v4 text + zerank-2 (pipeline)|74.2|text retrieval, then a 4B cross-encoder reranks; illuin pipeline board"><rect class="hit" x="0" y="220" width="860" height="28"/>
+        <text x="16" y="238">jina-v4 text + zerank-2</text><path class="mk-other" d="M788.1,227 L795.1,234 L788.1,241 L781.1,234 Z"/><text class="v" x="774" y="238" text-anchor="end">74.2</text></g>
+      <g class="row" data-tip="Qwen3-Embedding-8B (text)|54.8|zero-shot dense text model · one vector a page · 8B · illuin pipeline board"><rect class="hit" x="0" y="248" width="860" height="28"/>
+        <text x="16" y="266">Qwen3-Embedding-8B</text><rect class="mk-other" x="438.4" y="256.5" width="11" height="11"/><text class="v" x="457" y="266">54.8</text></g>
+      <g class="row" data-tip="BM25S (ours)|50.2 over all 309 questions|train 51.9 · test 48.4 · lexical, no model weights"><rect class="hit" x="0" y="276" width="860" height="28"/>
+        <text x="16" y="294">BM25S · ours</text><circle class="mk-ours" cx="362.3" cy="290" r="6"/><text class="v" x="376" y="294">50.2</text></g>
+      <g class="row" data-tip="mxbai-edge-colbert-32m (text)|48.1|zero-shot text late interaction · 32M · illuin pipeline board"><rect class="hit" x="0" y="304" width="860" height="28"/>
+        <text x="16" y="322">mxbai-edge-colbert-32m</text><circle class="mk-other" cx="325.0" cy="318" r="6"/><text class="v" x="339" y="322">48.1</text></g>
+      <g class="row" data-tip="Qwen/Qwen3-Embedding-0.6B|not on the board|Apache-2.0 · one 1,024-d vector a page · 0.6B · already in the Mac's HF cache · the proposed base"><rect class="hit" x="0" y="332" width="860" height="28"/>
+        <text x="16" y="350">Qwen3-Embedding-0.6B</text><text class="e" x="280" y="350">proposed base · not on the board · step B0 measures it</text></g>
+    </svg>
+    <figcaption>Zero-shot text retrievers sit about 17 points under EVIE. The one text system near the top gets there with a 4B
+    reranker on top. A fine-tuned text model doesn't have to beat EVIE. It has to be right where EVIE is wrong, often enough
+    for fusion to pay.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================================================================== -->
+<section id="where">
+  <span class="eyebrow">3 · Mac or Modal</span>
+  <h2>The Mac does almost all of it; Modal runs the sweep</h2>
+  <p class="sub">Your Mac is an M1 Pro with 32 GB of RAM, 16 GPU cores and 67 GB of free disk. Both proposed models are 0.6B
+  and fit beside each other. Qwen3-Embedding-0.6B is already in the Mac's Hugging Face cache (1.1 GB). Modal is worth it only
+  where many training runs have to happen at once.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 300" role="img" aria-labelledby="whereT">
+      <title id="whereT">The Mac drives Modal with modal run; Modal trains and scores folds on page text and train labels only; the Mac logs to the central MLflow</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g id="n-mac" class="node"><title>Your Mac: M1 Pro, 32 GB, 67 GB free disk</title>
+        <rect x="20" y="30" width="240" height="160" rx="10"/>
+        <text x="40" y="62">Your Mac</text>
+        <text class="s" x="40" y="88">viewer · search · scoring</text>
+        <text class="s" x="40" y="110">pplx-0.6b index · B0 encode</text>
+        <text class="s" x="40" y="132">EVIE index (732 MB)</text>
+        <text class="s" x="40" y="154">test labels stay here</text>
+        <text class="s" x="40" y="176">modal run (driver)</text>
+      </g>
+      <g id="n-mlflow" class="node"><title>Central MLflow on localhost:5000, which Modal cannot reach</title>
+        <rect x="20" y="226" width="240" height="56" rx="10"/>
+        <text x="40" y="252">central MLflow</text>
+        <text class="s" x="40" y="272">localhost:5000 · Mac only</text>
+      </g>
+      <g id="n-modal" class="node gpu"><title>Modal: per-second GPU functions for the cross-validation sweep</title>
+        <rect x="330" y="30" width="300" height="252" rx="10"/>
+        <text x="350" y="62">Modal</text>
+        <text class="s" x="350" y="88">train(config, fold) · map ×20</text>
+        <text class="s" x="350" y="110">re-encode 2,942 pages a fold</text>
+        <text class="s" x="350" y="132">L4 · L40S</text>
+      </g>
+      <g id="n-vol" class="node vol"><title>A Modal Volume holding page text, train labels only, weights and checkpoints</title>
+        <rect x="350" y="152" width="260" height="110" rx="8"/>
+        <text x="368" y="178">Volume</text>
+        <text class="s" x="368" y="200">page text 11 MB · train qrels</text>
+        <text class="s" x="368" y="220">weights cache</text>
+        <text class="s" x="368" y="240">checkpoints · fold scores</text>
+      </g>
+      <g id="n-hf" class="node"><title>Hugging Face Hub: model weights at pinned revisions</title>
+        <rect x="690" y="30" width="150" height="72" rx="10"/>
+        <text x="708" y="60">Hugging Face</text>
+        <text class="s" x="708" y="82">weights</text>
+      </g>
+      <g id="e-up" style="color:var(--line-3)"><title>Page text and train labels uploaded once; jobs launched with modal run</title>
+        <path class="edge" d="M262,80 L328,80" marker-end="url(#ah)"/>
+        <text class="s" x="268" y="72">run</text>
+      </g>
+      <g id="e-back" style="color:var(--accent)"><title>Back to the Mac: fold scores and the chosen checkpoint</title>
+        <path class="edge hot" d="M330,140 L262,140" marker-end="url(#ah)"/>
+        <text class="e" x="270" y="160">results</text>
+      </g>
+      <g id="e-hf" style="color:var(--line-3)"><title>Weights download into the Volume</title>
+        <path class="edge" d="M688,66 L632,66" marker-end="url(#ah)"/>
+      </g>
+      <g id="e-log" style="color:var(--line-3)"><title>The Mac logs runs, metrics and checkpoints to MLflow</title>
+        <path class="edge" d="M140,192 L140,224" marker-end="url(#ah)"/>
+      </g>
+    </svg>
+    <figcaption>Only page text and train labels go up to Modal. Test labels never leave the Mac, so no Modal job can score on
+    test. Modal can't reach the central MLflow on <code>localhost:5000</code>, so every MLflow write happens on the Mac.</figcaption>
+  </figure>
+  <div class="split" style="margin-top:var(--s4)">
+    <div class="card">
+      <h3>Keep on the Mac</h3>
+      <ul>
+        <li>pplx-0.6b visual index: est. 1.2–2.5 h, once</li>
+        <li>B0, the zero-shot text index: est. 25–45 min, no download</li>
+        <li>Scoring, fusion weights, the test run, the Runs and Leaderboard tabs</li>
+        <li>One training run fits too, at est. 2–3.5 h, if you'd rather not use Modal</li>
+      </ul>
+    </div>
+    <div class="card rec">
+      <h3>Send to Modal</h3>
+      <ul>
+        <li>The B1 sweep: 4 settings × 5 folds = 20 runs in parallel, ≈ 20–30 min wall clock, ≈ $3–5</li>
+        <li>On the Mac the same sweep would take 2–3 days, and one 31-question dev fold instead is too noisy (SE ≈ 5 points)</li>
+        <li>A Modal token is already on this Mac (<code>~/.modal.toml</code>, not read); the <code>modal</code> client isn't in the project yet</li>
+        <li>Prices: L4 $0.80/h · L40S $1.95/h</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="partA">
+  <span class="eyebrow">4 · part A · one small visual model</span>
+  <h2>pplx-embed-v2-late-0.6b, on the Mac, for $0</h2>
+  <p class="sub">It ties EVIE-4.5B on the board (72.2 against 72.3) at an eighth of the size. Like EVIE's cut, it stores 128-d
+  vectors per patch, so the index format and MaxSim search stay as they are.</p>
+  <div class="steps">
+    <div class="step" id="a1"><b>A1 · index it</b>Add it to <code>MODELS</code> in <code>retrieval/visual.py</code>. It needs
+      sentence-transformers ≥ 6.0 and transformers ≥ 5.4, both already in our lock. Time 50 pages first; if it's under 3 s
+      a page, build all 2,942 on the Mac.
+      <span class="tag">$0 · est. 1.2–2.5 h · ≈ 1.2 GB of weights to download, which I'll ask about first</span></div>
+    <div class="step" id="a2"><b>A2 · score on train, try fusion</b>Score its train run. Then fuse it with EVIE, choosing the
+      RRF weights on train only, as <code>fuse.WEIGHTS</code> was chosen.
+      <span class="tag">$0 · minutes · Runs tab</span></div>
+    <div class="step" id="a3"><b>A3 · choose on train, test once</b>The candidates are EVIE alone, pplx alone, and the two
+      fused. Only the train winner gets one <code>--final</code> test run. Its row goes on the Leaderboard tab beside the board
+      number.
+      <span class="tag">$0 · the test guard refuses a second test run of the same config</span></div>
+  </div>
+  <div class="callout warn">
+    <p><b>What to expect.</b> The board gap is −0.1, well inside our test SE of 2.25, so the scores will probably tie. The case
+    for pplx-0.6b is size. It encodes questions faster on the Mac, and it leaves room for the text model beside it: together
+    about 2.4 GB in bf16, against EVIE's 9 GB alone.</p>
+  </div>
+  <p class="tag">Parked: pplx-embed-v2-late-9b (73.9), EVIE-8B (73.7) and the Nemotron visual models. They all need Modal to
+  index, and none is more than 1.6 points above EVIE on the board.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="partB">
+  <span class="eyebrow">5 · part B · train a text embedder</span>
+  <h2>Fine-tune a text model on train, so text earns its fusion weight back</h2>
+  <p class="sub">A dense text model becomes a third channel beside BM25S and the visual model. RRF fuses all three, with the
+  weights chosen on train.</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 860 230" role="img" aria-labelledby="chanT">
+      <title id="chanT">A question goes to three channels, BM25S, a trained dense text model and the visual model; RRF fuses them into the top 10</title>
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g class="node"><title>A question</title><rect x="20" y="89" width="110" height="52" rx="8"/><text x="38" y="120">question</text></g>
+      <g class="node fixed"><title>BM25S over the page markdown, as today</title><rect x="200" y="20" width="250" height="52" rx="8"/><text x="218" y="43">BM25S · text</text><text class="s" x="218" y="61">fixed · as today</text></g>
+      <g class="node learn"><title>A dense text model, fine-tuned on the train questions; both question and page sides learn</title><rect x="200" y="89" width="250" height="52" rx="8"/><text x="218" y="112">dense text model</text><text class="e" x="218" y="130">trained · both sides</text></g>
+      <g class="node fixed"><title>The visual model chosen in part A, with its index as built</title><rect x="200" y="158" width="250" height="52" rx="8"/><text x="218" y="181">EVIE-4.5B or pplx-0.6b</text><text class="s" x="218" y="199">visual · fixed index</text></g>
+      <g class="node"><title>Reciprocal rank fusion with three weights chosen on train</title><rect x="520" y="89" width="180" height="52" rx="8"/><text x="538" y="112">RRF</text><text class="s" x="538" y="130">weights set on train</text></g>
+      <g class="node"><title>The fused top 10, scored as NDCG@10</title><rect x="740" y="89" width="100" height="52" rx="8"/><text x="762" y="120">top 10</text></g>
+      <g style="color:var(--line-3)">
+        <path class="edge" d="M130,108 C165,108 165,46 198,46" marker-end="url(#ah2)"/>
+        <path class="edge" d="M130,122 C165,122 165,184 198,184" marker-end="url(#ah2)"/>
+        <path class="edge" d="M450,46 C485,46 485,108 518,108" marker-end="url(#ah2)"/>
+        <path class="edge" d="M450,184 C485,184 485,122 518,122" marker-end="url(#ah2)"/>
+        <path class="edge" d="M700,115 L738,115" marker-end="url(#ah2)"/>
+      </g>
+      <g style="color:var(--accent)">
+        <path class="edge hot" d="M130,115 L198,115" marker-end="url(#ah2)"/>
+        <path class="edge hot" d="M450,115 L518,115" marker-end="url(#ah2)"/>
+      </g>
+    </svg>
+    <figcaption>Both sides of the text model learn, questions and pages. Re-encoding 2,942 pages of text takes minutes, not the
+    11 hours EVIE's index took on the Mac.</figcaption>
+  </figure>
+
+  <h3 style="margin-top:var(--s5)" id="why-text">Why text is the cheaper model to train</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Train the visual model (first draft)</th><th>Train a text model (this draft)</th></tr></thead>
+      <tbody>
+        <tr><td class="k">re-encode all 2,942 pages</td><td>11.2 h on the Mac; ≈ $2.5–3 on Modal</td><td class="rec">est. 25–45 min on the Mac; ≈ 2 min on an L4</td></tr>
+        <tr><td class="k">what can learn</td><td>the question side only, unless every eval pays for a re-index</td><td class="rec">both sides, with a fresh index for every fold</td></tr>
+        <tr><td class="k">tooling</td><td>a custom loop over fixed page vectors, or <code>peft</code> plus <code>MultiVectorEncoderTrainer</code></td><td class="rec"><code>SentenceTransformerTrainer</code> with the cached MNRL loss, already in our lock (sentence-transformers 6.1)</td></tr>
+        <tr><td class="k">what it reads</td><td>the page image: charts and layout</td><td class="rec">the OCR markdown: text and tables. Train questions cite text in 145, tables in 83 and charts in 8 of 155 (a question can cite several)</td></tr>
+        <tr><td class="k">fusion weight today</td><td>1, the champion</td><td class="rec">0: BM25S hasn't earned one</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:var(--s5)">What we can train on</h3>
+  <div class="verdict" style="margin-top:var(--s2)">
+    <div class="stat"><div class="n">702</div><div class="l">(question, gold page) pairs from the 155 train questions; 193 of them grade 2</div></div>
+    <div class="stat"><div class="n">860</div><div class="l">median tokens a page, counted with Qwen3-Embedding's tokenizer; all but 1 of the 2,942 fit in 4,096</div></div>
+    <div class="stat"><div class="n">2.8M</div><div class="l">tokens in the whole corpus: one full re-encode</div></div>
+    <div class="stat amber"><div class="n">55</div><div class="l">pages with under 200 characters of markdown, which only the visual channel can find</div></div>
+  </div>
+
+  <h3 style="margin-top:var(--s5)" id="leak">The catch: test and train share pages</h3>
+  <div class="split">
+    <div class="card">
+      <p><b>115 of the 154</b> test questions share at least one gold page with a train question. <b>39</b> share none.
+      Today EVIE scores <b>66.7</b> on the 115 and <b>84.0</b> on the 39.</p>
+      <p class="mini">Training both sides teaches the model the 471 train gold pages, 218 of which are also test gold pages.
+      A gain only on the 115 means memorised pages, not better retrieval, so every fine-tuned test run reports both slices.</p>
+    </div>
+    <div class="card">
+      <p><b>How small a gain can the test show?</b> Per-question NDCG@10 has a standard deviation of 28.0 points, so the mean
+      over 154 questions has an SE of <b>2.25</b>. Plan on <b>+2–3 points</b> as the smallest real gain, checked with a paired
+      bootstrap.</p>
+      <p class="mini">A model trained on finance_en questions is no longer zero-shot. Its row goes on the Leaderboard tab
+      marked "adapted on train", never ranked among the board's rows.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:var(--s5)" id="ladder">The steps: cheapest first, stop when it stops paying</h3>
+  <div class="ladder">
+    <div class="card rec" id="b0">
+      <h3>B0 · zero-shot dense text <span class="badge rec">start</span></h3>
+      <p>Add <code>retrieval/dense.py</code> beside <code>text.py</code>: one 1,024-d vector a page, and search is one matrix
+      product. Encode with Qwen3-Embedding-0.6B as it ships. Then fit the three RRF weights on train.</p>
+      <dl class="kv"><dt>where</dt><dd>Mac</dd><dt>cost</dt><dd>$0 · no download</dd><dt>time</dt><dd>est. 25–45 min to encode</dd><dt>tells us</dt><dd>the start against BM25S's 51.9 train</dd></dl>
+    </div>
+    <div class="card rec" id="b1">
+      <h3>B1 · fine-tune both sides <span class="badge rec">then</span></h3>
+      <p>Full fine-tune with the cached MNRL loss. Each question's gold pages are positives. Negatives come from the batch and
+      from BM25S and EVIE ranks 6–30. Train for 1–2 epochs and sweep 4 settings across 5 folds.</p>
+      <dl class="kv"><dt>where</dt><dd>Modal L4, 20 runs in parallel</dd><dt>per run</dt><dd>≈ 10–15 min · ≈ $0.15–0.20</dd><dt>sweep</dt><dd>≈ $3–5</dd><dt>pages</dt><dd>re-encoded every fold</dd></dl>
+    </div>
+    <div class="card rec" id="b2">
+      <h3>B2 · fuse, retrain, test once <span class="badge rec">then</span></h3>
+      <p>Choose the setting and the three RRF weights by cross-validation on train. Retrain on all 155. Run test once with
+      <code>--final</code> and report the full score plus the 115 and 39 slices.</p>
+      <dl class="kv"><dt>where</dt><dd>Modal L4 or the Mac</dd><dt>cost</dt><dd>≈ $0.20, or $0 on the Mac</dd><dt>time</dt><dd>≈ 15 min (Mac est. 2–3.5 h)</dd></dl>
+    </div>
+    <div class="card" id="b3">
+      <h3>B3 · synthetic questions <span class="badge warn">optional, biggest lift</span></h3>
+      <p>Claude writes about 2 questions from each page that no test question cites: 2,410 pages, ≈ 4,800 pairs, 7× the real
+      set. Retrain with B1's best setting. The real train questions still choose.</p>
+      <dl class="kv"><dt>where</dt><dd>Mac (subscription) + Modal L4</dd><dt>cost</dt><dd>$0 Claude + ≈ $1–3 GPU</dd><dt>time</dt><dd>≈ 2,400 text calls; hours</dd></dl>
+      <p class="cost">Leaves out every test gold page, so test pages stay unseen.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:var(--s5)" id="protocol">How a trained model gets scored</h3>
+  <div class="steps">
+    <div class="step"><b>Choose on train only</b>Use 5-fold cross-validation by question, stratified by query type with seed
+      300. Each fold trains on 124 questions, re-encodes all pages and scores its held-out 31.</div>
+    <div class="step"><b>Retrain on all 155</b>Retrain the chosen setting on all 155 train questions. The checkpoint
+      (≈ 1.2 GB) goes to <code>data/cache/models/text/</code>, and the run's params and metrics go to MLflow.</div>
+    <div class="step"><b>Test once</b>The config fingerprint gains <code>text_model</code>, the checkpoint hash and the three
+      weights, so the test guard treats it as a new config: one <code>--final</code> run each. That run reports the full
+      score plus the "shared gold" (115) and "unseen gold" (39) slices.</div>
+    <div class="step"><b>Answers last</b>Run answers only for a retrieval winner. They reuse the answer cache wherever the
+      top 5 pages are unchanged.</div>
+  </div>
+  <p class="tag">My expectation, not a measurement: zero-shot Qwen3-Embedding-0.6B lands near BM25S, since its 8B sibling
+  scores 54.8. Fine-tuning should add several points on train cross-validation. Whether fusion then beats EVIE alone by the
+  2–3 points the test can show is the open question, and B0–B2 settle it for under $5. Visual fine-tuning, the first
+  draft's ladder, is parked. If text training shows the 155 questions carry signal, the recipe can move to pplx-0.6b's
+  question side.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="vllm">
+  <span class="eyebrow">6 · where vLLM fits</span>
+  <h2>This plan doesn't need vLLM</h2>
+  <div class="split">
+    <div class="card">
+      <h3>What vLLM would add</h3>
+      <ul>
+        <li>Fast GPU serving of embedding models: the Qwen3-Embedding card shows vLLM usage, and vLLM pools tokens for ColQwen3 and ColQwen3.5</li>
+        <li>No training, and nothing on a Mac without CUDA</li>
+        <li>At 2,942 pages, encodes already take minutes with sentence-transformers</li>
+      </ul>
+    </div>
+    <div class="card rec">
+      <h3>Recommendation</h3>
+      <p>Use sentence-transformers everywhere: one code path for the Mac, Modal and training. The branch name says vLLM, but
+      it becomes worth it only if we later serve questions from a GPU.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="cost">
+  <span class="eyebrow">7 · cost and time</span>
+  <h2>Mostly $0 on the Mac; a few dollars on Modal for the sweep</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Step</th><th>Where</th><th>GPU</th><th>Est. cost</th><th>Wall clock</th></tr></thead>
+      <tbody>
+        <tr><td class="k">A1 pplx-0.6b index</td><td>Mac</td><td>—</td><td class="n">$0</td><td class="n">1.2–2.5 h</td></tr>
+        <tr><td class="k">A2–A3 score, fuse, test</td><td>Mac</td><td>—</td><td class="n">$0</td><td class="n">minutes</td></tr>
+        <tr class="rec"><td class="k rec">B0 zero-shot text index</td><td class="rec">Mac</td><td class="rec">—</td><td class="n rec">$0</td><td class="n rec">25–45 min</td></tr>
+        <tr><td class="k">Modal plumbing (once)</td><td>Modal CPU</td><td>—</td><td class="n">&lt; $0.10</td><td class="n">≈ 1 h of work</td></tr>
+        <tr class="rec"><td class="k rec">B1 sweep, 20 runs</td><td class="rec">Modal</td><td class="rec">L4</td><td class="n rec">≈ $3–5</td><td class="n rec">≈ 20–30 min, in parallel</td></tr>
+        <tr class="rec"><td class="k rec">B2 retrain on 155, fuse, test</td><td class="rec">Modal or Mac</td><td class="rec">L4</td><td class="n rec">≈ $0.20</td><td class="n rec">≈ 15 min (Mac 2–3.5 h)</td></tr>
+        <tr><td class="k">B3 synthetic + retrain</td><td>Mac + Modal</td><td>L4</td><td class="n">≈ $1–3</td><td class="n">hours of Claude calls</td></tr>
+        <tr><td class="k"><b>total</b></td><td colspan="2"><b>inside the $30/month Starter credit</b></td><td class="n"><b>≈ $3–5 · ≈ $5–8 with B3</b></td><td class="n"><b>≈ 3–5 days of work</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">How the times are estimated: the corpus is 2.8M tokens. A full fine-tune epoch reads about 1.35M (each pair
+  is a question, a gold page and a hard negative), at about 6 FLOPs per parameter per token. The Mac's effective rate comes
+  from the EVIE build (≈ 1.3 TFLOPS), and the L4's is taken as ≈ 40 TFLOPS. Step B0's encode is the first real timing.
+  Every Modal function gets a <code>timeout=</code>.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="risks">
+  <span class="eyebrow">8 · risks</span>
+  <h2>What could go wrong</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>ID</th><th>Risk</th><th>What we do</th></tr></thead>
+      <tbody>
+        <tr id="r1"><td class="k">R1</td><td>OCR markdown misses chart and image evidence, and 55 pages have almost no text.</td><td>The visual channel stays in the fusion; text only adds.</td></tr>
+        <tr id="r2"><td class="k">R2</td><td>Mined negatives include pages that do answer but have no label, which teaches the model to push right pages down.</td><td>Skip each channel's top 5 non-gold pages; take ranks 6–30. In B3, let Claude re-judge the top negatives.</td></tr>
+        <tr id="r3"><td class="k">R3</td><td>155 questions overfit fast, and training both sides can memorise the 471 train gold pages.</td><td>1–2 epochs and a low learning rate, stopped by cross-validation; LoRA is one of the 4 sweep settings.</td></tr>
+        <tr id="r4"><td class="k">R4</td><td>Gains come from shared pages (115 of 154), not better retrieval.</td><td>Always report the "unseen gold" slice beside the full score.</td></tr>
+        <tr id="r5"><td class="k">R5</td><td>A wrong question prompt quietly costs points: Qwen3-Embedding puts an instruction on questions only.</td><td>Use the model's sentence-transformers prompts, and check B0 against BM25S before training.</td></tr>
+        <tr id="r6"><td class="k">R6</td><td>Mac memory: a full fine-tune of 0.6B needs ≈ 10 GB plus activations.</td><td>One large model at a time; EVIE is never loaded during a Mac training run.</td></tr>
+        <tr id="r7"><td class="k">R7</td><td>Test labels leak into a Modal job.</td><td>Only train qrels go to the Volume. Test scoring runs only on the Mac, behind the <code>--final</code> guard.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="decide">
+  <span class="eyebrow">9 · your calls</span>
+  <h2>Six choices before anything is built</h2>
+  <p class="sub">Each form queues one answer. Nothing runs, downloads or spends until you send these.</p>
+  <div class="qgrid">
+    <form class="q" data-lavish-question="visual" onsubmit="return queueQ(event,'The visual model')">
+      <h3>Q1 · the visual model</h3>
+      <label><input type="radio" name="visual" value="Index pplx-0.6b; keep the train winner" checked><span>Index pplx-0.6b, keep the train winner <span class="badge rec">rec</span><span class="d">EVIE, pplx or the two fused, chosen on train</span></span></label>
+      <label><input type="radio" name="visual" value="Index pplx-0.6b; switch to it if within 1 point of EVIE on train"><span>Switch to pplx-0.6b if within 1 point<span class="d">a lighter system, at a possible small cost</span></span></label>
+      <label><input type="radio" name="visual" value="Keep EVIE-4.5B only; no new visual index"><span>Keep EVIE-4.5B only<span class="d">all the effort goes to text</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+    <form class="q" data-lavish-question="text-base" onsubmit="return queueQ(event,'Text model to fine-tune')">
+      <h3>Q2 · which text model to train</h3>
+      <label><input type="radio" name="tbase" value="Qwen/Qwen3-Embedding-0.6B" checked><span>Qwen3-Embedding-0.6B <span class="badge rec">rec</span><span class="d">Apache-2.0 · 0.6B · 32k context · already cached on the Mac</span></span></label>
+      <label><input type="radio" name="tbase" value="Alibaba-NLP/gte-modernbert-base"><span>gte-modernbert-base<span class="d">Apache-2.0 · 0.15B · 8k context · fast enough to sweep on the Mac</span></span></label>
+      <label><input type="radio" name="tbase" value="nvidia/llama-nemotron-embed-1b-v2"><span>llama-nemotron-embed-1b-v2<span class="d">the Nemotron option · NVIDIA Open Model License · 1.2B</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+    <form class="q" data-lavish-question="where-train" onsubmit="return queueQ(event,'Where to train')">
+      <h3>Q3 · where to train</h3>
+      <label><input type="radio" name="where" value="Modal L4 for the B1 sweep; the Mac for everything else" checked><span>Modal for the sweep, the Mac for the rest <span class="badge rec">rec</span><span class="d">≈ $3–5; 5-fold cross-validation in about 30 min</span></span></label>
+      <label><input type="radio" name="where" value="Mac only, one 31-question dev fold"><span>Mac only, one dev fold<span class="d">$0, overnight runs, SE ≈ 5 points on the choice</span></span></label>
+      <label><input type="radio" name="where" value="Modal for every training run and encode"><span>Modal for everything<span class="d">fastest; a few dollars more</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+    <form class="q" data-lavish-question="ladder" onsubmit="return queueQ(event,'How far to go')">
+      <h3>Q4 · how far to go</h3>
+      <label><input type="radio" name="ladder" value="B0 to B2, then review" checked><span>B0 to B2, then review with you <span class="badge rec">rec</span><span class="d">≤ $5; tells us whether 155 questions are enough</span></span></label>
+      <label><input type="radio" name="ladder" value="Through B3, synthetic questions"><span>Through B3<span class="d">≈ 2,400 Claude calls on the subscription · ≈ $1–3 more GPU</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+    <form class="q" data-lavish-question="budget" onsubmit="return queueQ(event,'Modal spend rule')">
+      <h3>Q5 · Modal spend</h3>
+      <label><input type="radio" name="budget" value="Cap at $10; ask past it" checked><span>Cap at $10, ask past it <span class="badge rec">rec</span><span class="d">covers B1–B3 with room for one rerun</span></span></label>
+      <label><input type="radio" name="budget" value="Cap at $30 (the free credit)"><span>Cap at $30<span class="d">the month's free credit</span></span></label>
+      <label><input type="radio" name="budget" value="Ask before every Modal run"><span>Ask before every Modal run<span class="d">slowest, tightest control</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+    <form class="q" data-lavish-question="scope" onsubmit="return queueQ(event,'Training data scope')">
+      <h3>Q6 · training data</h3>
+      <label><input type="radio" name="scope" value="finance_en train only" checked><span>finance_en train only <span class="badge rec">rec</span><span class="d">the project's one-dataset rule</span></span></label>
+      <label><input type="radio" name="scope" value="Also train on the other 4 English datasets"><span>Also the other 4 English datasets<span class="d">≈ 1,200 more questions and finance pages unseen in training, but it widens scope</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+  </div>
+  <div class="copyall">
+    <button type="button" class="ghost" onclick="copyAll(this)">Copy all answers</button>
+    <span data-lavish-copy-all-status role="status" aria-live="polite" class="tag"></span>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="sources">
+  <span class="eyebrow">sources</span>
+  <h2>Where each number comes from</h2>
+  <ul class="src">
+    <li>Visual rows: <a href="https://github.com/embeddings-benchmark/results">embeddings-benchmark/results</a>, read at commit 0acf39c2 (22 Oct 2026). It has no ViDoRe V3 scores for text-only models.</li>
+    <li>Text and pipeline rows: <a href="https://github.com/illuin-tech/vidore-benchmark/tree/main/results">illuin-tech/vidore-benchmark results</a>, as saved in <code>docs/research/boards.json</code> (collected 28 Sep 2026).</li>
+    <li>Licences and sizes: the Hugging Face model API for each model id, read 23 Oct 2026. Model cards: <a href="https://huggingface.co/Qwen/Qwen3-Embedding-0.6B">Qwen3-Embedding-0.6B</a>, <a href="https://huggingface.co/Alibaba-NLP/gte-modernbert-base">gte-modernbert-base</a>, <a href="https://huggingface.co/nvidia/llama-nemotron-embed-1b-v2">llama-nemotron-embed-1b-v2</a> and <a href="https://huggingface.co/perplexity-ai/pplx-embed-v2-late-0.6b">pplx-embed-v2-late-0.6b</a>.</li>
+    <li><a href="https://modal.com/pricing">Modal pricing</a>: per-second GPU rates and the $30/month Starter credit.</li>
+    <li>Ours: the two runs above, <code>data/splits/finance_en.json</code> (v3) and the finance_en qrels at the pinned revision. The page markdown is in <code>data/cache/pages/finance_en/*.json</code>, with tokens counted using the cached Qwen3-Embedding-0.6B tokenizer. The text-weight history is in the <code>retrieval/fuse.py</code> docstring.</li>
+  </ul>
+</section>
+
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+  // dot-plot hover: one tooltip, fed from each row's data-tip ("title|score|detail")
+  (function(){
+    const tip = document.getElementById('tip');
+    document.querySelectorAll('#fig-board .row').forEach(function(row){
+      const [name, score, detail] = row.dataset.tip.split('|');
+      row.addEventListener('mousemove', function(e){
+        tip.innerHTML = '<b></b><span></span><br><span></span>';
+        tip.children[0].textContent = name;
+        tip.children[1].textContent = 'finance_en NDCG@10: ' + score;
+        tip.children[3].textContent = detail;
+        tip.style.display = 'block';
+        const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      row.addEventListener('mouseleave', function(){ tip.style.display = 'none'; });
+    });
+  })();
+
+  function answersOf(form){
+    return [...form.querySelectorAll('input:checked')].map(function(i){ return i.value; });
+  }
+  function queueQ(event, label){
+    event.preventDefault();
+    const form = event.currentTarget;
+    const key = form.dataset.lavishQuestion;
+    const picked = answersOf(form);
+    const status = form.querySelector('.queued');
+    if (!picked.length){ status.textContent = 'nothing selected'; return false; }
+    const text = label + ': ' + picked.join('; ');
+    if (window.lavish && window.lavish.queuePrompt){
+      window.lavish.queuePrompt('Plan s03 decision. ' + text, { tag:'choice', text:text, element:form, queueKey:key, data:{ question:key, answer:picked } });
+      status.textContent = 'queued: ' + picked.join(', ');
+    } else {
+      status.textContent = 'selected (Lavish not running; use Copy all answers)';
+    }
+    return false;
+  }
+  async function copyAll(btn){
+    const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+    btn.parentElement.querySelector('textarea')?.remove();
+    const out = [...document.querySelectorAll('[data-lavish-question]')].map(function(q){
+      const a = answersOf(q); return a.length ? q.dataset.lavishQuestion + ': ' + a.join('; ') : '';
+    }).filter(Boolean).join('\n');
+    if (!out){ status.textContent = 'No answers to copy yet.'; return; }
+    try { await navigator.clipboard.writeText(out); status.textContent = 'Answers copied.'; }
+    catch (e) {
+      const t = document.createElement('textarea'); t.value = out; t.readOnly = true; t.rows = 6;
+      btn.parentElement.appendChild(t); t.select(); status.textContent = 'Copy the answers below.';
+    }
+  }
+</script>
+</body>
+</html>

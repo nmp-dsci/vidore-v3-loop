@@ -52,9 +52,9 @@ class AnswerConfig:
     source_run: str | None = None  # the retrieval run whose ranking `retrieved` answers from
     source_stage: str = "fused"
     modality: str = "image+text"
-    model: str = "sonnet"
+    model: str = "sonnet"  # M5: Sonnet 5.5 at medium answers and judges (the owner's call)
     effort: str = "medium"
-    judge_model: str = "opus"
+    judge_model: str = "sonnet"  # M5 S1: at high it matched Opus on 95.8% of M4 train verdicts
     judge_effort: str = "medium"
     workers: int = 4
     note: str = ""

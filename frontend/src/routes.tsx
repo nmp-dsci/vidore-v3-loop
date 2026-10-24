@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router-dom';
 import { Shell } from './Shell';
+import { Agent, AgentQuestionPage, AgentRunPage } from './pages/Agent';
 import { Overview } from './pages/Overview';
 import { Dataset, Datasets } from './pages/Datasets';
 import { Leaderboard } from './pages/Leaderboard';
@@ -28,6 +29,9 @@ export const routes: RouteObject[] = [
       { id: 'review', path: '/review', element: <Review /> },
       { id: 'review-run', path: '/review/:runId', element: <ReviewRun /> },
       { id: 'review-question', path: '/review/:runId/:qid', element: <ReviewQuestion /> },
+      { id: 'agent', path: '/agent', element: <Agent /> },
+      { id: 'agent-run', path: '/agent/:runId', element: <AgentRunPage /> },
+      { id: 'agent-question', path: '/agent/:runId/:qid', element: <AgentQuestionPage /> },
       { id: 'leaderboard', path: '/leaderboard', element: <Leaderboard /> },
       { id: 'missing', path: '*', element: <p className="empty">No page here. Try the Datasets tab.</p> },
     ],

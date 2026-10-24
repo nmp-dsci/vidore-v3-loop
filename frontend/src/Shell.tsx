@@ -13,12 +13,10 @@ const NAV: [string, string][] = [
   ['/pipeline', 'RAG pipeline'],
   ['/runs', 'Runs'],
   ['/review', 'Review'],
+  ['/agent', 'Agent'],
   ['/leaderboard', 'Leaderboard'],
 ];
-const LATER: [string, string][] = [
-  ['Agent', 'M5'],
-  ['Optimise', 'M6'],
-];
+const LATER: [string, string][] = [['Optimise', 'M6']];
 
 export function Shell() {
   const { data: health } = useGet<Health>('/api/health');

@@ -1,0 +1,137 @@
+{
+ "run_id": "20261024T035137Z_finance_en_judge_opus-medium_train",
+ "kind": "judge_check",
+ "dataset": "finance_en",
+ "split": "train",
+ "final": false,
+ "config": {
+  "source_run": "20261011T081955Z_finance_en_ans_r-o_k5_sonnet_train",
+  "judge_model": "opus",
+  "judge_effort": "medium",
+  "workers": 4,
+  "limit": null
+ },
+ "label": "judge_opus-medium",
+ "source": {
+  "run_id": "20261011T081955Z_finance_en_ans_r-o_k5_sonnet_train",
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium",
+  "answer": "claude-sonnet-5"
+ },
+ "models": {
+  "judge": "claude-opus-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "judge": "cc617078"
+ },
+ "billing": "subscription",
+ "code_sha": "8292ea6-dirty",
+ "started_at": "2026-10-24T03:51:37+00:00",
+ "n": 310,
+ "status": "finished",
+ "summary": {
+  "all": {
+   "n": 310,
+   "binary_agree": 0.9838709677419355,
+   "three_level_agree": 0.9774193548387097,
+   "kappa": 0.9609905874062517,
+   "source_accuracy": 0.7032258064516129,
+   "check_accuracy": 0.7129032258064516,
+   "shift": 0.00967741935483871,
+   "lenient": 4,
+   "strict": 1,
+   "confusion": {
+    "Correct": {
+     "Correct": 217,
+     "Partially Correct": 1,
+     "Incorrect": 0
+    },
+    "Partially Correct": {
+     "Correct": 4,
+     "Partially Correct": 61,
+     "Incorrect": 2
+    },
+    "Incorrect": {
+     "Correct": 0,
+     "Partially Correct": 0,
+     "Incorrect": 25
+    }
+   }
+  },
+  "modes": {
+   "oracle": {
+    "n": 155,
+    "binary_agree": 0.9741935483870968,
+    "three_level_agree": 0.967741935483871,
+    "kappa": 0.9302900832021589,
+    "source_accuracy": 0.7483870967741936,
+    "check_accuracy": 0.7612903225806451,
+    "shift": 0.012903225806451613,
+    "lenient": 3,
+    "strict": 1,
+    "confusion": {
+     "Correct": {
+      "Correct": 115,
+      "Partially Correct": 1,
+      "Incorrect": 0
+     },
+     "Partially Correct": {
+      "Correct": 3,
+      "Partially Correct": 25,
+      "Incorrect": 1
+     },
+     "Incorrect": {
+      "Correct": 0,
+      "Partially Correct": 0,
+      "Incorrect": 10
+     }
+    }
+   },
+   "retrieved": {
+    "n": 155,
+    "binary_agree": 0.9935483870967742,
+    "three_level_agree": 0.9870967741935484,
+    "kappa": 0.9855988107404998,
+    "source_accuracy": 0.6580645161290323,
+    "check_accuracy": 0.6645161290322581,
+    "shift": 0.0064516129032258064,
+    "lenient": 1,
+    "strict": 0,
+    "confusion": {
+     "Correct": {
+      "Correct": 102,
+      "Partially Correct": 0,
+      "Incorrect": 0
+     },
+     "Partially Correct": {
+      "Correct": 1,
+      "Partially Correct": 36,
+      "Incorrect": 1
+     },
+     "Incorrect": {
+      "Correct": 0,
+      "Partially Correct": 0,
+      "Incorrect": 15
+     }
+    }
+   }
+  },
+  "people": {
+   "n": 0,
+   "source": null,
+   "check": null
+  },
+  "errors": 0
+ },
+ "finished_at": "2026-10-24T03:57:40+00:00",
+ "seconds": 363.2,
+ "totals": {
+  "calls": 310,
+  "input_tokens": 561715,
+  "output_tokens": 71484,
+  "cost_usd": 5.84,
+  "ms": 1427015
+ },
+ "mlflow_run_id": "153b59f146b94147a5bbe94f82c0bd0d"
+}

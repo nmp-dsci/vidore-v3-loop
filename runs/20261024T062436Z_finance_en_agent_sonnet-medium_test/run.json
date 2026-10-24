@@ -1,0 +1,857 @@
+{
+ "run_id": "20261024T062436Z_finance_en_agent_sonnet-medium_test",
+ "kind": "agent",
+ "dataset": "finance_en",
+ "split": "test",
+ "final": true,
+ "config": {
+  "dataset": "finance_en",
+  "split": "test",
+  "model": "sonnet",
+  "effort": "medium",
+  "judge_model": "sonnet",
+  "judge_effort": "medium",
+  "max_searches": 5,
+  "max_views": 10,
+  "workers": 4,
+  "note": "S5: Sonnet 5.5 medium agent, final test",
+  "limit": null
+ },
+ "label": "agent_sonnet-medium",
+ "fingerprint": "9b81c1e9cc4d",
+ "models": {
+  "answer": "claude-sonnet-5-5",
+  "effort": "medium",
+  "judge": "claude-sonnet-5-5",
+  "judge_effort": "medium"
+ },
+ "prompts": {
+  "agent": "fce33fed",
+  "judge": "cc617078"
+ },
+ "search": {
+  "stage": "fused",
+  "weights": [
+   0.0,
+   1.0
+  ]
+ },
+ "billing": "subscription",
+ "split_seed": 300,
+ "split_fingerprint": "59392325bcfe",
+ "code_sha": "8292ea6-dirty",
+ "started_at": "2026-10-24T06:24:36+00:00",
+ "n": 154,
+ "status": "finished",
+ "pid": 29059,
+ "finished_at": "2026-10-24T06:32:47+00:00",
+ "progress": {
+  "done": 154,
+  "n": 154,
+  "seconds": 490.9
+ },
+ "summary": {
+  "retrieval": {
+   "ndcg_10": {
+    "mean": 0.6778,
+    "n": 154
+   },
+   "map_10": {
+    "mean": 0.5673,
+    "n": 154
+   },
+   "mrr": {
+    "mean": 0.8123,
+    "n": 154
+   },
+   "precision_5": {
+    "mean": 0.3922,
+    "n": 154
+   },
+   "precision_10": {
+    "mean": 0.2513,
+    "n": 154
+   },
+   "complete_10": {
+    "mean": 0.4675,
+    "n": 154
+   },
+   "complete_50": {
+    "mean": 0.4675,
+    "n": 154
+   },
+   "recall_1": {
+    "mean": 0.3149,
+    "n": 154
+   },
+   "recall_5": {
+    "mean": 0.6084,
+    "n": 154
+   },
+   "recall_10": {
+    "mean": 0.7033,
+    "n": 154
+   },
+   "recall_50": {
+    "mean": 0.7033,
+    "n": 154
+   },
+   "recall_100": {
+    "mean": 0.7033,
+    "n": 154
+   },
+   "hit_full_5": {
+    "mean": 0.8909,
+    "n": 110
+   },
+   "hit_full_10": {
+    "mean": 0.9,
+    "n": 110
+   },
+   "first_rank": {
+    "median": 1.0,
+    "found": 148,
+    "n": 154
+   },
+   "first_full_rank": {
+    "median": 1,
+    "found": 99,
+    "n": 110
+   }
+  },
+  "answers": {
+   "raw": {
+    "mean": 0.6818181818181818,
+    "n": 154
+   },
+   "audited": {
+    "mean": 0.6818181818181818,
+    "n": 154
+   },
+   "verdicts": {
+    "Correct": 105,
+    "Partially Correct": 30,
+    "Incorrect": 19
+   },
+   "errors": 0,
+   "answer_tokens": 21830,
+   "ms": 9583
+  },
+  "cited_gold": {
+   "mean": 0.7857142857142857,
+   "n": 154
+  },
+  "cited_full": {
+   "mean": 0.7,
+   "n": 110
+  },
+  "searches": 1.32,
+  "views": 1.47,
+  "turns": 4.95,
+  "seconds": 9.59,
+  "errors": 0
+ },
+ "seconds": 490.9,
+ "slices": {
+  "retrieval": {
+   "query type": [
+    {
+     "value": "extractive",
+     "n": 67,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7685,
+        "n": 67
+       },
+       "recall_10": {
+        "mean": 0.8059,
+        "n": 67
+       },
+       "recall_50": {
+        "mean": 0.8059,
+        "n": 67
+       },
+       "hit_full_10": {
+        "mean": 0.9298,
+        "n": 57
+       },
+       "complete_50": {
+        "mean": 0.5821,
+        "n": 67
+       },
+       "mrr": {
+        "mean": 0.8595,
+        "n": 67
+       }
+      }
+     }
+    },
+    {
+     "value": "numerical",
+     "n": 50,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7517,
+        "n": 50
+       },
+       "recall_10": {
+        "mean": 0.7903,
+        "n": 50
+       },
+       "recall_50": {
+        "mean": 0.7903,
+        "n": 50
+       },
+       "hit_full_10": {
+        "mean": 0.9565,
+        "n": 46
+       },
+       "complete_50": {
+        "mean": 0.6,
+        "n": 50
+       },
+       "mrr": {
+        "mean": 0.8417,
+        "n": 50
+       }
+      }
+     }
+    },
+    {
+     "value": "open-ended",
+     "n": 27,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.4993,
+        "n": 27
+       },
+       "recall_10": {
+        "mean": 0.4642,
+        "n": 27
+       },
+       "recall_50": {
+        "mean": 0.4642,
+        "n": 27
+       },
+       "hit_full_10": {
+        "mean": 0.8333,
+        "n": 12
+       },
+       "complete_50": {
+        "mean": 0.1852,
+        "n": 27
+       },
+       "mrr": {
+        "mean": 0.7868,
+        "n": 27
+       }
+      }
+     }
+    },
+    {
+     "value": "compare-contrast",
+     "n": 26,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.4826,
+        "n": 26
+       },
+       "recall_10": {
+        "mean": 0.5455,
+        "n": 26
+       },
+       "recall_50": {
+        "mean": 0.5455,
+        "n": 26
+       },
+       "hit_full_10": {
+        "mean": 0.8571,
+        "n": 14
+       },
+       "complete_50": {
+        "mean": 0.2692,
+        "n": 26
+       },
+       "mrr": {
+        "mean": 0.6331,
+        "n": 26
+       }
+      }
+     }
+    },
+    {
+     "value": "boolean",
+     "n": 24,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7829,
+        "n": 24
+       },
+       "recall_10": {
+        "mean": 0.8004,
+        "n": 24
+       },
+       "recall_50": {
+        "mean": 0.8004,
+        "n": 24
+       },
+       "hit_full_10": {
+        "mean": 0.85,
+        "n": 20
+       },
+       "complete_50": {
+        "mean": 0.5833,
+        "n": 24
+       },
+       "mrr": {
+        "mean": 0.8906,
+        "n": 24
+       }
+      }
+     }
+    },
+    {
+     "value": "enumerative",
+     "n": 16,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.6295,
+        "n": 16
+       },
+       "recall_10": {
+        "mean": 0.5819,
+        "n": 16
+       },
+       "recall_50": {
+        "mean": 0.5819,
+        "n": 16
+       },
+       "hit_full_10": {
+        "mean": 0.8182,
+        "n": 11
+       },
+       "complete_50": {
+        "mean": 0.3125,
+        "n": 16
+       },
+       "mrr": {
+        "mean": 0.7865,
+        "n": 16
+       }
+      }
+     }
+    },
+    {
+     "value": "multi-hop",
+     "n": 12,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.5213,
+        "n": 12
+       },
+       "recall_10": {
+        "mean": 0.5678,
+        "n": 12
+       },
+       "recall_50": {
+        "mean": 0.5678,
+        "n": 12
+       },
+       "hit_full_10": {
+        "mean": 1.0,
+        "n": 5
+       },
+       "complete_50": {
+        "mean": 0.25,
+        "n": 12
+       },
+       "mrr": {
+        "mean": 0.7153,
+        "n": 12
+       }
+      }
+     }
+    }
+   ],
+   "content": [
+    {
+     "value": "Text",
+     "n": 146,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.6731,
+        "n": 146
+       },
+       "recall_10": {
+        "mean": 0.6987,
+        "n": 146
+       },
+       "recall_50": {
+        "mean": 0.6987,
+        "n": 146
+       },
+       "hit_full_10": {
+        "mean": 0.902,
+        "n": 102
+       },
+       "complete_50": {
+        "mean": 0.4589,
+        "n": 146
+       },
+       "mrr": {
+        "mean": 0.8123,
+        "n": 146
+       }
+      }
+     }
+    },
+    {
+     "value": "Table",
+     "n": 90,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.6259,
+        "n": 90
+       },
+       "recall_10": {
+        "mean": 0.642,
+        "n": 90
+       },
+       "recall_50": {
+        "mean": 0.642,
+        "n": 90
+       },
+       "hit_full_10": {
+        "mean": 0.8636,
+        "n": 66
+       },
+       "complete_50": {
+        "mean": 0.3667,
+        "n": 90
+       },
+       "mrr": {
+        "mean": 0.7926,
+        "n": 90
+       }
+      }
+     }
+    },
+    {
+     "value": "Chart",
+     "n": 12,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7783,
+        "n": 12
+       },
+       "recall_10": {
+        "mean": 0.778,
+        "n": 12
+       },
+       "recall_50": {
+        "mean": 0.778,
+        "n": 12
+       },
+       "hit_full_10": {
+        "mean": 0.9091,
+        "n": 11
+       },
+       "complete_50": {
+        "mean": 0.5833,
+        "n": 12
+       },
+       "mrr": {
+        "mean": 0.9444,
+        "n": 12
+       }
+      }
+     }
+    },
+    {
+     "value": "Infographic",
+     "n": 3,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.6929,
+        "n": 3
+       },
+       "recall_10": {
+        "mean": 0.7639,
+        "n": 3
+       },
+       "recall_50": {
+        "mean": 0.7639,
+        "n": 3
+       },
+       "hit_full_10": {
+        "mean": 1.0,
+        "n": 2
+       },
+       "complete_50": {
+        "mean": 0.3333,
+        "n": 3
+       },
+       "mrr": {
+        "mean": 0.75,
+        "n": 3
+       }
+      }
+     }
+    }
+   ],
+   "format": [
+    {
+     "value": "question",
+     "n": 95,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7324,
+        "n": 95
+       },
+       "recall_10": {
+        "mean": 0.7802,
+        "n": 95
+       },
+       "recall_50": {
+        "mean": 0.7802,
+        "n": 95
+       },
+       "hit_full_10": {
+        "mean": 0.9333,
+        "n": 75
+       },
+       "complete_50": {
+        "mean": 0.5579,
+        "n": 95
+       },
+       "mrr": {
+        "mean": 0.8256,
+        "n": 95
+       }
+      }
+     }
+    },
+    {
+     "value": "instruction",
+     "n": 36,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.6228,
+        "n": 36
+       },
+       "recall_10": {
+        "mean": 0.6071,
+        "n": 36
+       },
+       "recall_50": {
+        "mean": 0.6071,
+        "n": 36
+       },
+       "hit_full_10": {
+        "mean": 0.85,
+        "n": 20
+       },
+       "complete_50": {
+        "mean": 0.3333,
+        "n": 36
+       },
+       "mrr": {
+        "mean": 0.7704,
+        "n": 36
+       }
+      }
+     }
+    },
+    {
+     "value": "keyword",
+     "n": 23,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.5383,
+        "n": 23
+       },
+       "recall_10": {
+        "mean": 0.5364,
+        "n": 23
+       },
+       "recall_50": {
+        "mean": 0.5364,
+        "n": 23
+       },
+       "hit_full_10": {
+        "mean": 0.8,
+        "n": 15
+       },
+       "complete_50": {
+        "mean": 0.3043,
+        "n": 23
+       },
+       "mrr": {
+        "mean": 0.8232,
+        "n": 23
+       }
+      }
+     }
+    }
+   ],
+   "author": [
+    {
+     "value": "person",
+     "n": 107,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.7258,
+        "n": 107
+       },
+       "recall_10": {
+        "mean": 0.7339,
+        "n": 107
+       },
+       "recall_50": {
+        "mean": 0.7339,
+        "n": 107
+       },
+       "hit_full_10": {
+        "mean": 0.9114,
+        "n": 79
+       },
+       "complete_50": {
+        "mean": 0.4953,
+        "n": 107
+       },
+       "mrr": {
+        "mean": 0.8551,
+        "n": 107
+       }
+      }
+     }
+    },
+    {
+     "value": "synthetic",
+     "n": 47,
+     "stages": {
+      "agent": {
+       "ndcg_10": {
+        "mean": 0.5683,
+        "n": 47
+       },
+       "recall_10": {
+        "mean": 0.6337,
+        "n": 47
+       },
+       "recall_50": {
+        "mean": 0.6337,
+        "n": 47
+       },
+       "hit_full_10": {
+        "mean": 0.871,
+        "n": 31
+       },
+       "complete_50": {
+        "mean": 0.4043,
+        "n": 47
+       },
+       "mrr": {
+        "mean": 0.7149,
+        "n": 47
+       }
+      }
+     }
+    }
+   ]
+  },
+  "answers": {
+   "query type": [
+    {
+     "value": "extractive",
+     "n": 67,
+     "modes": {
+      "agent": {
+       "mean": 0.8059701492537313,
+       "n": 67
+      }
+     }
+    },
+    {
+     "value": "numerical",
+     "n": 50,
+     "modes": {
+      "agent": {
+       "mean": 0.8,
+       "n": 50
+      }
+     }
+    },
+    {
+     "value": "open-ended",
+     "n": 27,
+     "modes": {
+      "agent": {
+       "mean": 0.5185185185185185,
+       "n": 27
+      }
+     }
+    },
+    {
+     "value": "compare-contrast",
+     "n": 26,
+     "modes": {
+      "agent": {
+       "mean": 0.46153846153846156,
+       "n": 26
+      }
+     }
+    },
+    {
+     "value": "boolean",
+     "n": 24,
+     "modes": {
+      "agent": {
+       "mean": 0.7083333333333334,
+       "n": 24
+      }
+     }
+    },
+    {
+     "value": "enumerative",
+     "n": 16,
+     "modes": {
+      "agent": {
+       "mean": 0.5625,
+       "n": 16
+      }
+     }
+    },
+    {
+     "value": "multi-hop",
+     "n": 12,
+     "modes": {
+      "agent": {
+       "mean": 0.5833333333333334,
+       "n": 12
+      }
+     }
+    }
+   ],
+   "content": [
+    {
+     "value": "Text",
+     "n": 146,
+     "modes": {
+      "agent": {
+       "mean": 0.678082191780822,
+       "n": 146
+      }
+     }
+    },
+    {
+     "value": "Table",
+     "n": 90,
+     "modes": {
+      "agent": {
+       "mean": 0.6666666666666666,
+       "n": 90
+      }
+     }
+    },
+    {
+     "value": "Chart",
+     "n": 12,
+     "modes": {
+      "agent": {
+       "mean": 0.9166666666666666,
+       "n": 12
+      }
+     }
+    },
+    {
+     "value": "Infographic",
+     "n": 3,
+     "modes": {
+      "agent": {
+       "mean": 1.0,
+       "n": 3
+      }
+     }
+    }
+   ],
+   "format": [
+    {
+     "value": "question",
+     "n": 95,
+     "modes": {
+      "agent": {
+       "mean": 0.7157894736842105,
+       "n": 95
+      }
+     }
+    },
+    {
+     "value": "instruction",
+     "n": 36,
+     "modes": {
+      "agent": {
+       "mean": 0.6666666666666666,
+       "n": 36
+      }
+     }
+    },
+    {
+     "value": "keyword",
+     "n": 23,
+     "modes": {
+      "agent": {
+       "mean": 0.5652173913043478,
+       "n": 23
+      }
+     }
+    }
+   ],
+   "author": [
+    {
+     "value": "person",
+     "n": 107,
+     "modes": {
+      "agent": {
+       "mean": 0.7289719626168224,
+       "n": 107
+      }
+     }
+    },
+    {
+     "value": "synthetic",
+     "n": 47,
+     "modes": {
+      "agent": {
+       "mean": 0.574468085106383,
+       "n": 47
+      }
+     }
+    }
+   ]
+  }
+ },
+ "totals": {
+  "calls": 308,
+  "input_tokens": 3645977,
+  "output_tokens": 119054,
+  "cost_usd": 8.54,
+  "reused": 0
+ },
+ "mlflow_run_id": "b6e89f430b4e422899be556a692b2ae3"
+}

@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5 Agent Plan</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .hero-meta .badge, td .badge{ white-space:normal; }
+  .legend{ display:flex; flex-wrap:wrap; gap:var(--s2) var(--s4); font-size:var(--t-2); color:var(--muted); margin:0 0 var(--s2); }
+  .legend span{ display:inline-flex; align-items:center; gap:var(--s1); }
+  .legend svg{ width:14px; height:14px; }
+  .fig svg{ width:100%; display:block; }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:13px; }
+  .fig text.s{ fill:var(--muted); font-size:12px; font-family:var(--mono); }
+  .fig text.e{ fill:var(--accent); font-size:12px; font-family:var(--mono); }
+  .fig text.v{ fill:var(--ink-2); font-size:12px; font-family:var(--mono); }
+  .fig text.g{ fill:var(--muted); font-size:11px; font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+  .fig .grid line{ stroke:var(--line); stroke-width:1; }
+  .fig .axis line{ stroke:var(--line-3); }
+  .fig .ref{ stroke:var(--line-3); stroke-width:1.5; stroke-dasharray:4 4; }
+  .fig .mk-ours{ fill:var(--ink); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-prop{ fill:var(--accent); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-other{ fill:var(--line-3); stroke:var(--panel); stroke-width:2; }
+  .fig .hit{ fill:transparent; cursor:default; }
+  .fig .row:hover .hit{ fill:var(--accent-wash); }
+  .fig .node rect{ fill:var(--panel); stroke:var(--line-3); }
+  .fig .node.learn rect{ stroke:var(--accent); fill:var(--accent-soft); }
+  .fig .node.fixed rect{ fill:var(--band); stroke:var(--line-2); }
+  .fig .seg-train{ fill:var(--accent-soft); stroke:var(--accent); }
+  .fig .seg-test{ fill:var(--band); stroke:var(--line-3); }
+  .fig .edge{ stroke:var(--line-3); stroke-width:1.5; fill:none; }
+  .fig .edge.hot{ stroke:var(--accent); stroke-width:2.5; }
+  .tip{ position:fixed; pointer-events:none; z-index:10; background:var(--panel); color:var(--ink);
+        border:1px solid var(--line-3); border-radius:var(--r-sm); box-shadow:var(--shadow);
+        padding:var(--s2) var(--s3); font-size:var(--t-2); max-width:280px; display:none; }
+  .tip b{ display:block; font-family:var(--mono); }
+  .ladder{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:var(--s3); }
+  .ladder .card, .cards .card{ min-width:0; }
+  .ladder .card h3, .cards .card h3{ display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; }
+  .ladder .card .kv{ margin-top:var(--s2); }
+  td code, td .m{ font-family:var(--mono); font-size:var(--t-2); }
+  td code{ overflow-wrap:anywhere; }
+  .mini{ font-size:var(--t-2); color:var(--muted); display:block; }
+  .copyall{ margin-top:var(--s4); display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; }
+  .copyall textarea{ margin-top:var(--s2); }
+  .src li{ font-size:var(--t-1); }
+</style>
+</head>
+<body>
+<main>
+
+<span class="eyebrow">vidore-v3-loop · branch ft-vllm-embed · M5 plan · decided 24 Oct · nothing built yet</span>
+<h1>M5: an agent that searches, reads and answers, <em>scored on all 309</em></h1>
+<p class="lede">Today the pipeline answers from a fixed top 5 pages and gets 67.6% right over all 309 finance_en questions,
+level with the paper's best with retrieval (67.3%). M5 lets Claude search again and read more pages before it answers.
+It scores both the agent's ranking and its answer against the boards. Haiku 5.5 at high effort is both the answer
+agent and the judge. A bigger model runs only when train shows a large gap to the board.</p>
+<div class="hero-meta">
+  <span class="badge">finance_en only · English questions</span>
+  <span class="badge">split v3 · seed 300 · 155 train / 154 test</span>
+  <span class="badge info">models: latest through aliases · today Haiku 5.5 · Sonnet 5.5 · Opus 5.5 · Fable 5.1</span>
+  <span class="badge info">billing: subscription · dollar figures are API-equivalent</span>
+  <span class="badge warn">agent cost and time are estimates until step S4 measures 10 questions</span>
+</div>
+
+<div class="verdict">
+  <div class="stat"><div class="n">67.6%</div><div class="l">answers right from our top 5, all 309 (Sonnet 5, Opus 5.5 judge); the paper's best with retrieval is 67.3%</div></div>
+  <div class="stat"><div class="n">74.4%</div><div class="l">answers right from the human-marked pages, all 309; the paper's best is 70.6%</div></div>
+  <div class="stat"><div class="n">72.9</div><div class="l">NDCG@10 over all 309 with EVIE-4.5B; the board has 72.3 for the same model, and the agentic best is 75.9</div></div>
+  <div class="stat amber"><div class="n">36</div><div class="l">questions lost to retrieval: wrong from our top 5, right from the human pages. This is what the agent can win back</div></div>
+</div>
+
+<!-- ===================================================================== -->
+<section id="asks">
+  <span class="eyebrow">1 · your six points</span>
+  <h2>Short answers, with the detail further down</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Can the judge be Sonnet or Haiku? <span class="badge rec">Haiku first</span></h3>
+      <p>Haiku 5.5 re-judges M4's 310 train verdicts first, and it should be close: the judge reads about 1.8k tokens and picks
+      one of three labels. We adopt it if it matches Opus; Sonnet 5.5 is tried only if Haiku misses. <a href="#judge">Step S1</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Answer agent: Haiku first <span class="badge rec">Haiku 5.5</span></h3>
+      <p>Haiku 5.5 runs alone first, since its job is to read the pages that search finds. We compare it with the board on train,
+      and move to Sonnet 5.5 only on a large gap: more than the ±3.8 points 155 questions can resolve. <a href="#ladder">The ladder</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Latest model versions <span class="badge rec">always latest</span></h3>
+      <p>The code stops pinning versions; today two of the pins are stale. Step S0 passes the alias (<code>haiku</code>,
+      <code>sonnet</code>, <code>opus</code>, <code>fable</code>) straight to the Agent SDK, which resolves it to the newest model.
+      Each run records the exact id it got. <a href="#models">Models</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Why not score all 309? <span class="badge rec">we will</span></h3>
+      <p>The board's numbers cover all 309, and pooling M4's two runs already gives 67.6% and 72.9. The rule limits what we
+      <em>choose</em> on, not what we score: choices are made on train, so test stays a clean check once M6 tunes prompts there.
+      <a href="#all309">Scoring</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Effort <span class="badge rec">high, for judge and agent</span></h3>
+      <p>Haiku 5.5 runs at high effort as both the judge and the answer agent, set explicitly because its default is medium.
+      Sonnet 5.5, if it's needed, also runs at high, so the step up changes only the model. <a href="#ladder">The ladder</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Keep the work on this branch <span class="badge rec">yes</span></h3>
+      <p>All M5 commits go to <code>ft-vllm-embed</code>. Nothing goes to main until you say. The branch holds only the s03 plan so
+      far.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="board">
+  <span class="eyebrow">2 · every metric against the boards</span>
+  <h2>Retrieval and answers are scored; the agent and grounding are not yet</h2>
+  <p class="sub">All figures are finance_en with English questions. Our "all 309" column pools the train and test runs of
+  one configuration, which matches how the board scores. The test column is the clean held-out figure.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>What's scored</th><th>Ours · all 309</th><th>Ours · test 154</th><th>Best published</th><th>What M5 adds</th></tr></thead>
+      <tbody>
+        <tr><td class="k">retrieval · NDCG@10</td><td class="n">72.9</td><td class="n">71.1</td><td>75.9 · NeMo agentic (colembed-8b + Opus 4.5)<span class="mini">73.7 for EVIE-8B alone; 72.3 for EVIE-4.5B, our model</span></td><td class="rec">the agent's final 10 pages</td></tr>
+        <tr><td class="k">answers · retrieved pages</td><td class="n">67.6%<span class="mini">209 / 309</span></td><td class="n">69.5%</td><td>67.3% · ColEmbed-3B-v2 top 5 + Gemini 3 Pro</td><td class="rec">the agent's answer</td></tr>
+        <tr><td class="k">answers · human pages</td><td class="n">74.4%<span class="mini">230 / 309</span></td><td class="n">74.0%</td><td>70.6% · Gemini 3 Pro on page images</td><td class="rec">rerun with the latest models</td></tr>
+        <tr><td class="k">grounding · box F1</td><td class="n">—</td><td class="n">—</td><td>0.05 · Qwen3-VL-30B<span class="mini">people agree at 0.569</span></td><td>cited pages only; boxes are M7</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Not yet like for like: our judge is Opus 5.5 and the paper's is GPT-5.2, and our answer model (Sonnet 5) is newer
+  than the paper's. All 309 carries ±2.7 points of sampling noise; 155 carries ±3.8.</p>
+
+  <div class="legend" aria-hidden="true" style="margin-top:var(--s4)">
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--ink)"/></svg>ours today, all 309</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--line-3)"/></svg>the paper's Table 3</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--accent)"/></svg>M5, to be measured</span>
+  </div>
+  <figure class="fig" id="fig-board">
+    <svg viewBox="0 0 860 418" role="img" aria-labelledby="ansT">
+      <title id="ansT">finance_en answer accuracy, our rows against the paper's end-to-end table, axis from 55 to 80 percent</title>
+      <g class="grid">
+        <line x1="270" y1="28" x2="270" y2="362"/><line x1="380" y1="28" x2="380" y2="362"/>
+        <line x1="490" y1="28" x2="490" y2="362"/><line x1="600" y1="28" x2="600" y2="362"/>
+        <line x1="710" y1="28" x2="710" y2="362"/><line x1="820" y1="28" x2="820" y2="362"/>
+      </g>
+      <g class="axis">
+        <line x1="270" y1="362" x2="820" y2="362"/>
+        <text class="s" x="270" y="382" text-anchor="middle">55</text><text class="s" x="380" y="382" text-anchor="middle">60</text>
+        <text class="s" x="490" y="382" text-anchor="middle">65</text><text class="s" x="600" y="382" text-anchor="middle">70</text>
+        <text class="s" x="710" y="382" text-anchor="middle">75</text><text class="s" x="820" y="382" text-anchor="middle">80</text>
+        <text class="s" x="545" y="406" text-anchor="middle">% judged correct, finance_en (axis starts at 55)</text>
+      </g>
+      <g id="ref-bar"><title>The bar for M5: the paper's best with retrieved pages, 67.3%</title>
+        <line class="ref" x1="540.6" y1="28" x2="540.6" y2="362"/>
+        <text class="s" x="548" y="22">best with retrieval · 67.3</text>
+      </g>
+
+      <text class="g" x="16" y="42">given the human-marked pages</text>
+      <g class="row" data-tip="ours · Sonnet 5, human pages|74.4% (230 / 309)|image + OCR text · judge Opus 5.5 · train 74.8%, test 74.0%"><rect class="hit" x="0" y="50" width="860" height="28"/>
+        <text x="16" y="68">ours · Sonnet 5</text><circle class="mk-ours" cx="696.8" cy="64" r="6"/><text class="v" x="683" y="68" text-anchor="end">74.4</text></g>
+      <g class="row" data-tip="Gemini 3 Pro · page images|70.6%|the paper's Table 3 · judge GPT-5.2"><rect class="hit" x="0" y="78" width="860" height="28"/>
+        <text x="16" y="96">Gemini 3 Pro · images</text><circle class="mk-other" cx="613.2" cy="92" r="6"/><text class="v" x="600" y="96" text-anchor="end">70.6</text></g>
+      <g class="row" data-tip="Gemini 3 Pro · page text|70.2%|the paper's Table 3 · judge GPT-5.2"><rect class="hit" x="0" y="106" width="860" height="28"/>
+        <text x="16" y="124">Gemini 3 Pro · text</text><circle class="mk-other" cx="604.4" cy="120" r="6"/><text class="v" x="591" y="124" text-anchor="end">70.2</text></g>
+
+      <text class="g" x="16" y="166">given retrieved pages</text>
+      <g class="row" data-tip="ours · Sonnet 5, our top 5|67.6% (209 / 309)|EVIE-4.5B top 5, as the paper's Table 3 · judge Opus 5.5 · train 65.8%, test 69.5%"><rect class="hit" x="0" y="174" width="860" height="28"/>
+        <text x="16" y="192">ours · Sonnet 5 · top 5</text><circle class="mk-ours" cx="547.2" cy="188" r="6"/><text class="v" x="561" y="192">67.6</text></g>
+      <g class="row" data-tip="ColEmbed-3B-v2 top 5 · Gemini 3 Pro|67.3%|the paper's best with retrieval on finance_en"><rect class="hit" x="0" y="202" width="860" height="28"/>
+        <text x="16" y="220">ColEmbed-3B-v2 · Gemini 3 Pro</text><circle class="mk-other" cx="540.6" cy="216" r="6"/><text class="v" x="527" y="220" text-anchor="end">67.3</text></g>
+      <g class="row" data-tip="jina-v4 + zerank-2 top 5 · Gemini 3 Pro|66.0%|text retrieval and a reranker, then Gemini on page text"><rect class="hit" x="0" y="230" width="860" height="28"/>
+        <text x="16" y="248">jina-v4 + zerank-2 · Gemini</text><circle class="mk-other" cx="512" cy="244" r="6"/><text class="v" x="498" y="248" text-anchor="end">66.0</text></g>
+      <g class="row" data-tip="hybrid visual + text top 5 · Gemini 3 Pro|65.0%|the paper's Table 3"><rect class="hit" x="0" y="258" width="860" height="28"/>
+        <text x="16" y="276">hybrid · Gemini 3 Pro</text><circle class="mk-other" cx="490" cy="272" r="6"/><text class="v" x="476" y="276" text-anchor="end">65.0</text></g>
+      <g class="row" data-tip="ColEmbed-3B-v2 top 5 · GPT-5.2|59.5%|best on all 8 sets (66.7%), weaker on finance"><rect class="hit" x="0" y="286" width="860" height="28"/>
+        <text x="16" y="304">ColEmbed-3B-v2 · GPT-5.2</text><circle class="mk-other" cx="369" cy="300" r="6"/><text class="v" x="355" y="304" text-anchor="end">59.5</text></g>
+      <g class="row" data-tip="M5 agent|not measured yet|step S5 measures it on train; test once at S6"><rect class="hit" x="0" y="314" width="860" height="28"/>
+        <text x="16" y="332">M5 agent</text><text class="e" x="280" y="332">proposed · measured at S5–S6</text></g>
+    </svg>
+    <figcaption>The pipeline already reaches the paper's best with retrieval, and its human-page ceiling sits 3.8 points above the
+    paper's. M5 is about closing the 6.8-point gap between our top 5 and the human pages.</figcaption>
+  </figure>
+
+  <div class="split">
+    <div class="card">
+      <h3>Why the pipeline gets only the top 5</h3>
+      <p>Top 5 is the paper's method. Every retrieved-pages row in its Table 3 (ColEmbed-3B-v2, hybrid, jina-v4 + zerank-2) hands
+      the generator the top 5 pages, so M4 does too (<code>answer/generate.py</code>, <code>K = 5</code>). That keeps our pipeline
+      row comparable with theirs.</p>
+    </div>
+    <div class="card">
+      <h3>The agent isn't held to 5</h3>
+      <p>The agent chooses what to read: up to 5 searches and up to 10 page views per question. That makes it a different kind of
+      system from the paper's rows, much as NeMo's agent is on the retrieval board. Its row is labelled "agent", and the M4
+      pipeline row sits beside it as the like-for-like comparison.</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <p><b>Where the points go today (all 309).</b> 194 questions are right both ways. <b>36</b> are wrong from our top 5 but right
+    from the human pages; the agent goes after these. 15 are right only from our top 5. <b>64</b> are wrong even with the human
+    pages. Those come down to how the answer is written, the judge, or a wrong reference: 2 of the 5 hand checks found a wrong
+    reference. The 40-label check on the Review tab measures that part.</p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="all309">
+  <span class="eyebrow">3 · all 309 vs train</span>
+  <h2>Score all 309; choose on the 155</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 860 160" role="img" aria-labelledby="splitT">
+      <title id="splitT">The 309 finance_en questions: 155 train where choices are made, 154 test reported once; pooled, they are what the board scores</title>
+      <g style="color:var(--line-3)">
+        <path class="edge" d="M20,38 L20,30 L840,30 L840,38"/>
+      </g>
+      <text class="s" x="430" y="22" text-anchor="middle">all 309 · what the board scores · pooled from one config's train and test runs</text>
+      <g class="node"><title>155 train questions</title><rect class="seg-train" x="20" y="46" width="409" height="40" rx="6"/><text x="36" y="71">train · 155</text></g>
+      <g class="node"><title>154 test questions</title><rect class="seg-test" x="433" y="46" width="407" height="40" rx="6"/><text x="449" y="71">test · 154</text></g>
+      <text x="36" y="112">choose here: judge, model, effort · M6 prompts</text>
+      <text class="s" x="36" y="134">M4: 65.8% answers · 74.7 NDCG@10</text>
+      <text x="449" y="112">reported once with --final · never chosen on</text>
+      <text class="s" x="449" y="134">M4: 69.5% answers · 71.1 NDCG@10</text>
+    </svg>
+  </figure>
+  <div class="split">
+    <div class="card">
+      <h3>What changes</h3>
+      <ul>
+        <li>Every configuration that reaches test is also run on train, so its all-309 figure is a weighted mean of the two runs.
+          No question is scored twice.</li>
+        <li>The Leaderboard tab shows both columns: all 309 to compare with the board, and test 154 as the clean check.</li>
+        <li>The test guard stays: a test run needs <code>--final</code>, and a configuration already scored on test is refused.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Why train still matters</h3>
+      <ul>
+        <li>The all-309 figure includes test, so choosing a model, an effort or a prompt by looking at it would be choosing on test.</li>
+        <li>After M6 tunes prompts on train, the all-309 figure flatters us by however much train overfits. The test figure shows
+          the gap.</li>
+        <li>Train runs 1.8 points <em>above</em> all 309 on NDCG@10 and 1.8 points <em>below</em> on answers (M4). The ladder's
+          bar takes this into account.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="models">
+  <span class="eyebrow">4 · models</span>
+  <h2>Aliases only: the SDK picks the newest model, the run records which</h2>
+  <p class="sub">Today <code>answer/claude.py</code> pins an id for each alias (<code>MODELS</code>), and two of those pins have
+  gone stale. M5 removes the pins. <code>haiku</code>, <code>sonnet</code>, <code>opus</code> and <code>fable</code> go to the
+  Agent SDK as they are, and its bundled Claude Code CLI resolves each one to the newest model it knows. The judge and the
+  agent run at high effort, set explicitly.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Alias</th><th>Pinned today</th><th>Resolves to now</th><th>Effort default</th><th>API $ / M tokens (in / out)</th><th>Role in M5</th></tr></thead>
+      <tbody>
+        <tr><td class="k">haiku</td><td><code>claude-haiku-4-5</code><span class="mini">rejects the effort setting</span></td><td class="rec"><code>claude-haiku-5-5</code></td><td>medium · we pass high</td><td class="n">0.10 / 0.50</td><td>answer agent, rung 1; the judge if it passes S1</td></tr>
+        <tr><td class="k">sonnet</td><td><code>claude-sonnet-5</code></td><td class="rec"><code>claude-sonnet-5-5</code></td><td>high</td><td class="n">2 / 10</td><td>rung 2, only on a large gap; the fallback judge</td></tr>
+        <tr><td class="k">opus</td><td><code>claude-opus-5-5</code></td><td class="rec"><code>claude-opus-5-5</code></td><td>medium</td><td class="n">4 / 20</td><td>judge today; kept at medium as the S1 yardstick; not a ladder rung</td></tr>
+        <tr><td class="k">fable</td><td>—</td><td class="rec"><code>claude-fable-5-1</code></td><td>high</td><td class="n">10 / 50</td><td>not used in M5 (your call)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="steps" style="margin-top:var(--s4)">
+    <div class="step"><b>Resolve once per run</b>At the start of a run, one tiny call per alias reads back the exact model id.
+      That id goes into <code>run.json</code> and the fingerprint. A run never mixes models, and no old answer is reused for
+      a new model.</div>
+    <div class="step"><b>Stay current</b>The alias table ships inside <code>claude-agent-sdk</code>, so new models arrive with
+      <code>uv lock --upgrade-package claude-agent-sdk</code>. A new <code>vidoreloop models</code> command prints what each
+      alias resolves to today.</div>
+    <div class="step"><b>Guard</b>A test fails if a <code>claude-…</code> model id is written into <code>src/</code>. A full
+      id still works on the command line, to rerun an old configuration exactly.</div>
+  </div>
+  <p class="tag">Checked offline in the bundled CLI (claude-agent-sdk 0.2.165): haiku → <code>claude-haiku-5-5</code>, sonnet →
+  <code>claude-sonnet-5-5</code>, opus → <code>claude-opus-5-5</code>, fable → <code>claude-fable-5-1</code>. Prices and effort
+  defaults are from Anthropic's model table (cached 6 Oct 2026). The subscription pays; the API-equivalent cost is recorded
+  on every call, as M4 already does. M4's 1,236 calls came to about $68 API-equivalent. Step S0's smoke call confirms each
+  model is on the plan; Fable 5.1 is unconfirmed.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="judge">
+  <span class="eyebrow">5 · the judge</span>
+  <h2>Haiku 5.5 first, checked against Opus before switching</h2>
+  <p class="sub">The judge is the ruler for every number in M5, so it's fixed before the ladder runs. The prompt stays the
+  paper's (Figure 24), and only "Correct" counts.</p>
+  <div class="steps">
+    <div class="step"><b>Re-judge train with Haiku</b>Take M4's 310 train verdicts: 155 questions, each with a top-5 answer
+      and a human-page answer. Judge them again with Haiku 5.5, plus a second Opus 5.5 pass that shows how often Opus disagrees
+      with itself. Haiku runs at high effort; the Opus pass stays at medium, as M4 ran it. The answers aren't regenerated.</div>
+    <div class="step"><b>Compare</b>Haiku's yes/no agreement with Opus's first pass, Cohen's κ, and how far its accuracy moves
+      (lenient or strict). It's also checked against your 40 labels if they exist.</div>
+    <div class="step"><b>Rule</b>Adopt Haiku if it agrees with Opus on at least 95% of the Correct / not-Correct labels and
+      moves accuracy by 1 point or less. If Opus agrees with itself on fewer than 95%, Opus's own figure is the bar. Against your
+      40 labels, Haiku must also be at least as accurate as Opus. If Haiku misses, Sonnet 5.5 runs the same check. If both miss,
+      Opus stays.</div>
+    <div class="step"><b>Re-score M4</b>If the judge changes, M4's runs are re-judged so every row sits on one judge. The old
+      verdicts stay in their run folders.</div>
+  </div>
+  <div class="split" style="margin-top:var(--s4)">
+    <div class="card">
+      <h3>Cost and time</h3>
+      <dl class="kv"><dt>Haiku 5.5 · high</dt><dd>≈ $0.30 for 310</dd><dt>Opus repeat</dt><dd>≈ $6</dd><dt>Sonnet 5.5</dt><dd>≈ $3, only if Haiku misses</dd><dt>time</dt><dd>≈ 5 min each, 4 workers</dd></dl>
+      <p class="mini">M4's judge calls averaged 1.8k tokens in and 230 out, $0.018 each on Opus.</p>
+    </div>
+    <div class="card">
+      <h3>Why Haiku should be close, and where it might not be</h3>
+      <p>The task is small: a question, a reference and an answer, then one of three labels. That suits Haiku. The risk is the
+      line between Correct and Partially Correct. In M4, 68 of 309 top-5 answers were Partially Correct, and only Correct
+      counts, so a slightly more lenient judge moves the score by points. The check measures exactly that line.</p>
+      <p class="mini">A judge may also favour answers from its own model family, and Haiku will judge Haiku's answers at rung R1.
+      At the end, Opus re-judges 50 of the agent's train answers. If agreement drops, the judge reverts to Opus.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="agent">
+  <span class="eyebrow">6 · the agent</span>
+  <h2>Search, read, then one structured reply</h2>
+  <p class="sub">The agent is one Agent SDK session per question, billed to the subscription and sealed like M4's: no built-in
+  tools, no settings files, an allow-listed environment. Two in-process tools are its only way out. The installed SDK (0.2.165)
+  passes images back from in-process tools.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 860 300" role="img" aria-labelledby="agentT">
+      <title id="agentT">A question goes to the agent, which calls search and view_page, then gives one structured reply that is scored three ways</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g class="node"><title>One finance_en question</title><rect x="20" y="124" width="110" height="52" rx="8"/><text x="38" y="155">question</text></g>
+      <g class="node learn"><title>Haiku 5.5 in an Agent SDK session, at high effort</title><rect x="170" y="110" width="190" height="80" rx="8"/><text x="188" y="142">agent</text><text class="e" x="188" y="164">Haiku 5.5 · high</text></g>
+      <g class="node fixed"><title>search: the champion ranking, EVIE-4.5B visual, returns 10 page ids with a short text opening; at most 5 calls</title><rect x="400" y="20" width="200" height="56" rx="8"/><text x="416" y="43">search(query)</text><text class="s" x="416" y="63">EVIE top 10 · ≤ 5 calls</text></g>
+      <g class="node"><title>The final reply as JSON: a ranking of 10 pages, the answer, and the pages it cites</title><rect x="400" y="122" width="200" height="56" rx="8"/><text x="416" y="145">final reply · JSON</text><text class="s" x="416" y="165">ranking · answer · cites</text></g>
+      <g class="node fixed"><title>view_page: the page image and its OCR markdown, as M4 gives them; at most 10 pages</title><rect x="400" y="224" width="200" height="56" rx="8"/><text x="416" y="247">view_page(id)</text><text class="s" x="416" y="267">image + OCR · ≤ 10 pages</text></g>
+      <g class="node"><title>NDCG@10 of the final ranking, against the board's 75.9</title><rect x="650" y="40" width="190" height="50" rx="8"/><text x="666" y="61">NDCG@10</text><text class="s" x="666" y="79">board best 75.9</text></g>
+      <g class="node"><title>The paper's judge on the answer, against the paper's 67.3%</title><rect x="650" y="125" width="190" height="50" rx="8"/><text x="666" y="146">judge · Correct</text><text class="s" x="666" y="164">board best 67.3%</text></g>
+      <g class="node"><title>Whether a cited page is a gold page: groundwork for M7</title><rect x="650" y="210" width="190" height="50" rx="8"/><text x="666" y="231">cited a gold page</text><text class="s" x="666" y="249">groundwork for M7</text></g>
+      <g style="color:var(--line-3)">
+        <path class="edge" d="M130,150 L168,150" marker-end="url(#ah)"/>
+        <path class="edge" d="M360,128 C380,128 380,48 398,48" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <path class="edge" d="M360,172 C380,172 380,252 398,252" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <path class="edge" d="M600,142 C625,142 625,65 648,65" marker-end="url(#ah)"/>
+        <path class="edge" d="M600,158 C625,158 625,235 648,235" marker-end="url(#ah)"/>
+      </g>
+      <g style="color:var(--accent)">
+        <path class="edge hot" d="M360,150 L398,150" marker-end="url(#ah)"/>
+        <path class="edge hot" d="M600,150 L648,150" marker-end="url(#ah)"/>
+      </g>
+    </svg>
+    <figcaption>One reply gives both scores: the ranking goes on the retrieval board, the answer on the answer board.</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Piece</th><th>What it does</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="k"><code>search(query)</code></td><td>The champion ranking (EVIE-4.5B, visual only, the same <code>pipeline.compute()</code> runs use). Returns 10 results: page id, document, page number and the page's first 300 characters of text. At most 5 calls.</td><td>The agent's search is the system we already scored, so the agent's gain is measured against it alone. The cap is s00's.</td></tr>
+        <tr><td class="k"><code>view_page(id)</code></td><td>The page image plus its OCR markdown, exactly as M4 gives them. At most 10 pages a question.</td><td>M4 measured about 4.4k tokens a page. Ten pages keep a question under about 50k tokens of context.</td></tr>
+        <tr><td class="k">final reply</td><td>Structured output: <code>{ranking: 10 page ids, answer, cited}</code>. The answer follows the paper's line, "Keep the response short when appropriate. Output the answer only."</td><td>The 5.5 models reject forced tool use, so the final reply uses structured output, as the judge already does. Keeping the paper's wording keeps answers comparable with Table 3.</td></tr>
+        <tr><td class="k">short ranking</td><td>Filled from RRF over every search the agent made.</td><td>NeMo's fallback, so NDCG@10 always scores 10 pages.</td></tr>
+        <tr><td class="k">no <code>think</code> tool</td><td>s00 listed one; M5 drops it.</td><td>The 5.5 models think between tool calls on their own.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:var(--s5)">What a run stores, and the Agent tab that reads it</h3>
+  <div class="split">
+    <div class="card">
+      <p><code>runs/&lt;id&gt;/run.json</code> plus <code>agent.jsonl</code>, one line per question with:</p>
+      <ul>
+        <li>every step: the tool, its input, the page ids returned, milliseconds</li>
+        <li>the final ranking, answer and cited pages</li>
+        <li>the verdict and the explanation</li>
+        <li>tokens and API-equivalent cost</li>
+      </ul>
+      <p class="mini">The fingerprint covers the model, the effort, the judge, the caps, the prompt hash, the tool-schema hash and
+      the retrieval config. Runs are resumable and immutable once scored, and each one logs to MLflow
+      (<code>vidore-v3-loop/evals</code>, with the required tags).</p>
+    </div>
+    <div class="card">
+      <p><b>Agent tab</b>, at <code>/agent/v1?run=&lt;run&gt;&amp;query=&lt;id&gt;</code> (s00's URL grammar), shows one question's
+      steps in order. A sketch, not a real trace:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>step</th><th>result</th></tr></thead>
+          <tbody>
+            <tr><td class="n">1</td><td>search "Citi banking book interest rate risk"</td><td class="mini">10 pages</td></tr>
+            <tr><td class="n">2</td><td>view_page 1058, 1057</td><td class="mini">2 pages · ≈ 9k tokens</td></tr>
+            <tr><td class="n">3</td><td>search "IRE EVS AOCI at risk Citi"</td><td class="mini">10 pages, 4 new</td></tr>
+            <tr><td class="n">4</td><td>final reply</td><td class="mini">10 ranked · cites 1058 · Correct</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="ladder">
+  <span class="eyebrow">7 · the ladder</span>
+  <h2>Haiku 5.5 first; move up only on a large gap to the board</h2>
+  <p class="sub">The answer bar on train is <b>65.5%</b>: the paper's 67.3%, moved down by M4's 1.8-point gap between train and
+  all 309. NDCG@10 is compared with the board (75.9, or 77.7 on train) on every rung. A rung that ranks worse than its own
+  search tool (74.7 on train) points to a bug, not a weak model.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Haiku's train answers</th><th>Reads as</th><th>Next</th></tr></thead>
+      <tbody>
+        <tr class="rec"><td class="k rec">65.5% or more</td><td class="rec">level with or ahead of the board</td><td class="rec">keep Haiku; run test once</td></tr>
+        <tr class="rec"><td class="k rec">61.7–65.4%</td><td class="rec">a small gap, inside the ±3.8 points 155 questions carry</td><td class="rec">keep Haiku; the test and all-309 figures settle it</td></tr>
+        <tr><td class="k">under 61.7%</td><td>a large gap</td><td>R2 · Sonnet 5.5, with the same rule</td></tr>
+        <tr><td class="k">Sonnet also under 61.7%</td><td>a large gap on both</td><td>stop and review with you; no Opus or Fable run</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ladder" style="margin-top:var(--s4)">
+    <div class="card rec">
+      <h3>R1 · Haiku 5.5 · high <span class="badge rec">start</span></h3>
+      <p>Runs alone on the 155 train questions, reading the pages its own searches find. Haiku 5.5 is also the judge, if it
+      passes S1.</p>
+      <dl class="kv"><dt>est. cost</dt><dd>≈ $2–6 API-eq.</dd><dt>time</dt><dd>≈ 25–45 min</dd></dl>
+    </div>
+    <div class="card">
+      <h3>R2 · Sonnet 5.5 · high <span class="badge">on a large gap</span></h3>
+      <p>Only if Haiku trails the bar by more than 3.8 points. Same effort, so only the model changes.</p>
+      <dl class="kv"><dt>est. cost</dt><dd>≈ $25–55 API-eq.</dd><dt>time</dt><dd>≈ 25–45 min</dd></dl>
+    </div>
+    <div class="card">
+      <h3>Then · stop and review <span class="badge warn">if Sonnet trails too</span></h3>
+      <p>There's no automatic climb past Sonnet. Opus 5.5 is a choice for that review, and Fable 5.1 is left out of M5.</p>
+      <dl class="kv"><dt>cost</dt><dd>$0</dd><dt>brings</dt><dd>both rungs' numbers, the failures by question type</dd></dl>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:var(--s4)">
+    <p><b>Stop rule.</b> Stop at the first rung within 3.8 points of the bar, then run test once. Every rung also reports the
+    <b>agentic gain</b>: the agent minus M4's pipeline with the same model, paired on the same 155 questions. That's s00's
+    "the agentic gain on our data".</p>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="steps">
+  <span class="eyebrow">8 · build order</span>
+  <h2>Seven steps, each ending in something to open</h2>
+  <div class="steps">
+    <div class="step"><b>S0 · aliases, not ids</b>Remove the pinned ids from <code>MODELS</code> and pass aliases to the SDK.
+      Add the start-of-run resolve, <code>vidoreloop models</code>, and the test that rejects a hardcoded id. Make one smoke call
+      per alias on the subscription.</div>
+    <div class="step"><b>S1 · judge check</b>Add <code>vidoreloop rejudge &lt;run&gt; --judge &lt;model&gt;</code>: an earlier run's
+      answers, judged again, never re-answered. Check Haiku 5.5 first, and Sonnet 5.5 only if Haiku misses (section 5's rule, on train). You label 40 judged answers on the Review tab while it runs.</div>
+    <div class="step"><b>S2 · pipeline baseline</b>Run M4's pipeline on train with Haiku 5.5 at high effort, with retrieved and human pages,
+      on the chosen judge. This gives the latest-model row and the baseline for Haiku's agentic gain. Sonnet 5.5's baseline runs
+      only if rung R2 does.</div>
+    <div class="step"><b>S3 · build the agent</b>Add <code>answer/agent.py</code> (the tools, caps, final schema and fallback
+      fill), an agent call in <code>answer/claude.py</code> that records each step, and <code>eval/agents.py</code> (runs,
+      fingerprint, test guard, metrics, judge, MLflow). Then <code>vidoreloop agent</code>, the API routes, the Agent tab, and
+      Leaderboard rows with all-309 and test-154 columns. Tests stay offline, using a fake SDK stream.</div>
+    <div class="step"><b>S4 · smoke</b>Run 10 train questions on Haiku 5.5. Measure tokens, time and cost, then replace this
+      page's estimates.</div>
+    <div class="step"><b>S5 · the ladder</b>Run R1 (Haiku 5.5, high) on train, and R2 (Sonnet 5.5, high) only on a large gap. If Sonnet trails too, stop and review with you. Opus
+      spot-checks 50 of the agent's answers to confirm the judge.</div>
+    <div class="step"><b>S6 · test once</b>Run the chosen agent and its same-model pipeline on test with <code>--final</code>.
+      Publish both the all-309 and test-154 figures on the Leaderboard. Update README and AGENTS, and mark M5 done after your
+      review.</div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="cost">
+  <span class="eyebrow">9 · cost and time</span>
+  <h2>Subscription-billed; about $15–35 API-equivalent if Haiku 5.5 holds</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Step</th><th>Calls</th><th>Est. API-equivalent</th><th>Wall clock</th></tr></thead>
+      <tbody>
+        <tr><td class="k">S0 smoke</td><td class="n">4</td><td class="n">≈ $0.10</td><td class="n">minutes</td></tr>
+        <tr><td class="k">S1 judge check</td><td class="n">620 judge calls (+310 if Sonnet is needed)</td><td class="n">≈ $6 (+ $3)</td><td class="n">≈ 10 min</td></tr>
+        <tr class="rec"><td class="k rec">S2 Haiku pipeline baseline, train</td><td class="n rec">310 answers + judging</td><td class="n rec">≈ $2–7</td><td class="n rec">≈ 10 min</td></tr>
+        <tr><td class="k">S3 build</td><td class="n">—</td><td class="n">$0</td><td class="n">≈ 2–3 days of work</td></tr>
+        <tr><td class="k">S4 smoke, 10 questions</td><td class="n">10 agent runs</td><td class="n">≈ $0.20</td><td class="n">minutes</td></tr>
+        <tr class="rec"><td class="k rec">S5 R1 · Haiku 5.5 · high, train</td><td class="n rec">155 agent runs</td><td class="n rec">≈ $2–6</td><td class="n rec">≈ 20–40 min</td></tr>
+        <tr><td class="k">S5 R2 · Sonnet 5.5 · high, on a large gap</td><td class="n">155 agent runs + its pipeline baseline</td><td class="n">≈ $25–55 + ≈ $30</td><td class="n">≈ 40 min</td></tr>
+        <tr><td class="k">if Sonnet also trails</td><td class="n">—</td><td class="n">$0 · stop and review</td><td class="n">—</td></tr>
+        <tr class="rec"><td class="k rec">S6 test: agent + pipeline</td><td class="n rec">154 + 308 + judging</td><td class="n rec">≈ $5–15 (Haiku) · ≈ $55–85 (Sonnet)</td><td class="n rec">≈ 30 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">How the agent estimate is made: about 8–12 turns per question, ≤ 5 searches of about 1k tokens each and ≤ 10 page views
+  of about 4.4k each (measured in M4: 22.9k tokens for 5 pages). Context reaches 25–50k, and 150–300k tokens are read in total,
+  mostly from the prompt cache. For scale, NeMo's agent used about 760k input tokens and 136 s a question with Opus 4.5. Heavy
+  rungs may run into a subscription usage window; the code already waits for the reset rather than failing.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="risks">
+  <span class="eyebrow">10 · risks</span>
+  <h2>What could go wrong</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>ID</th><th>Risk</th><th>What we do</th></tr></thead>
+      <tbody>
+        <tr id="r1"><td class="k">R1</td><td>A cheaper judge is more lenient, or favours answers from its own model family.</td><td>Section 5's rule, then an Opus spot-check of 50 agent answers at S5.</td></tr>
+        <tr id="r2"><td class="k">R2</td><td>155 questions carry ±3.8 points, so a rung can clear or miss the bar by chance.</td><td>Show every rung with its interval and the paired gain over the pipeline. The final word is test plus all 309.</td></tr>
+        <tr id="r3"><td class="k">R3</td><td>Answers grow longer than the paper's style and come back "Partially Correct" (68 of 309 in M4).</td><td>The final reply keeps the paper's "output the answer only" line. M6 can tune it, on train.</td></tr>
+        <tr id="r4"><td class="k">R4</td><td>The agent loops, or reads too much.</td><td>The tool handlers enforce the caps (5 searches, 10 pages), plus <code>max_turns</code>. A short ranking is filled from RRF.</td></tr>
+        <tr id="r5"><td class="k">R5</td><td>Four workers hit the EVIE query encoder at once on MPS.</td><td>One shared model behind a lock. S4 measures the encode time.</td></tr>
+        <tr id="r6"><td class="k">R6</td><td>Wrong references cap the score (2 of 5 hand checks).</td><td>Your 40 labels and the disputed-reference audit. The audited score is reported beside the raw one.</td></tr>
+        <tr id="r7"><td class="k">R7</td><td>Haiku 5.5 or Sonnet 5.5 isn't available on the subscription.</td><td>S0's smoke call finds out before anything depends on it.</td></tr>
+        <tr id="r8"><td class="k">R8</td><td>Choosing on all 309 slips in, through the Leaderboard's new column.</td><td>The ladder and judge rules read train runs only. The all-309 column is built only from runs that already have a <code>--final</code> test run.</td></tr>
+        <tr id="r9"><td class="k">R9</td><td>An SDK upgrade moves an alias to a new model between two ladder rungs.</td><td>Each run pins the id it resolved at the start. The ladder shows the id on every rung, and a change is flagged, never mixed into one run.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Out of scope: fine-tuning (dropped on 24 Oct), new embedders, prompt optimisation (M6), boxes (M7) and other
+  datasets.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="decide">
+  <span class="eyebrow">11 · decided, 24 Oct</span>
+  <h2>Your six calls, folded into the plan above</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Question</th><th>Your call</th><th>Where it lands</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Q1 · the judge</td><td class="rec">Haiku 5.5 first, checked against Opus; Sonnet 5.5 only if Haiku misses</td><td><a href="#judge">section 5</a>, step S1</td></tr>
+        <tr><td class="k">Q2 · first answer model</td><td class="rec">Haiku 5.5 alone; Sonnet 5.5 only on a large gap (more than 3.8 points under the bar)</td><td><a href="#ladder">section 7</a></td></tr>
+        <tr><td class="k">Q3 · if Sonnet also trails</td><td class="rec">stop and review with you</td><td>section 7: no automatic Opus run</td></tr>
+        <tr><td class="k">Q4 · Fable 5.1</td><td class="rec">left out of M5</td><td>section 7, and the models table</td></tr>
+        <tr><td class="k">Q5 · Leaderboard columns</td><td class="rec">both: all 309 and test 154</td><td><a href="#all309">section 3</a>, step S3</td></tr>
+        <tr><td class="k">Q6 · the 40 judge labels</td><td class="rec">you label 40 on the Review tab while S1 runs</td><td>section 5's rule uses them</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sub" style="margin-top:var(--s4)">One choice is left: when to start.</p>
+  <div class="qgrid">
+    <form class="q" data-lavish-question="start" onsubmit="return queueQ(event,'Start')">
+      <h3>Start M5?</h3>
+      <label><input type="radio" name="start" value="Commit the plan, then build S0 to S3 on ft-vllm-embed and stop before any paid run" checked><span>Commit the plan, build S0–S3, stop before the runs <span class="badge rec">rec</span><span class="d">code and offline tests only; S1 onward runs on your go</span></span></label>
+      <label><input type="radio" name="start" value="Commit the plan and run S0 to S2 now (aliases, judge check, Haiku baseline), then build S3"><span>Run S0–S2 now, then build<span class="d">≈ $8–13 API-eq.; label your 40 answers while S1 runs</span></span></label>
+      <label><input type="radio" name="start" value="Not yet; keep reviewing the plan"><span>Not yet<span class="d">keep reviewing</span></span></label>
+      <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+    </form>
+  </div>
+  <div class="copyall">
+    <button type="button" class="ghost" onclick="copyAll(this)">Copy all answers</button>
+    <span data-lavish-copy-all-status role="status" aria-live="polite" class="tag"></span>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="sources">
+  <span class="eyebrow">sources</span>
+  <h2>Where each number comes from</h2>
+  <ul class="src">
+    <li>Ours: <code>runs/20261011T081553Z_finance_en_w0-1_norr_train</code>, <code>…081741Z_…_test</code> (retrieval) and <code>…081955Z_…_ans_r-o_k5_sonnet_train</code>, <code>…082342Z_…_test</code> (answers). The all-309 figures pool the two runs of each pair, and the token counts and API-equivalent costs come from each call's recorded usage.</li>
+    <li>The paper's answer and grounding tables: <a href="https://arxiv.org/html/2601.08620">arXiv 2601.08620 v2</a>, Tables 3, 20–22, as saved in <code>docs/research/boards.json</code>.</li>
+    <li>Retrieval boards: <a href="https://github.com/illuin-tech/vidore-benchmark/tree/main/results">illuin-tech/vidore-benchmark results</a> (the NeMo agentic row) and <a href="https://github.com/embeddings-benchmark/results">embeddings-benchmark/results</a> (EVIE). NeMo's tokens and time per question are from <code>docs/research/systems.md</code>.</li>
+    <li>Model ids, effort defaults and prices: Anthropic's current model table (cached 6 Oct 2026), via the claude-api skill. <code>answer/claude.py</code> holds today's aliases.</li>
+    <li>Agent SDK: <code>claude-agent-sdk</code> 0.2.165 in the lock (<code>create_sdk_mcp_server</code>, <code>effort</code>, <code>output_format</code>; image tool results pass through), with Claude Code 2.1.309.</li>
+  </ul>
+</section>
+
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+  // dot-plot hover: one tooltip, fed from each row's data-tip ("title|score|detail")
+  (function(){
+    const tip = document.getElementById('tip');
+    document.querySelectorAll('#fig-board .row').forEach(function(row){
+      const [name, score, detail] = row.dataset.tip.split('|');
+      row.addEventListener('mousemove', function(e){
+        tip.innerHTML = '<b></b><span></span><br><span></span>';
+        tip.children[0].textContent = name;
+        tip.children[1].textContent = 'finance_en: ' + score;
+        tip.children[3].textContent = detail;
+        tip.style.display = 'block';
+        const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      row.addEventListener('mouseleave', function(){ tip.style.display = 'none'; });
+    });
+  })();
+
+  function answersOf(form){
+    return [...form.querySelectorAll('input:checked')].map(function(i){ return i.value; });
+  }
+  function queueQ(event, label){
+    event.preventDefault();
+    const form = event.currentTarget;
+    const key = form.dataset.lavishQuestion;
+    const picked = answersOf(form);
+    const status = form.querySelector('.queued');
+    if (!picked.length){ status.textContent = 'nothing selected'; return false; }
+    const text = label + ': ' + picked.join('; ');
+    if (window.lavish && window.lavish.queuePrompt){
+      window.lavish.queuePrompt('Plan s04 (M5) decision. ' + text, { tag:'choice', text:text, element:form, queueKey:key, data:{ question:key, answer:picked } });
+      status.textContent = 'queued: ' + picked.join(', ');
+    } else {
+      status.textContent = 'selected (Lavish not running; use Copy all answers)';
+    }
+    return false;
+  }
+  async function copyAll(btn){
+    const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+    btn.parentElement.querySelector('textarea')?.remove();
+    const out = [...document.querySelectorAll('[data-lavish-question]')].map(function(q){
+      const a = answersOf(q); return a.length ? q.dataset.lavishQuestion + ': ' + a.join('; ') : '';
+    }).filter(Boolean).join('\n');
+    if (!out){ status.textContent = 'No answers to copy yet.'; return; }
+    try { await navigator.clipboard.writeText(out); status.textContent = 'Answers copied.'; }
+    catch (e) {
+      const t = document.createElement('textarea'); t.value = out; t.readOnly = true; t.rows = 6;
+      btn.parentElement.appendChild(t); t.select(); status.textContent = 'Copy the answers below.';
+    }
+  }
+</script>
+</body>
+</html>

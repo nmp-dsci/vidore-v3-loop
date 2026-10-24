@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5 S0–S2 Results</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .hero-meta .badge, td .badge{ white-space:normal; }
+  .legend{ display:flex; flex-wrap:wrap; gap:var(--s2) var(--s4); font-size:var(--t-2); color:var(--muted); margin:0 0 var(--s2); }
+  .legend span{ display:inline-flex; align-items:center; gap:var(--s1); }
+  .legend svg{ width:14px; height:14px; }
+  .fig svg{ width:100%; display:block; }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:13px; }
+  .fig text.s{ fill:var(--muted); font-size:12px; font-family:var(--mono); }
+  .fig text.v{ fill:var(--ink-2); font-size:12px; font-family:var(--mono); }
+  .fig .grid line{ stroke:var(--line); stroke-width:1; }
+  .fig .axis line{ stroke:var(--line-3); }
+  .fig .ref{ stroke:var(--line-3); stroke-width:1.5; stroke-dasharray:4 4; }
+  .fig .bar-pick{ fill:var(--accent); }
+  .fig .bar-other{ fill:var(--line-3); }
+  .fig .mk-ours{ fill:var(--ink); stroke:var(--panel); stroke-width:2; }
+  .fig .mk-prop{ fill:var(--accent); stroke:var(--panel); stroke-width:2; }
+  .fig .link{ stroke:var(--line-3); stroke-width:2; }
+  .fig .hit{ fill:transparent; cursor:default; }
+  .fig .row:hover .hit{ fill:var(--accent-wash); }
+  .tip{ position:fixed; pointer-events:none; z-index:10; background:var(--panel); color:var(--ink);
+        border:1px solid var(--line-3); border-radius:var(--r-sm); box-shadow:var(--shadow);
+        padding:var(--s2) var(--s3); font-size:var(--t-2); max-width:280px; display:none; }
+  .tip b{ display:block; font-family:var(--mono); }
+  .cards .card{ min-width:0; }
+  td code, td .m{ font-family:var(--mono); font-size:var(--t-2); }
+  td code{ overflow-wrap:anywhere; }
+  .mini{ font-size:var(--t-2); color:var(--muted); display:block; }
+  .src li{ font-size:var(--t-1); }
+  .src code{ overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<main>
+
+<span class="eyebrow">vidore-v3-loop · branch ft-vllm-embed · M5 steps S0–S2 · run 24 Oct 2026 · not committed</span>
+<h1>Sonnet 5.5 judges, Haiku 5.5 trails as the answerer, so the agent starts on <em>Sonnet 5.5</em></h1>
+<p class="lede">S0 switched every model to an alias that resolves to the newest version. S1 checked whether a cheaper judge scores
+like Opus: Sonnet 5.5 does, Haiku 5.5 doesn't. S2 measured Haiku 5.5 as the answering model on the 155 train questions. It trails
+Sonnet 5, and most of all when it reads the human-marked pages, which is the one gap an agent can't close.</p>
+<div class="hero-meta">
+  <span class="badge">finance_en · 155 train questions · split v3</span>
+  <span class="badge info">all runs logged to MLflow · vidore-v3-loop/evals</span>
+  <span class="badge info">≈ $18 API-equivalent in all, paid by the subscription</span>
+  <span class="badge warn">your 40 judge labels aren't in yet</span>
+</div>
+
+<div class="verdict">
+  <div class="stat accent"><div class="n">95.8%</div><div class="l">Sonnet 5.5 (high) agrees with Opus on Correct / not-Correct, accuracy −0.3 pts: the new judge</div></div>
+  <div class="stat amber"><div class="n">87.1%</div><div class="l">Haiku 5.5 (high) as judge: 12.9 pts stricter than Opus, so it misses the 95% bar</div></div>
+  <div class="stat amber"><div class="n">61.3%</div><div class="l">Haiku 5.5 answers from our top 5 (Sonnet judge); the train bar is 65.5%, a large gap below 61.7%</div></div>
+  <div class="stat"><div class="n">65.8%</div><div class="l">Haiku 5.5 from the human pages, against Sonnet 5's 74.8%: −9.0 pts, paired p = 0.003</div></div>
+</div>
+
+<div class="callout">
+  <p><b>What it decides for S5.</b> Haiku's train answers fall in the plan's large-gap band (61.3% against the 61.7% line),
+  and even with the human-marked pages it only reaches the bar. The agent can win back retrieval, not reading, so a Haiku agent is
+  capped near the bar. S5 starts on <b>Sonnet 5.5 at high</b>, judged by Sonnet 5.5 at high. Haiku stays the cheap default for
+  one-off answers.</p>
+</div>
+
+<!-- ===================================================================== -->
+<section id="ran">
+  <span class="eyebrow">1 · what ran</span>
+  <h2>Three steps, no errors</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Step</th><th>What</th><th>Calls</th><th>API-eq.</th><th>Wall clock</th></tr></thead>
+      <tbody>
+        <tr><td class="k">S0</td><td>aliases resolved: <code>vidoreloop models</code></td><td class="n">3</td><td class="n">&lt; $0.01</td><td class="n">6 s</td></tr>
+        <tr><td class="k">S1</td><td>M4's train answers re-judged by Haiku 5.5 · high</td><td class="n">310</td><td class="n">$0.21</td><td class="n">5.7 min</td></tr>
+        <tr><td class="k">S1</td><td>… by Opus 5.5 · medium again (the noise floor)</td><td class="n">310</td><td class="n">$5.84</td><td class="n">6.1 min</td></tr>
+        <tr class="rec"><td class="k rec">S1</td><td class="rec">… by Sonnet 5.5 · high (Haiku missed, so the rule ran it)</td><td class="n rec">310</td><td class="n rec">$2.85</td><td class="n rec">4.1 min</td></tr>
+        <tr class="rec"><td class="k rec">S2</td><td class="rec">Haiku 5.5 · high answers, top 5 and human pages, judged by Opus · medium (M4's judge)</td><td class="n rec">620</td><td class="n rec">$6.77</td><td class="n rec">12.4 min</td></tr>
+        <tr><td class="k">S2</td><td>S2's answers re-judged by Sonnet 5.5 · high (the new judge)</td><td class="n">310</td><td class="n">$2.68</td><td class="n">3.8 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Haiku's 310 answers cost $1.42 API-equivalent ($0.005 each) against Sonnet 5's $0.089 each in M4: about 20× cheaper,
+  with a median 4.1 s an answer against 3.0 s. The rest of S2's $6.77 is the Opus judge.</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="s0">
+  <span class="eyebrow">2 · S0 · aliases, not ids</span>
+  <h2>Every model now resolves to the newest version</h2>
+  <div class="split">
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Alias</th><th>Was pinned to</th><th>Resolves to today</th></tr></thead>
+        <tbody>
+          <tr><td class="k">haiku</td><td><code>claude-haiku-4-5</code></td><td class="rec"><code>claude-haiku-5-5</code></td></tr>
+          <tr><td class="k">sonnet</td><td><code>claude-sonnet-5</code></td><td class="rec"><code>claude-sonnet-5-5</code></td></tr>
+          <tr><td class="k">opus</td><td><code>claude-opus-5-5</code></td><td class="rec"><code>claude-opus-5-5</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <ul>
+        <li><code>answer/claude.py</code>: no ids. <code>resolve</code> asks once per process and every later call names the id.</li>
+        <li>A test fails if a model id appears in <code>src/</code>.</li>
+        <li><code>vidoreloop answer</code> gains <code>--effort</code> and <code>--judge-effort</code>; answering defaults to Haiku · high,
+          judging to Sonnet · high (S1's result).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="s1">
+  <span class="eyebrow">3 · S1 · the judge check</span>
+  <h2>Sonnet 5.5 scores like Opus; Haiku 5.5 is far stricter</h2>
+  <p class="sub">Each judge re-scored the same 310 answers (M4's Sonnet 5 answers on train, top 5 and human pages), with the paper's
+  prompt. Agreement is on the binary label: only Correct counts. Hover a bar for details.</p>
+  <figure class="fig" id="fig-judge">
+    <svg viewBox="0 0 860 196" role="img" aria-labelledby="judgeT">
+      <title id="judgeT">Agreement with Opus 5.5's first pass on 310 verdicts: Opus repeat 98.4%, Sonnet 5.5 95.8%, Haiku 5.5 87.1%; the bar is 95%</title>
+      <g class="grid">
+        <line x1="300" y1="26" x2="300" y2="150"/><line x1="430" y1="26" x2="430" y2="150"/>
+        <line x1="560" y1="26" x2="560" y2="150"/><line x1="690" y1="26" x2="690" y2="150"/>
+        <line x1="820" y1="26" x2="820" y2="150"/>
+      </g>
+      <g class="axis">
+        <line x1="300" y1="150" x2="820" y2="150"/>
+        <text class="s" x="300" y="168" text-anchor="middle">80</text><text class="s" x="430" y="168" text-anchor="middle">85</text>
+        <text class="s" x="560" y="168" text-anchor="middle">90</text><text class="s" x="690" y="168" text-anchor="middle">95</text>
+        <text class="s" x="820" y="168" text-anchor="middle">100</text>
+        <text class="s" x="560" y="190" text-anchor="middle">% of verdicts agreeing with Opus 5.5 (axis starts at 80)</text>
+      </g>
+      <g id="ref-95"><title>The adoption bar: 95% agreement (Opus agrees with itself on 98.4%)</title>
+        <line class="ref" x1="690" y1="26" x2="690" y2="150"/>
+        <text class="s" x="684" y="18" text-anchor="end">bar · 95%</text>
+      </g>
+      <g class="row" data-tip="Opus 5.5 · medium, a second pass|98.4% · kappa 0.961|shift +1.0 pts · 4 more lenient, 1 stricter · $5.84 · the noise floor"><rect class="hit" x="0" y="30" width="860" height="34"/>
+        <text x="16" y="52">Opus 5.5 · repeat</text><rect class="bar-other" x="300" y="38" width="478.4" height="18" rx="4"/><text class="v" x="786" y="52">98.4</text></g>
+      <g class="row" data-tip="Sonnet 5.5 · high|95.8% · kappa 0.900|shift −0.3 pts · 6 more lenient, 7 stricter · $2.85 · adopted"><rect class="hit" x="0" y="66" width="860" height="34"/>
+        <text x="16" y="88">Sonnet 5.5 · high · adopted</text><rect class="bar-pick" x="300" y="74" width="410.8" height="18" rx="4"/><text class="v" x="718" y="88">95.8</text></g>
+      <g class="row" data-tip="Haiku 5.5 · high|87.1% · kappa 0.725|shift −12.9 pts · 0 more lenient, 40 stricter · $0.21 · misses"><rect class="hit" x="0" y="102" width="860" height="34"/>
+        <text x="16" y="124">Haiku 5.5 · high</text><rect class="bar-other" x="300" y="110" width="184.6" height="18" rx="4"/><text class="v" x="492" y="124">87.1</text></g>
+    </svg>
+    <figcaption>Opus agrees with itself on 98.4%, so the bar stays at 95%. Sonnet clears it with balanced disagreements. Haiku
+    misses by 8 points.</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Judge</th><th>Agree, binary</th><th>Agree, 3 levels</th><th>κ</th><th>Accuracy shift</th><th>M4 top 5 / human pages</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Opus 5.5 · medium (M4's)</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">65.8% / 74.8%</td><td>the yardstick</td></tr>
+        <tr><td class="k">Opus 5.5 · medium, repeat</td><td class="n">98.4%</td><td class="n">97.7%</td><td class="n">0.961</td><td class="n">+1.0</td><td class="n">66.5% / 76.1%</td><td>noise floor</td></tr>
+        <tr class="rec"><td class="k rec">Sonnet 5.5 · high</td><td class="n rec">95.8%</td><td class="n rec">92.6%</td><td class="n rec">0.900</td><td class="n rec">−0.3</td><td class="n rec">65.2% / 74.8%</td><td class="rec">passes · adopted</td></tr>
+        <tr><td class="k">Haiku 5.5 · high</td><td class="n">87.1%</td><td class="n">82.6%</td><td class="n">0.725</td><td class="n">−12.9</td><td class="n">49.7% / 65.2%</td><td>misses both tests</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h3>Why Haiku is stricter</h3>
+      <p>All 40 of its disagreements turn Opus's Correct into Partially Correct, and each explanation points to extra detail.
+      The paper's prompt does say "substantial extra information" earns Partially Correct, so Haiku reads it literally. An example:
+      the question "Citigroup share repurchases 2024" has the reference "$2.5 billion". The answer gave $2.5 billion plus share
+      counts and the 2025 programme. Opus and Sonnet called it Correct; Haiku didn't.</p>
+    </div>
+    <div class="card">
+      <h3>Two caveats</h3>
+      <p>Sonnet's agreement depends a little on whose answers it judges. On Haiku's S2 answers it matched Opus on 94.2%, 2.6 points
+      stricter, mostly on human-page answers. The plan's Opus spot-check of 50 agent answers at S5 covers this.</p>
+      <p class="mini">With no labels from you yet, "matches Opus" is the only test. <code>rejudge.rescore(&lt;check&gt;)</code>
+      re-scores every check once your labels exist.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="s2">
+  <span class="eyebrow">4 · S2 · Haiku 5.5 as the answering model</span>
+  <h2>Haiku trails Sonnet 5 by 4 points from our top 5, and 9 from the human pages</h2>
+  <p class="sub">The same 155 train questions and the same pages: our fused top 5, then every human-marked page. Haiku 5.5 ran at
+  high effort and Sonnet 5 at medium (M4). Both are scored by the new judge, Sonnet 5.5 · high. Hover a mark for details.</p>
+  <div class="legend" aria-hidden="true">
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--ink)"/></svg>Sonnet 5 (M4)</span>
+    <span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="var(--accent)"/></svg>Haiku 5.5 · high (S2)</span>
+  </div>
+  <figure class="fig" id="fig-answers">
+    <svg viewBox="0 0 860 232" role="img" aria-labelledby="ansT">
+      <title id="ansT">Train answer accuracy, Sonnet judge: from our top 5, Haiku 61.3% against Sonnet 5 65.2%; from the human pages, Haiku 65.8% against 74.8%. The bar is 65.5% and the large-gap line 61.7%</title>
+      <g class="grid">
+        <line x1="300" y1="30" x2="300" y2="190"/><line x1="404" y1="30" x2="404" y2="190"/>
+        <line x1="508" y1="30" x2="508" y2="190"/><line x1="612" y1="30" x2="612" y2="190"/>
+        <line x1="716" y1="30" x2="716" y2="190"/><line x1="820" y1="30" x2="820" y2="190"/>
+      </g>
+      <g class="axis">
+        <line x1="300" y1="190" x2="820" y2="190"/>
+        <text class="s" x="300" y="208" text-anchor="middle">55</text><text class="s" x="404" y="208" text-anchor="middle">60</text>
+        <text class="s" x="508" y="208" text-anchor="middle">65</text><text class="s" x="612" y="208" text-anchor="middle">70</text>
+        <text class="s" x="716" y="208" text-anchor="middle">75</text><text class="s" x="820" y="208" text-anchor="middle">80</text>
+        <text class="s" x="560" y="228" text-anchor="middle">% judged correct on train (axis starts at 55)</text>
+      </g>
+      <g id="ref-bar"><title>The train bar: the paper's 67.3% less M4's 1.8-point train offset</title>
+        <line class="ref" x1="518.4" y1="30" x2="518.4" y2="190"/>
+        <text class="s" x="524" y="22">bar · 65.5</text>
+      </g>
+      <g id="ref-gap"><title>Below 61.7% (the bar less 3.8 points) is a large gap</title>
+        <line class="ref" x1="439.4" y1="30" x2="439.4" y2="190"/>
+        <text class="s" x="434" y="22" text-anchor="end">large gap · 61.7</text>
+      </g>
+      <text x="16" y="74">from our top 5</text>
+      <line class="link" x1="431" y1="70" x2="512.2" y2="70"/>
+      <g class="row" data-tip="Haiku 5.5 · high, our top 5|61.3% (95 / 155)|Opus judge 61.9% · 3 right only for Haiku, 9 only for Sonnet 5 · p = 0.15"><rect class="hit" x="380" y="52" width="80" height="36"/>
+        <circle class="mk-prop" cx="431" cy="70" r="6"/><text class="v" x="419" y="74" text-anchor="end">61.3</text></g>
+      <g class="row" data-tip="Sonnet 5 (M4), our top 5|65.2% (101 / 155)|Opus judge 65.8%"><rect class="hit" x="490" y="52" width="80" height="36"/>
+        <circle class="mk-ours" cx="512.2" cy="70" r="6"/><text class="v" x="526" y="74">65.2</text></g>
+      <text x="16" y="144">from the human pages</text>
+      <line class="link" x1="524.6" y1="140" x2="711.8" y2="140"/>
+      <g class="row" data-tip="Haiku 5.5 · high, human pages|65.8% (102 / 155)|Opus judge 70.3% · 3 right only for Haiku, 17 only for Sonnet 5 · p = 0.003"><rect class="hit" x="480" y="122" width="80" height="36"/>
+        <circle class="mk-prop" cx="524.6" cy="140" r="6"/><text class="v" x="512" y="144" text-anchor="end">65.8</text></g>
+      <g class="row" data-tip="Sonnet 5 (M4), human pages|74.8% (116 / 155)|Opus judge 74.8%"><rect class="hit" x="690" y="122" width="80" height="36"/>
+        <circle class="mk-ours" cx="711.8" cy="140" r="6"/><text class="v" x="726" y="144">74.8</text></g>
+    </svg>
+    <figcaption>From the human pages Haiku only reaches the bar, which caps what a Haiku agent could score even with perfect
+    retrieval.</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Judge</th><th>Setting</th><th>Sonnet 5 (M4)</th><th>Haiku 5.5 · high</th><th>Gap</th><th>Right only for Sonnet 5 / Haiku</th><th>Paired p</th></tr></thead>
+      <tbody>
+        <tr class="rec"><td class="k rec">Sonnet 5.5 · high</td><td class="rec">our top 5</td><td class="n rec">65.2%</td><td class="n rec">61.3%</td><td class="n rec">−3.9</td><td class="n rec">9 / 3</td><td class="n rec">0.15</td></tr>
+        <tr class="rec"><td class="k rec">Sonnet 5.5 · high</td><td class="rec">human pages</td><td class="n rec">74.8%</td><td class="n rec">65.8%</td><td class="n rec">−9.0</td><td class="n rec">17 / 3</td><td class="n rec">0.003</td></tr>
+        <tr><td class="k">Opus 5.5 · medium</td><td>our top 5</td><td class="n">65.8%</td><td class="n">61.9%</td><td class="n">−3.9</td><td class="n">9 / 3</td><td class="n">0.15</td></tr>
+        <tr><td class="k">Opus 5.5 · medium</td><td>human pages</td><td class="n">74.8%</td><td class="n">70.3%</td><td class="n">−4.5</td><td class="n">12 / 5</td><td class="n">0.14</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="tag">Paired p is an exact McNemar test on the questions only one model got right. By question type, from our top 5 (Sonnet
+  judge), Haiku trails most on open-ended (44.4% against 55.6%, n = 27), enumerative (64.7% against 76.5%, n = 17) and compare-contrast
+  (38.5% against 46.2%, n = 26), ties on boolean (83.3%, n = 24) and leads on multi-hop (50.0% against 41.7%, n = 12).</p>
+</section>
+
+<!-- ===================================================================== -->
+<section id="decide">
+  <span class="eyebrow">5 · what the plan's rule says</span>
+  <h2>Large gap, so S5 skips Haiku and starts on Sonnet 5.5</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Haiku's train answers (top 5, Sonnet judge)</th><th>Band</th><th>The plan's next step</th></tr></thead>
+      <tbody>
+        <tr><td class="k">65.5% or more</td><td>level or ahead</td><td>keep Haiku</td></tr>
+        <tr><td class="k">61.7–65.4%</td><td>small gap</td><td>keep Haiku; test settles it</td></tr>
+        <tr class="rec"><td class="k rec">under 61.7% · <b>Haiku: 61.3%</b></td><td class="rec">large gap</td><td class="rec">Sonnet 5.5 at high, under the same rule</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="split">
+    <div class="card">
+      <h3>How close it is</h3>
+      <p>The rule was written for the agent at S5. Applied to the S2 pipeline, Haiku lands 0.4 points under the line with the Sonnet
+      judge and 0.2 over it with Opus, so the top-5 figure alone is a coin flip. The human-page result isn't: −9.0 points, p = 0.003.
+      That's reading ability, which no amount of searching fixes.</p>
+    </div>
+    <div class="card rec">
+      <h3>So the agent starts on Sonnet 5.5</h3>
+      <p>R1 (a Haiku agent) is skipped and S5 opens at R2: <b>Sonnet 5.5 · high</b> answers, <b>Sonnet 5.5 · high</b> judges. If
+      Sonnet also lands under 61.7% on train, we stop and review, as you decided. Haiku stays the default for single answers in
+      the viewer, where cost matters more than a few points.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<section id="next">
+  <span class="eyebrow">6 · next steps</span>
+  <h2>A Sonnet 5.5 baseline, then the agent itself</h2>
+  <div class="steps">
+    <div class="step"><b>S2b · Sonnet 5.5 baseline</b>Run M4's pipeline on train with Sonnet 5.5 · high, top 5 and human pages,
+      judged by Sonnet 5.5 · high. This is the baseline the agentic gain is measured against, and a check that Sonnet 5.5 is at
+      least Sonnet 5. ≈ $30 API-eq., ≈ 12 min.</div>
+    <div class="step"><b>S3 · build the agent</b>Add <code>answer/agent.py</code> (search, view_page, caps, the structured final
+      reply), <code>eval/agents.py</code>, <code>vidoreloop agent</code>, the Agent tab, and Leaderboard rows with all-309 and
+      test-154 columns. Code and offline tests only.</div>
+    <div class="step"><b>S4 · smoke</b>Run 10 train questions on Sonnet 5.5 · high to measure tokens, time and cost per question.</div>
+    <div class="step"><b>S5 · R2 on train</b>Run the Sonnet 5.5 agent on all 155 and compare with the bar (65.5%) and the
+      board (NDCG@10 75.9). Opus spot-checks 50 verdicts. Stop and review if Sonnet trails.</div>
+    <div class="step"><b>S6 · test once</b>Run the agent and its pipeline on test with <code>--final</code>; M4's test answers are
+      re-judged by Sonnet so every row sits on one judge.</div>
+    <div class="step"><b>Your 40 labels</b>On the Review tab for <code>…081955Z_…_ans_r-o_k5_sonnet_train</code>, then
+      <code>rejudge.rescore</code> checks Sonnet and Opus against you.</div>
+  </div>
+  <form class="q" data-lavish-question="next" onsubmit="return queueQ(event,'Next')" style="margin-top:var(--s5)">
+    <h3>Go on?</h3>
+    <label><input type="radio" name="next" value="Run S2b (Sonnet 5.5 baseline), then build S3 and S4; stop before S5" checked><span>Run S2b, build S3–S4, stop before S5 <span class="badge rec">rec</span><span class="d">≈ $30 API-eq. now; S5 waits for your go</span></span></label>
+    <label><input type="radio" name="next" value="Build S3 only (code and offline tests); no runs"><span>Build S3 only<span class="d">no Claude calls</span></span></label>
+    <label><input type="radio" name="next" value="Commit S0 to S2 and stop here"><span>Commit S0–S2 and stop<span class="d">review first</span></span></label>
+    <div class="row"><button type="submit">Queue answer</button><span class="queued" aria-live="polite"></span></div>
+  </form>
+</section>
+
+<!-- ===================================================================== -->
+<section id="sources">
+  <span class="eyebrow">sources</span>
+  <h2>Where each number comes from</h2>
+  <ul class="src">
+    <li>S1 judge checks, in <code>runs/judge_checks/</code>: <code>20261024T035134Z_finance_en_judge_haiku-high_train</code>, <code>…035137Z_…_judge_opus-medium_train</code>, <code>…035802Z_…_judge_sonnet-high_train</code>, and S2's re-judge <code>…041104Z_…_judge_sonnet-high_train</code>.</li>
+    <li>S2 answer run: <code>runs/20261024T035815Z_finance_en_ans_r-o_k5_haiku_train</code> (Haiku 5.5 · high, Opus · medium judge). M4 baseline: <code>runs/20261011T081955Z_finance_en_ans_r-o_k5_sonnet_train</code>.</li>
+    <li>MLflow: <a href="http://localhost:5000/#/experiments/8">vidore-v3-loop/evals</a>, kinds <code>judge_check</code> and <code>answer</code>.</li>
+    <li>The bar and the gap rule: <code>.lavish/s04_m5-agent-plan.html</code>, section 7. Code: <code>answer/claude.py</code>, <code>eval/rejudge.py</code>, <code>cli.py</code> (<code>models</code>, <code>rejudge</code>); tests in <code>tests/test_rejudge.py</code>, all passing, lint clean.</li>
+  </ul>
+</section>
+
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+  // one tooltip for both figures, fed from each row's data-tip ("title|value|detail")
+  (function(){
+    const tip = document.getElementById('tip');
+    document.querySelectorAll('.fig .row').forEach(function(row){
+      const [name, value, detail] = row.dataset.tip.split('|');
+      row.addEventListener('mousemove', function(e){
+        tip.innerHTML = '<b></b><span></span><br><span></span>';
+        tip.children[0].textContent = name;
+        tip.children[1].textContent = value;
+        tip.children[3].textContent = detail;
+        tip.style.display = 'block';
+        const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      row.addEventListener('mouseleave', function(){ tip.style.display = 'none'; });
+    });
+  })();
+
+  function queueQ(event, label){
+    event.preventDefault();
+    const form = event.currentTarget;
+    const key = form.dataset.lavishQuestion;
+    const picked = [...form.querySelectorAll('input:checked')].map(function(i){ return i.value; });
+    const status = form.querySelector('.queued');
+    if (!picked.length){ status.textContent = 'nothing selected'; return false; }
+    const text = label + ': ' + picked.join('; ');
+    if (window.lavish && window.lavish.queuePrompt){
+      window.lavish.queuePrompt('M5 S0–S2 report. ' + text, { tag:'choice', text:text, element:form, queueKey:key, data:{ question:key, answer:picked } });
+      status.textContent = 'queued: ' + picked.join(', ');
+    } else {
+      status.textContent = 'selected (Lavish not running)';
+    }
+    return false;
+  }
+</script>
+</body>
+</html>

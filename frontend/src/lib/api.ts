@@ -152,6 +152,7 @@ export type Board = {
   about: string;
   ours: OurRow[];
   ours_answers: OurAnswerRow[];
+  ours_agent?: OurAgentRow[];
 };
 
 export async function get<T>(url: string): Promise<T> {
@@ -414,6 +415,7 @@ export type OurRow = {
   models: RunMeta['models'];
   config: RunMeta['config'];
   ndcg_10: Partial<Record<Stage, number | null>>;
+  all?: Partial<Record<Stage, Mean>>; // with its train twin: every question, as the boards score
 };
 export const pct1 = (x: number | null | undefined) => (x == null ? '—' : (x * 100).toFixed(1));
 
@@ -532,4 +534,94 @@ export type OurAnswerRow = {
   n: number;
   models: { answer: string; judge: string };
   accuracy: Partial<Record<Mode, number | null>>;
+  all?: Partial<Record<Mode, Mean>>;
+};
+
+// ---- M5: the agent -------------------------------------------------------------
+
+export type AgentSummary = {
+  retrieval: StageSummary | null;
+  answers: ModeSummary | null;
+  cited_gold: Mean;
+  cited_full: Mean;
+  searches: number | null;
+  views: number | null;
+  turns: number | null;
+  seconds: number | null;
+  errors: number;
+};
+export type AgentRun = {
+  run_id: string;
+  kind: 'agent';
+  dataset: string;
+  split: string;
+  final: boolean;
+  status: string;
+  n: number;
+  label: string;
+  started_at: string;
+  progress: { done: number; n: number; seconds?: number };
+  error?: string;
+  config: { max_searches: number; max_views: number; note: string; limit: number | null };
+  models: { answer: string; effort: string; judge: string; judge_effort: string };
+  summary: AgentSummary | null;
+  totals?: { calls: number; input_tokens: number; output_tokens: number; cost_usd: number };
+  mlflow_url?: string | null;
+  questions?: AgentQuestionRow[];
+};
+export type AgentQuestionRow = {
+  query_id: number;
+  query: string;
+  query_types: string[];
+  n_full: number;
+  ndcg_10: number | null;
+  verdict: Verdict | null;
+  correct: boolean | null;
+  error?: string | null;
+  searches: number | null;
+  views: number | null;
+  cited_gold: boolean | null;
+};
+export type AgentPage = { corpus_id: number; doc_id: string | null; page: number | null; grade: number };
+export type AgentStep = {
+  tool: 'search' | 'view_page';
+  query?: string;
+  results?: AgentPage[];
+  page?: AgentPage;
+  refused?: string;
+  error?: string;
+  ms?: number;
+};
+export type AgentQuestion = {
+  run_id: string;
+  dataset: string;
+  query_id: number;
+  query: string;
+  reference: string | null;
+  query_types: string[];
+  gold: AgentPage[];
+  steps: AgentStep[];
+  ranking: AgentPage[];
+  agent_ranked: number;
+  metrics: Metrics | null;
+  cited: AgentPage[];
+  mode: {
+    answer: string | null;
+    verdict: Verdict | null;
+    correct: boolean | null;
+    explanation?: string;
+    error?: string;
+    usage?: { answer: Usage & { turns?: number }; judge?: Usage };
+  };
+  prev: number | null;
+  next: number | null;
+};
+export type OurAgentRow = {
+  run_id: string;
+  dataset: string;
+  n: number;
+  models: { answer: string; judge: string };
+  ndcg_10: number | null;
+  accuracy: number | null;
+  all?: { ndcg_10?: Mean; accuracy?: Mean };
 };

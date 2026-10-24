@@ -433,3 +433,15 @@ table.setup tr.secstart td,table.setup tr.secstart th{border-top:2px solid var(-
 table.setup tr:first-child td,table.setup tr:first-child th{border-top:0}
 table.setup td{overflow-wrap:anywhere}
 table.setup td.nw{width:1%}
+
+/* M5: the agent's path, one step per row */
+.agent-steps{list-style:none;margin:var(--s3) 0 0;padding:0;display:grid;gap:var(--s2)}
+.agent-step{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s3);align-items:start;padding:var(--s3);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm)}
+.agent-step-body{min-width:0;overflow-wrap:anywhere}
+.agent-step-body .chips{margin-top:var(--s2)}
+.agent-step-body .chip{white-space:normal}
+.agent-step-body .hit{margin-top:var(--s2);cursor:default;max-width:420px}
+.agent-ranking{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.agent-ranking .hit{cursor:default}
+.agent-answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--s4);margin-top:var(--s5)}
+.agent-answers>.card{min-width:0;display:grid;gap:var(--s2);align-content:start}

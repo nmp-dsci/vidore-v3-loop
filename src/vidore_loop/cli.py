@@ -267,7 +267,9 @@ def answer_run(
         "", help="the retrieval run to answer from (default: latest with the viewer's weights)"
     ),
     model: str = typer.Option("sonnet", help="the answering model: haiku | sonnet | opus | an id"),
-    judge_model: str = typer.Option("opus", help="the judge model"),
+    effort: str = typer.Option("medium", help="the answering model's effort: low … max"),
+    judge_model: str = typer.Option("sonnet", help="the judge model (M5 S1 chose sonnet)"),
+    judge_effort: str = typer.Option("medium", help="the judge's effort"),
     workers: int = typer.Option(4, help="questions answered at once"),
     final: bool = typer.Option(False, help="answer the test split, once"),
     force: bool = typer.Option(False, help="repeat a configuration already scored on test"),
@@ -291,7 +293,9 @@ def answer_run(
         k=k,
         source_run=source_run or None,
         model=model,
+        effort=effort,
         judge_model=judge_model,
+        judge_effort=judge_effort,
         workers=workers,
         note=note,
         limit=limit or None,
@@ -332,6 +336,150 @@ def answer_run(
         console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
 
 
+@app.command("agent")
+def agent_run(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    split_name: str = typer.Option("train", "--split", help="train | test (test needs --final)"),
+    model: str = typer.Option("sonnet", help="the agent's model: haiku | sonnet | opus | an id"),
+    effort: str = typer.Option("medium", help="the agent's effort: low … max"),
+    judge_model: str = typer.Option("sonnet", help="the judge model"),
+    judge_effort: str = typer.Option("medium", help="the judge's effort"),
+    max_searches: int = typer.Option(5, help="searches the agent may make per question"),
+    max_views: int = typer.Option(10, help="pages the agent may view per question"),
+    workers: int = typer.Option(4, help="questions at once"),
+    final: bool = typer.Option(False, help="run the test split, once"),
+    force: bool = typer.Option(False, help="repeat a configuration already scored on test"),
+    limit: int = typer.Option(0, help="only the first N questions (a smoke; train only)"),
+    note: str = typer.Option("", help="why this run exists"),
+) -> None:
+    """The M5 agent on every question of a split: it searches, reads pages and answers.
+
+    Scores its final 10 pages (NDCG@10) and its answer (the judge). Loads the visual model
+    for search; one Agent SDK session per question on the subscription."""
+    from vidore_loop.eval import agents
+
+    cfg = agents.AgentConfig(
+        dataset=registry.get(dataset).key,
+        split=split_name,
+        model=model,
+        effort=effort,
+        judge_model=judge_model,
+        judge_effort=judge_effort,
+        max_searches=max_searches,
+        max_views=max_views,
+        workers=workers,
+        note=note,
+        limit=limit or None,
+    )
+    rid = agents.execute(
+        cfg, final=final, force=force, on_progress=lambda d, n: console.print(f"{d}/{n}", end="\r")
+    )
+    doc = runs_get(rid)
+    s = doc.get("summary") or {}
+    r, a = s.get("retrieval") or {}, s.get("answers") or {}
+    console.print(f"\n{rid}: {doc['status']} · {doc['models']['answer']} ({cfg.effort})")
+    t = Table(
+        "NDCG@10",
+        "recall@10",
+        "accuracy",
+        "cited gold",
+        "searches",
+        "views",
+        "s / question",
+        "errors",
+    )
+    acc = a.get("raw", {}).get("mean")
+    t.add_row(
+        f"{r['ndcg_10']['mean'] * 100:.1f}"
+        if r.get("ndcg_10", {}).get("mean") is not None
+        else "—",
+        f"{r['recall_10']['mean'] * 100:.1f}"
+        if r.get("recall_10", {}).get("mean") is not None
+        else "—",
+        "—" if acc is None else f"{acc * 100:.1f}% of {a['raw']['n']}",
+        "—"
+        if s.get("cited_gold", {}).get("mean") is None
+        else f"{s['cited_gold']['mean'] * 100:.0f}%",
+        str(s.get("searches")),
+        str(s.get("views")),
+        str(s.get("seconds")),
+        str(s.get("errors")),
+    )
+    console.print(t)
+    tot = doc.get("totals") or {}
+    console.print(
+        f"{tot.get('calls', 0)} calls · {tot.get('input_tokens', 0):,} input tokens · "
+        f"≈${tot.get('cost_usd', 0)} at per-token prices (the subscription pays)"
+    )
+    if doc.get("mlflow_error"):
+        console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
+
+
+@app.command("models")
+def models(
+    aliases: str = typer.Option("haiku,sonnet,opus", help="aliases to resolve, comma-separated"),
+) -> None:
+    """What each model alias resolves to today: one tiny call per alias (subscription)."""
+    from vidore_loop.answer import claude
+
+    t = Table("alias", "model id")
+    for a in (x.strip() for x in aliases.split(",") if x.strip()):
+        t.add_row(a, claude.resolve(a))
+    console.print(t)
+
+
+@app.command("rejudge")
+def rejudge_run(
+    run: str = typer.Option(..., help="the finished answer run whose answers are judged again"),
+    judge_model: str = typer.Option("haiku", help="the judge to check: haiku | sonnet | opus"),
+    judge_effort: str = typer.Option("high", help="its effort: low … max"),
+    workers: int = typer.Option(4, help="verdicts at once"),
+    final: bool = typer.Option(False, help="re-judge a test run (reporting, once)"),
+    limit: int = typer.Option(0, help="only the first N questions (a smoke)"),
+) -> None:
+    """Judge an answer run's answers again with another model and compare the verdicts (M5 S1).
+
+    Never re-answers. Writes runs/judge_checks/<id>/ and logs it to MLflow."""
+    from vidore_loop.eval import rejudge
+
+    cfg = rejudge.JudgeCheckConfig(
+        source_run=run,
+        judge_model=judge_model,
+        judge_effort=judge_effort,
+        workers=workers,
+        limit=limit or None,
+    )
+    cid = rejudge.execute(
+        cfg, final=final, on_progress=lambda d, n: console.print(f"{d}/{n}", end="\r")
+    )
+    doc = rejudge.get(cid)
+    s = doc["summary"]
+    console.print(f"\n{cid}: {doc['status']} · {doc['models']['judge']} ({cfg.judge_effort})")
+    t = Table("scope", "n", "agree (binary)", "agree (3 levels)", "kappa", "accuracy shift")
+    for scope, row in [("all", s["all"]), *s["modes"].items()]:
+        t.add_row(
+            scope,
+            str(row["n"]),
+            f"{row['binary_agree'] * 100:.1f}%",
+            f"{row['three_level_agree'] * 100:.1f}%",
+            f"{row['kappa']:.3f}",
+            f"{row['shift'] * 100:+.1f} pts",
+        )
+    console.print(t)
+    p = s["people"]
+    if p["n"]:
+        console.print(
+            f"against {p['n']} labels: source {p['source'] * 100:.1f}% · check {p['check'] * 100:.1f}%"
+        )
+    tot = doc["totals"]
+    console.print(
+        f"{tot['calls']} calls · {s['errors']} errors · "
+        f"≈${tot['cost_usd']} at per-token prices (the subscription pays)"
+    )
+    if doc.get("mlflow_error"):
+        console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
+
+
 def runs_get(rid: str) -> dict[str, Any]:
     from vidore_loop.eval import runs
 
@@ -351,6 +499,12 @@ def list_runs() -> None:
                 f"{m} {v['raw']['mean'] * 100:.1f}%"
                 for m, v in summ.items()
                 if m != "retrieval_cost" and v["raw"]["mean"] is not None
+            )
+        elif r.get("kind") == "agent":
+            ndcg = ((summ.get("retrieval") or {}).get("ndcg_10") or {}).get("mean")
+            acc = ((summ.get("answers") or {}).get("raw") or {}).get("mean")
+            cells = (f"agent ndcg {ndcg:.3f} · " if ndcg is not None else "agent · ") + (
+                f"{acc * 100:.1f}%" if acc is not None else "—"
             )
         else:
             cells = " · ".join(f"{s[0]} {m['ndcg_10']['mean']:.3f}" for s, m in summ.items())

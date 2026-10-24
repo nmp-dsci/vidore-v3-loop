@@ -44,7 +44,7 @@ def prompt_version() -> str:
 
 
 def judge(
-    query: str, true_answer: str, test_answer: str, model: str = "opus", effort: str = "medium"
+    query: str, true_answer: str, test_answer: str, model: str = "sonnet", effort: str = "medium"
 ) -> dict[str, Any]:
     """{verdict, correct, explanation, usage}; `correct` is the paper's binary label."""
     text = PROMPT.format(query=query, true_answer=true_answer, test_answer=test_answer)

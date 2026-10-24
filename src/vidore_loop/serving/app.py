@@ -68,7 +68,7 @@ class AnswerRunIn(BaseModel):
     k: int = 5
     source_run: str | None = None
     model: str = "sonnet"
-    judge_model: str = "opus"
+    judge_model: str = "sonnet"
     workers: int = 4
     note: str = ""
     limit: int | None = None
@@ -229,27 +229,34 @@ def create_app() -> FastAPI:
         from vidore_loop.eval import answers, runs
 
         rs = runs.list_runs()
+
+        def accuracy(r: dict[str, Any]) -> dict[str, Any]:
+            return {
+                m: v["raw"]
+                for m, v in answers.audited_view(r, answers.records(r["run_id"])).items()
+                if m != "retrieval_cost"
+            }
+
+        ours_answers = []
+        for r in rs:
+            if not _final_test(r) or r.get("kind") != answers.KIND:
+                continue
+            acc = accuracy(r)
+            row: dict[str, Any] = {
+                "run_id": r["run_id"],
+                "dataset": r["dataset"],
+                "n": r["n"],
+                "models": r["models"],
+                "accuracy": {m: v["mean"] for m, v in acc.items()},
+            }
+            if twin := _train_twin(rs, r):
+                row["all"] = _pool_means(acc, accuracy(twin))
+            ours_answers.append(row)
         return {
             **board.leaderboard(),
             "ours": _ours(rs),
-            "ours_answers": [
-                {
-                    "run_id": r["run_id"],
-                    "dataset": r["dataset"],
-                    "n": r["n"],
-                    "models": r["models"],
-                    "accuracy": {
-                        m: v["raw"]["mean"]
-                        for m, v in answers.audited_view(r, answers.records(r["run_id"])).items()
-                        if m != "retrieval_cost"
-                    },
-                }
-                for r in rs
-                if r.get("kind") == answers.KIND
-                and r.get("split") == "test"
-                and r.get("final")
-                and r.get("status") == "finished"
-            ],
+            "ours_answers": ours_answers,
+            "ours_agent": _ours_agent(rs),
         }
 
     @app.get("/api/split/{key}")
@@ -588,30 +595,182 @@ def create_app() -> FastAPI:
             "stages": stages,
         }
 
+    @app.get("/api/agent-runs/{run_id}")
+    def agent_run(run_id: str) -> dict[str, Any]:
+        """An agent run (M5) and one row per question: its NDCG@10, verdict and path length."""
+        from vidore_loop.eval import agents, runs
+        from vidore_loop.tracking import mlflow_log
+
+        try:
+            doc = runs.get(run_id)
+        except KeyError as e:
+            raise HTTPException(404, f"no run {run_id}") from e
+        if doc.get("kind") != agents.KIND:
+            raise HTTPException(404, f"{run_id} is not an agent run")
+        doc["mlflow_url"] = mlflow_log.run_url(doc.get("mlflow_run_id"))
+        doc["questions"] = [
+            {
+                "query_id": r["query_id"],
+                "query": r["query"],
+                "query_types": r["query_types"],
+                "n_full": r["n_full"],
+                "ndcg_10": (r.get("stages", {}).get(agents.STAGE) or {})
+                .get("metrics", {})
+                .get("ndcg_10"),
+                "verdict": r["modes"][agents.MODE].get("verdict"),
+                "correct": r["modes"][agents.MODE].get("correct"),
+                "error": r["modes"][agents.MODE].get("error"),
+                "searches": r.get("searches"),
+                "views": r.get("views"),
+                "cited_gold": r.get("cited_gold"),
+            }
+            for r in agents.records(run_id)
+        ]
+        return doc
+
+    @app.get("/api/agent-runs/{run_id}/{query_id}")
+    def agent_question(run_id: str, query_id: int) -> dict[str, Any]:
+        """One question's path through the agent: each search and page viewed, its final
+        ranking, answer, citations and verdict, every page marked with its gold grade."""
+        from vidore_loop.eval import agents, runs
+
+        try:
+            doc = runs.get(run_id)
+            recs = agents.records(run_id)
+        except KeyError as e:
+            raise HTTPException(404, f"no run {run_id}") from e
+        ids = [r["query_id"] for r in recs]
+        if query_id not in ids:
+            raise HTTPException(404, f"query {query_id} is not in run {run_id}")
+        i = ids.index(query_id)
+        rec = recs[i]
+        key = doc["dataset"]
+        index = pages.page_index(key)
+        gold = {int(c): g for c, g in rec["gold"].items()}
+        q = catalog.question(key, query_id) or {}
+
+        def page(cid: int) -> dict[str, Any]:
+            e = index.get(cid, {})
+            return {
+                "corpus_id": cid,
+                "doc_id": e.get("doc_id"),
+                "page": e.get("page"),
+                "grade": gold.get(cid, 0),
+            }
+
+        steps = []
+        for s in rec.get("steps", []):
+            st = dict(s)
+            if "results" in st:
+                st["results"] = [page(c) for c in st["results"]]
+            if "page" in st:
+                st["page"] = page(int(st["page"]))
+            steps.append(st)
+        stage = rec.get("stages", {}).get(agents.STAGE) or {}
+        return {
+            "run_id": run_id,
+            "dataset": key,
+            "query_id": query_id,
+            "query": rec["query"],
+            "reference": q.get("answer"),
+            "query_types": rec["query_types"],
+            "gold": [page(c) for c in sorted(gold, key=lambda c: (-gold[c], c))],
+            "steps": steps,
+            "ranking": [page(c) for c in stage.get("ranking", [])],
+            "agent_ranked": len(rec.get("agent_ranking", [])),
+            "metrics": stage.get("metrics"),
+            "cited": [page(c) for c in rec.get("cited", [])],
+            "mode": rec["modes"][agents.MODE],
+            "prev": ids[i - 1] if i > 0 else None,
+            "next": ids[i + 1] if i + 1 < len(ids) else None,
+        }
+
     _mount_frontend(app)
     return app
 
 
+def _final_test(r: dict[str, Any]) -> bool:
+    return bool(r.get("split") == "test" and r.get("final") and r.get("status") == "finished")
+
+
+def _train_twin(all_runs: list[dict[str, Any]], test: dict[str, Any]) -> dict[str, Any] | None:
+    """The newest finished, full train run of the same configuration (same fingerprint): with
+    the test run it covers every question, the way the boards score (M5 S3)."""
+    for r in all_runs:
+        if (
+            r.get("kind", "retrieval") == test.get("kind", "retrieval")
+            and r.get("split") == "train"
+            and r.get("fingerprint") == test.get("fingerprint")
+            and r.get("status") == "finished"
+            and not (r.get("config") or {}).get("limit")
+        ):
+            return r
+    return None
+
+
+def _pool_means(test: dict[str, Any], train: dict[str, Any]) -> dict[str, Any]:
+    """{key: {mean, n}} from both halves, weighted by each half's n."""
+    out: dict[str, Any] = {}
+    for k, a in test.items():
+        b = train.get(k) or {}
+        if a.get("mean") is None or b.get("mean") is None:
+            continue
+        n = a["n"] + b["n"]
+        out[k] = {"mean": (a["mean"] * a["n"] + b["mean"] * b["n"]) / n, "n": n}
+    return out
+
+
 def _ours(all_runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Our leaderboard rows: every finished final run on the test split, newest first."""
+    """Our leaderboard rows: every finished final run on the test split, newest first, with
+    the all-questions figure when its train twin exists."""
     out = []
     for r in all_runs:
-        if r.get("split") != "test" or not r.get("final") or r.get("status") != "finished":
+        if not _final_test(r) or r.get("kind", "retrieval") != "retrieval":
             continue
-        if r.get("kind", "retrieval") != "retrieval":
+        ndcg = {s: m["ndcg_10"] for s, m in (r.get("summary") or {}).items()}
+        row: dict[str, Any] = {
+            "run_id": r["run_id"],
+            "dataset": r["dataset"],
+            "label": r["label"],
+            "n": r["n"],
+            "models": r["models"],
+            "config": r["config"],
+            "ndcg_10": {s: m["mean"] for s, m in ndcg.items()},
+            "costs": r.get("costs"),
+        }
+        if twin := _train_twin(all_runs, r):
+            tw = {s: m["ndcg_10"] for s, m in (twin.get("summary") or {}).items()}
+            row["all"] = _pool_means(ndcg, tw)
+        out.append(row)
+    return out
+
+
+def _agent_means(r: dict[str, Any]) -> dict[str, Any]:
+    s = r.get("summary") or {}
+    return {
+        "ndcg_10": (s.get("retrieval") or {}).get("ndcg_10") or {},
+        "accuracy": (s.get("answers") or {}).get("raw") or {},
+    }
+
+
+def _ours_agent(all_runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The agent's leaderboard rows (M5): its NDCG@10 and its accuracy, test and all questions."""
+    out = []
+    for r in all_runs:
+        if not _final_test(r) or r.get("kind") != "agent":
             continue
-        out.append(
-            {
-                "run_id": r["run_id"],
-                "dataset": r["dataset"],
-                "label": r["label"],
-                "n": r["n"],
-                "models": r["models"],
-                "config": r["config"],
-                "ndcg_10": {s: m["ndcg_10"]["mean"] for s, m in (r.get("summary") or {}).items()},
-                "costs": r.get("costs"),
-            }
-        )
+        m = _agent_means(r)
+        row: dict[str, Any] = {
+            "run_id": r["run_id"],
+            "dataset": r["dataset"],
+            "n": r["n"],
+            "models": r["models"],
+            "ndcg_10": m["ndcg_10"].get("mean"),
+            "accuracy": m["accuracy"].get("mean"),
+        }
+        if twin := _train_twin(all_runs, r):
+            row["all"] = _pool_means(m, _agent_means(twin))
+        out.append(row)
     return out
 
 

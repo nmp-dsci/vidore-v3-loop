@@ -10,6 +10,12 @@ key present the CLI bills per token.
 The prompt goes in as content blocks, so page images travel as base64 image
 blocks beside their OCR text. A subscription window that has run out is waited
 for, not failed.
+
+Models are named by alias only (`haiku`, `sonnet`, `opus`, `fable`): the SDK's
+bundled CLI maps each to the newest model it knows, so nothing here goes stale.
+`resolve` reads the exact id back once per process with one tiny call, and every
+call after that names the id, so a run never mixes models and records what ran.
+New models arrive by upgrading `claude-agent-sdk`.
 """
 
 from __future__ import annotations
@@ -20,19 +26,23 @@ import json
 import os
 import re
 import tempfile
+import threading
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-MODELS: dict[str, str] = {
-    "haiku": "claude-haiku-4-5",
-    "sonnet": "claude-sonnet-5",
-    "opus": "claude-opus-5-5",
-}
+ALIASES = ("haiku", "sonnet", "opus", "fable")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
+PROBE_EFFORT = "low"
+# the SDK reads each CLI message whole; a turn that views several page images (≈0.8 MB each,
+# base64) overflows its 1 MB default
+MAX_BUFFER = 64 * 1024 * 1024
+
+_RESOLVED: dict[str, str] = {}  # alias → the id it answered as, this process
+_RESOLVE_LOCK = threading.Lock()
 
 RETRIES = 3
 MAX_RESET_WAITS = 3
@@ -71,6 +81,8 @@ ENV_FIXED = {
 }
 
 Block = dict[str, Any]
+# In-process tools for one attempt: MCP servers by name and the tool names allowed (M5 agent)
+ToolKit = tuple[dict[str, Any], list[str]]
 
 
 class BillingError(RuntimeError):
@@ -92,6 +104,7 @@ class Reply:
     model: str = ""
     structured: Any = None
     error: str | None = None
+    turns: int = 0
 
     def usage(self) -> dict[str, Any]:
         d = asdict(self)
@@ -101,8 +114,23 @@ class Reply:
 
 
 def resolve(name: str) -> str:
-    """`sonnet` → `claude-sonnet-5`; a full model id passes through."""
-    return MODELS.get(name.strip().lower(), name.strip())
+    """An alias → the newest model id the SDK maps it to, read back once per process;
+    a full model id passes through unchanged (to rerun an old configuration exactly)."""
+    alias = name.strip().lower()
+    if alias not in ALIASES:
+        return name.strip()
+    with _RESOLVE_LOCK:
+        if alias not in _RESOLVED:
+            _RESOLVED[alias] = _probe(alias)
+        return _RESOLVED[alias]
+
+
+def _probe(alias: str) -> str:
+    """One tiny call under the alias; the reply names the model that answered it."""
+    rep = _ask("", [text_block("Reply with the word OK.")], alias, PROBE_EFFORT, None)
+    if not rep.model or rep.model.strip().lower() in ALIASES:
+        raise ClaudeError(f"the reply under {alias!r} did not name its model")
+    return rep.model
 
 
 def billing() -> str:
@@ -162,7 +190,13 @@ async def _message(blocks: list[Block]) -> AsyncIterator[dict[str, Any]]:
 
 
 async def _query(
-    system: str, blocks: list[Block], model: str, effort: str, schema: dict[str, Any] | None
+    system: str,
+    blocks: list[Block],
+    model: str,
+    effort: str,
+    schema: dict[str, Any] | None,
+    kit: ToolKit | None = None,
+    max_turns: int = 4,
 ) -> Reply:
     from claude_agent_sdk import (
         AssistantMessage,
@@ -172,19 +206,21 @@ async def _query(
         query,
     )
 
+    servers, allowed = kit or ({}, [])
     options = ClaudeAgentOptions(
         model=model,
         system_prompt=system,
-        tools=[],  # no built-in tools: the model can only answer
-        allowed_tools=[],
-        mcp_servers={},
+        tools=[],  # no built-in tools: the model can only answer, or use the kit's own tools
+        allowed_tools=allowed,
+        mcp_servers=servers,
         strict_mcp_config=True,
         permission_mode="bypassPermissions",
-        max_turns=4,  # one reply; headroom because the CLI has ended a tool-less reply as 'max turns'
+        max_turns=max_turns,  # 4 for one reply: the CLI has ended a tool-less reply as 'max turns'
         cwd=str(session_dir()),
         env=sealed_env(),
         setting_sources=[],
         effort=effort,
+        max_buffer_size=MAX_BUFFER,
         output_format={"type": "json_schema", "schema": schema} if schema else None,
     )
     texts: list[str] = []
@@ -193,6 +229,7 @@ async def _query(
     async for msg in query(prompt=_message(blocks), options=options):
         if isinstance(msg, AssistantMessage):
             texts += [b.text for b in msg.content if isinstance(b, TextBlock)]
+            rep.model = msg.model or rep.model  # the id that answered, not the name asked for
         elif isinstance(msg, ResultMessage):
             u = msg.usage or {}
             rep.input_tokens = (
@@ -203,6 +240,7 @@ async def _query(
             rep.output_tokens = int(u.get("output_tokens", 0))
             rep.cache_read = int(u.get("cache_read_input_tokens", 0))
             rep.cost_usd = msg.total_cost_usd
+            rep.turns = int(msg.num_turns or 0)
             if msg.is_error:
                 detail = (msg.errors or [msg.result or ""])[0]
                 rep.error = f"{msg.subtype}: {detail}"[:500]
@@ -245,18 +283,47 @@ def ask(
     schema: dict[str, Any] | None = None,
 ) -> Reply:
     """One call on a private event loop (safe from worker threads); raises ClaudeError on no reply."""
+    return _ask(system, blocks, resolve(model), effort, schema)
+
+
+def agent(
+    system: str,
+    blocks: list[Block],
+    kit: Callable[[], ToolKit],
+    model: str = "sonnet",
+    effort: str = "medium",
+    schema: dict[str, Any] | None = None,
+    max_turns: int = 24,
+) -> Reply:
+    """A session that may call in-process tools before its reply. `kit` builds fresh tools for
+    each attempt, so a retried attempt starts clean (caps, trace)."""
+    return _ask(system, blocks, resolve(model), effort, schema, kit, max_turns)
+
+
+def _ask(
+    system: str,
+    blocks: list[Block],
+    model: str,
+    effort: str,
+    schema: dict[str, Any] | None,
+    kit: Callable[[], ToolKit] | None = None,
+    max_turns: int = 4,
+) -> Reply:
     check_billing()
-    model = resolve(model)
     last = Reply("", model=model)
     attempt = 0
     waits = 0
     while attempt < RETRIES:
         loop = asyncio.new_event_loop()
         try:
-            last = loop.run_until_complete(_query(system, blocks, model, effort, schema))
+            tools = kit() if kit else None
+            last = loop.run_until_complete(
+                _query(system, blocks, model, effort, schema, tools, max_turns)
+            )
         except Exception as e:  # noqa: BLE001 - transport errors are retried like HTTP ones
             last = Reply("", model=model, error=f"{type(e).__name__}: {e}"[:500])
         finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())  # close the CLI before the loop
             loop.close()
         if last.text:
             return last

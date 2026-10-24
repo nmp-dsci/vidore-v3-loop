@@ -1,8 +1,34 @@
 import { Link } from 'react-router-dom';
-import { type Board, type OurRow, type Stage, STAGES, STAGE_LABEL, datasetLabel, pct1, useGet } from '../lib/api';
+import {
+  type Board,
+  type Mean,
+  type OurRow,
+  type Stage,
+  STAGES,
+  STAGE_LABEL,
+  datasetLabel,
+  pct1,
+  useGet,
+} from '../lib/api';
 import { Loading } from '../lib/ui';
 
 const TOP_MODELS = 15;
+
+/** Our test figure, with the all-questions figure under it when the train twin exists. */
+function OursCell({ test, all, unit = '' }: { test: number | null | undefined; all?: Mean; unit?: string }) {
+  return (
+    <>
+      {pct1(test)}
+      {unit}
+      {all?.mean != null && (
+        <div className="small muted">
+          all {all.n} · {pct1(all.mean)}
+          {unit}
+        </div>
+      )}
+    </>
+  );
+}
 
 const ourShortKind = (s: Stage) =>
   ({ text: 'text', visual: 'visual LI', fused: 'visual LI + text', reranked: 'visual LI + text + reranker' })[s];
@@ -92,7 +118,7 @@ export function Leaderboard() {
                   <td>{ourShortKind(s)}</td>
                   {b.datasets.map((d) => (
                     <td key={d} className="num">
-                      {d === o.dataset ? pct1(o.ndcg_10[s]) : '—'}
+                      {d === o.dataset ? <OursCell test={o.ndcg_10[s]} all={o.all?.[s]} /> : '—'}
                     </td>
                   ))}
                   <td className="num muted">—</td>
@@ -100,6 +126,24 @@ export function Leaderboard() {
                 </tr>
               )),
             )}
+            {(b.ours_agent ?? []).map((o) => (
+              <tr key={`${o.run_id}-agent`} className="ours-row">
+                <td className="sub wrap">
+                  <Link to={`/agent/${o.run_id}`}>ours · agent</Link>
+                  <div className="small muted">
+                    {o.models.answer} searching our index and reading pages · our test split, {o.n} questions
+                  </div>
+                </td>
+                <td>visual LI + LLM agent</td>
+                {b.datasets.map((d) => (
+                  <td key={d} className="num">
+                    {d === o.dataset ? <OursCell test={o.ndcg_10} all={o.all?.ndcg_10} /> : '—'}
+                  </td>
+                ))}
+                <td className="num muted">—</td>
+                <td className="small">local search · Claude on the subscription</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -108,7 +152,7 @@ export function Leaderboard() {
       </p>
       {b.ours.length > 0 ? (
         <p className="small muted">
-          Our rows are scored once on our test half, so they are close to, not exactly, like for like.
+          Our rows show the test half, scored once, with every question (train and test of the same configuration) under it.
         </p>
       ) : (
         <p className="small muted">Our rows appear once a configuration chosen on train is scored on test.</p>
@@ -189,7 +233,7 @@ export function Leaderboard() {
                     <td>{o.models.answer}</td>
                     {b.datasets.map((d) => (
                       <td key={d} className="num">
-                        {d === o.dataset ? `${((o.accuracy[m] ?? 0) * 100).toFixed(1)}%` : '—'}
+                        {d === o.dataset ? <OursCell test={o.accuracy[m]} all={o.all?.[m]} unit="%" /> : '—'}
                       </td>
                     ))}
                     <td className="num">—</td>
@@ -197,6 +241,22 @@ export function Leaderboard() {
                   </tr>
                 )),
             )}
+            {(b.ours_agent ?? []).map((o) => (
+              <tr key={`${o.run_id}-agent`} className="ours-row">
+                <td className="sub">
+                  <Link to={`/agent/${o.run_id}`}>ours · the agent's pages</Link>
+                </td>
+                <td>image + text</td>
+                <td>{o.models.answer}</td>
+                {b.datasets.map((d) => (
+                  <td key={d} className="num">
+                    {d === o.dataset ? <OursCell test={o.accuracy} all={o.all?.accuracy} unit="%" /> : '—'}
+                  </td>
+                ))}
+                <td className="num">—</td>
+                <td className="num">—</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

@@ -185,3 +185,108 @@ def log_answer_run(doc: dict[str, Any], folder: Path) -> str:
         mlflow.log_artifact(str(folder / "run.json"))
         run_id: str = run.info.run_id
     return run_id
+
+
+def log_judge_check(doc: dict[str, Any], folder: Path) -> str:
+    """One `kind=judge_check` run (M5 S1): the judges as params, agreement with the source
+    judge as metrics, run.json as the artifact. Agreement with people changes as people
+    label, so it lives in the report, not here."""
+    preflight()
+    mlflow.set_tracking_uri(settings().mlflow_tracking_uri)
+    mlflow.set_experiment(EXPERIMENT)
+    with mlflow.start_run(run_name=doc["run_id"]) as run:
+        tags = required_tags(billing=doc["billing"])
+        tags["git_sha"] = doc["code_sha"]
+        mlflow.set_tags(
+            {
+                **tags,
+                "kind": "judge_check",
+                "dataset": doc["dataset"],
+                "split": doc["split"],
+                "final": str(doc["final"]).lower(),
+                "source_run": doc["source"]["run_id"],
+                "run_dir": f"runs/judge_checks/{doc['run_id']}",
+            }
+        )
+        mlflow.log_params(
+            {
+                "judge_model": doc["models"]["judge"],
+                "judge_effort": doc["models"]["judge_effort"],
+                "source_judge": doc["source"]["judge"],
+                "source_judge_effort": doc["source"]["judge_effort"],
+                "judge_prompt": doc["prompts"]["judge"],
+                "n_verdicts": doc["n"],
+            }
+        )
+        metrics: dict[str, float] = {}
+        for scope, row in [("all", doc["summary"]["all"]), *doc["summary"]["modes"].items()]:
+            for k in ("binary_agree", "three_level_agree", "kappa", "shift", "check_accuracy"):
+                if row.get(k) is not None:
+                    metrics[f"{scope}.{k}"] = row[k]
+        metrics["errors"] = doc["summary"]["errors"]
+        for k in ("calls", "input_tokens", "output_tokens", "cost_usd"):
+            metrics[f"total.{k}"] = doc["totals"][k]
+        mlflow.log_metrics(metrics)
+        mlflow.log_artifact(str(folder / "run.json"))
+        run_id: str = run.info.run_id
+    return run_id
+
+
+def log_agent_run(doc: dict[str, Any], folder: Path) -> str:
+    """One `kind=agent` run (M5): models, caps and prompts as params; the agent's retrieval
+    metrics, raw accuracy, citations, steps and tokens as metrics; run.json as the artifact."""
+    preflight()
+    mlflow.set_tracking_uri(settings().mlflow_tracking_uri)
+    mlflow.set_experiment(EXPERIMENT)
+    cfg = doc["config"]
+    s = doc["summary"] or {}
+    with mlflow.start_run(run_name=doc["run_id"]) as run:
+        tags = required_tags(billing=doc["billing"])
+        tags["git_sha"] = doc["code_sha"]
+        mlflow.set_tags(
+            {
+                **tags,
+                "kind": "agent",
+                "dataset": doc["dataset"],
+                "split": doc["split"],
+                "final": str(doc["final"]).lower(),
+                "fingerprint": doc["fingerprint"],
+                "run_dir": f"runs/{doc['run_id']}",
+            }
+        )
+        mlflow.log_params(
+            {
+                "agent_model": doc["models"]["answer"],
+                "agent_effort": doc["models"]["effort"],
+                "judge_model": doc["models"]["judge"],
+                "judge_effort": doc["models"]["judge_effort"],
+                "max_searches": cfg["max_searches"],
+                "max_views": cfg["max_views"],
+                "agent_prompt": doc["prompts"]["agent"],
+                "judge_prompt": doc["prompts"]["judge"],
+                "search_stage": doc["search"]["stage"],
+                "n_questions": doc["n"],
+                "split_fingerprint": doc["split_fingerprint"],
+            }
+        )
+        metrics: dict[str, float] = {}
+        for k, v in (s.get("retrieval") or {}).items():
+            if isinstance(v, dict) and v.get("mean") is not None:
+                metrics[f"agent.{k}"] = v["mean"]
+        acc = (s.get("answers") or {}).get("raw", {}).get("mean")
+        if acc is not None:
+            metrics["agent.accuracy"] = acc
+        for k in ("cited_gold", "cited_full"):
+            if (s.get(k) or {}).get("mean") is not None:
+                metrics[f"agent.{k}"] = s[k]["mean"]
+        for k in ("searches", "views", "turns", "seconds", "errors"):
+            if s.get(k) is not None:
+                metrics[f"agent.{k}"] = s[k]
+        t = doc.get("totals") or {}
+        for k in ("calls", "input_tokens", "output_tokens", "cost_usd"):
+            if k in t:
+                metrics[f"total.{k}"] = t[k]
+        mlflow.log_metrics(metrics)
+        mlflow.log_artifact(str(folder / "run.json"))
+        run_id: str = run.info.run_id
+    return run_id

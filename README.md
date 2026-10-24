@@ -56,6 +56,7 @@ make eval DATASET=finance_en WTEXT=0.25       # score a config on train → runs
 make eval DATASET=finance_en SPLIT=test FINAL=1  # the chosen config, once, on test
 make answers DATASET=finance_en LIMIT=5       # Claude answers (retrieved / oracle), judged → runs/ + MLflow (subscription)
 make answers DATASET=finance_en RESUME=<run>  # carry on an interrupted answer run
+uv run vidoreloop agent --dataset finance_en --limit 10  # the M5 agent on a train smoke (test needs --final)
 make runs                                     # every scored run
 make test · make lint
 ```

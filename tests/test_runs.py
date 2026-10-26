@@ -129,7 +129,9 @@ def fake(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(pipeline, "status", lambda key: {})
     monkeypatch.setattr(runs.RunConfig, "models", lambda self: {"visual": "fake", "reranker": None})
 
-    def compute(key: str, query: str, stages: Any, depth: int, weights: Any, st: Any) -> Any:
+    def compute(
+        key: str, query: str, stages: Any, depth: int, weights: Any, st: Any, **kw: Any
+    ) -> Any:
         i = int(query.split()[-1])
         full = 1000 + i
         # text finds the answer at #3 for even questions and misses it for odd ones;
@@ -186,7 +188,7 @@ def test_the_test_split_is_guarded(fake: Path) -> None:
 def test_a_failed_question_marks_the_run_failed(
     fake: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def boom(*a: Any) -> Any:
+    def boom(*a: Any, **kw: Any) -> Any:
         raise RuntimeError("model fell over")
 
     monkeypatch.setattr(pipeline, "compute", boom)

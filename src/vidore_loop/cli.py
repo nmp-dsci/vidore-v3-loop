@@ -171,11 +171,15 @@ def evaluate(
         False, help="run here even when the viewer is up (loads a second copy of the models)"
     ),
     port: int = typer.Option(8083, help="the viewer's port"),
+    question_encoder: str = typer.Option(
+        "", help="a tuned question side of the visual model, by name (`tune-fit`); runs here"
+    ),
 ) -> None:
     """Score a pipeline configuration on a split: a run folder under runs/, logged to MLflow.
 
     When the viewer is running, the run executes inside it (one copy of the models, the
-    viewer's GPU lock) and this command follows its progress."""
+    viewer's GPU lock) and this command follows its progress. A run with a tuned question
+    encoder always runs here: the viewer's process may predate the encoder."""
     import json
     import time
     import urllib.error
@@ -191,10 +195,11 @@ def evaluate(
         weights=(w_text, w_visual),
         note=note,
         limit=limit or None,
+        question_encoder=question_encoder or None,
     )
     base = f"http://127.0.0.1:{port}"
     viewer_up = False
-    if not in_process:
+    if not in_process and not question_encoder:
         try:
             with urllib.request.urlopen(f"{base}/api/health", timeout=2):  # noqa: S310 - localhost
                 viewer_up = True
@@ -255,6 +260,84 @@ def evaluate(
         console.print(t)
     if doc.get("mlflow_error"):
         console.print(f"[yellow]not logged to MLflow: {doc['mlflow_error']}[/yellow]")
+
+
+@app.command("tune")
+def tune_cv(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    settings_: str = typer.Option(
+        "head-3e-5,head-1e-4,layers4-1e-5,layers4-3e-5", "--settings", help="comma-separated"
+    ),
+    epochs: int = typer.Option(5, help="epochs per fold, each scored on the held-out report"),
+    resume: str = typer.Option("", help="carry on a stopped sweep by its runs/tune id"),
+) -> None:
+    """Cross-validate question-side fine-tuning of EVIE by annual report (plan s07): train
+    only, the stored pages untouched, $0. Writes runs/tune/<id>/ and logs it to MLflow."""
+    from vidore_loop.retrieval import tune
+
+    names = [n.strip() for n in settings_.split(",") if n.strip()]
+    unknown = [n for n in names if n not in tune.SETTINGS]
+    if unknown:
+        raise typer.BadParameter(f"unknown settings {unknown}; known: {list(tune.SETTINGS)}")
+    rid = tune.cross_validate(
+        registry.get(dataset).key, names, epochs, say=console.print, resume=resume or None
+    )
+    doc = tune.cv_run(rid)
+    t = Table("setting", "best epoch", "NDCG@10", "gain", "95% interval")
+    for name, by_epoch in doc["results"].items():
+        e, r = max(by_epoch.items(), key=lambda kv: kv[1]["gain"])
+        t.add_row(
+            name, e, f"{r['ndcg_10']:.4f}", f"{r['gain']:+.4f}", f"[{r['lo']:+.4f}, {r['hi']:+.4f}]"
+        )
+    console.print(t)
+    b = doc["best"]
+    verdict = "passes" if b["passes"] else "does not pass"
+    console.print(
+        f"{rid}: EVIE {doc['base']['ndcg_10']:.4f} on {doc['base']['n']} held-out questions; "
+        f"best {b['setting']} at epoch {b['epoch']}, {b['gain']:+.4f} [{b['lo']:+.4f}, "
+        f"{b['hi']:+.4f}]: {verdict} the gate (+{tune.GATE:g}, interval above 0)"
+    )
+
+
+@app.command("tune-fit")
+def tune_fit(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    cv_run: str = typer.Option(..., help="the sweep (runs/tune/<id>) whose best setting to fit"),
+    name: str = typer.Option("", help="the encoder's name (default: setting and epochs)"),
+    force: bool = typer.Option(False, help="fit even though the sweep did not clear the gate"),
+) -> None:
+    """Retrain the sweep's best setting on every clean train pair; saves the tuned question
+    tensors under data/cache/models/ (never committed). Refused unless the gate was cleared."""
+    from vidore_loop.retrieval import tune
+
+    try:
+        out = tune.fit(registry.get(dataset).key, cv_run, name, force)
+    except RuntimeError as e:
+        raise typer.BadParameter(str(e)) from e
+    console.print(f"saved {out}: score it with `vidoreloop eval ... --question-encoder {out}`")
+
+
+@app.command("tune-compare")
+def tune_compare(
+    dataset: str = typer.Option(..., help="a dataset key"),
+    base: str = typer.Option(..., help="the run as EVIE ships (e.g. the champion test run)"),
+    tuned: str = typer.Option(..., help="the same configuration with the tuned encoder"),
+) -> None:
+    """Two scored runs question by question: the gain overall and on the questions whose gold
+    pages a train question shares, against those with unseen gold pages."""
+    from vidore_loop.retrieval import tune
+
+    t = Table("questions", "n", "EVIE", "tuned", "gain", "95% interval")
+    for label, r in tune.compare(base, tuned, registry.get(dataset).key).items():
+        t.add_row(
+            label,
+            str(r["n"]),
+            f"{r['base']:.4f}",
+            f"{r['tuned']:.4f}",
+            f"{r['gain']:+.4f}",
+            f"[{r['lo']:+.4f}, {r['hi']:+.4f}]",
+        )
+    console.print(t)
 
 
 @app.command("answer")

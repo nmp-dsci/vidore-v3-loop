@@ -63,10 +63,12 @@ def compute(
     rerank_depth: int = 20,
     weights: tuple[float, float] | None = None,
     st: dict[str, Any] | None = None,
+    question_encoder: str | None = None,
 ) -> tuple[dict[str, list[tuple[int, float]]], dict[str, dict[str, Any]]]:
     """Every requested stage's full ranking as (corpus_id, score), and each stage's timing,
     cost or the reason it is unavailable. The viewer's `run` and M3's scored runs share it,
-    so a question scores the same in the RAG pipeline tab and in a run."""
+    so a question scores the same in the RAG pipeline tab and in a run. A `question_encoder`
+    (retrieval.tune) encodes the question for the visual channel; the pages stay as built."""
     st = st or status(key)
     out: dict[str, dict[str, Any]] = {}
     lists: dict[str, list[tuple[int, float]]] = {}
@@ -101,7 +103,9 @@ def compute(
 
             with GPU:
                 t0 = time.time()
-                lists["visual"] = visual.search(key, query_text, CHANNEL_K)
+                lists["visual"] = visual.search(
+                    key, query_text, CHANNEL_K, question_encoder=question_encoder
+                )
                 out["visual"] = {"ms": _ms(t0)}
             if not st["visual_complete"]:
                 out["visual"]["note"] = (

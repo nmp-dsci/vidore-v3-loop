@@ -33,10 +33,16 @@ split: ## write our fixed train / test split of DATASET's English questions (onc
 	uv run vidoreloop split --dataset $(DATASET) $(if $(filter 1,$(EXTEND)),--extend)
 
 eval: platform-status ## score a pipeline config on SPLIT (train; test needs FINAL=1): STAGES= DEPTH= WTEXT= WVISUAL= LIMIT= NOTE=
-	uv run vidoreloop eval --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(STAGES),--stages $(STAGES)) $(if $(DEPTH),--depth $(DEPTH)) $(if $(WTEXT),--w-text $(WTEXT)) $(if $(WVISUAL),--w-visual $(WVISUAL)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)")
+	uv run vidoreloop eval --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(STAGES),--stages $(STAGES)) $(if $(DEPTH),--depth $(DEPTH)) $(if $(WTEXT),--w-text $(WTEXT)) $(if $(WVISUAL),--w-visual $(WVISUAL)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)") $(if $(QENC),--question-encoder $(QENC))
 
 answers: platform-status ## Claude answers SPLIT from our top 5 and from the human pages, judged (subscription): MODES= K= LIMIT= MODEL= FINAL=1 RESUME= NOTE=
-	uv run vidoreloop answer --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(MODES),--modes $(MODES)) $(if $(K),--k $(K)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(MODEL),--model $(MODEL)) $(if $(RESUME),--resume $(RESUME)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)")
+	uv run vidoreloop answer --dataset $(DATASET) --split $(or $(SPLIT),train) $(if $(MODES),--modes $(MODES)) $(if $(K),--k $(K)) $(if $(LIMIT),--limit $(LIMIT)) $(if $(MODEL),--model $(MODEL)) $(if $(RESUME),--resume $(RESUME)) $(if $(filter 1,$(FINAL)),--final) $(if $(NOTE),--note "$(NOTE)") $(if $(QENC),--question-encoder $(QENC))
+
+tune: platform-status ## cross-validate question-side fine-tuning of EVIE by report on train (s07; Mac, $0): SETTINGS= EPOCHS=
+	uv run vidoreloop tune --dataset $(DATASET) $(if $(SETTINGS),--settings $(SETTINGS)) $(if $(EPOCHS),--epochs $(EPOCHS))
+
+tune-fit: ## retrain a sweep's best setting on all clean train pairs (refused unless it cleared the gate): CV=<runs/tune id> NAME=
+	uv run vidoreloop tune-fit --dataset $(DATASET) --cv-run $(CV) $(if $(NAME),--name $(NAME))
 
 runs: ## every scored run, newest first
 	uv run vidoreloop runs
@@ -67,4 +73,4 @@ lint: ## ruff + mypy (+ frontend design lint when node_modules exist)
 fmt: ## ruff format + fix
 	uv run ruff format src tests && uv run ruff check --fix src tests
 
-.PHONY: help setup datasets download stats pages index index-visual-overnight split eval runs dev viewer platform-up platform-status smoke test lint fmt
+.PHONY: help setup datasets download stats pages index index-visual-overnight split eval tune tune-fit runs dev viewer platform-up platform-status smoke test lint fmt

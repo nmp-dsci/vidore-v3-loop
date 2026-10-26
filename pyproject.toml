@@ -67,7 +67,7 @@ packages = ["vidore_loop"]
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*", "bm25s.*", "Stemmer", "torch.*", "sentence_transformers.*", "claude_agent_sdk.*"]
+module = ["datasets.*", "mlflow.*", "mteb.*", "pyarrow.*", "huggingface_hub.*", "bm25s.*", "Stemmer", "torch.*", "safetensors.*", "sentence_transformers.*", "claude_agent_sdk.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 

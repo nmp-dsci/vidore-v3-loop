@@ -57,6 +57,9 @@ make eval DATASET=finance_en SPLIT=test FINAL=1  # the chosen config, once, on t
 make answers DATASET=finance_en LIMIT=5       # Claude answers (retrieved / oracle), judged → runs/ + MLflow (subscription)
 make answers DATASET=finance_en RESUME=<run>  # carry on an interrupted answer run
 uv run vidoreloop agent --dataset finance_en --limit 10  # the M5 agent on a train smoke (test needs --final)
+make tune DATASET=finance_en                 # question-side fine-tuning of EVIE, cross-validated by report on train → runs/tune/ (s07; Mac, $0)
+make tune-fit DATASET=finance_en CV=<id>     # retrain the sweep's best on all clean train pairs (refused unless it cleared the gate)
+make eval DATASET=finance_en QENC=<name> ... # score a config with the tuned question encoder (runs in this process)
 make runs                                     # every scored run
 make test · make lint
 ```
@@ -77,6 +80,7 @@ make platform-up    # central MLflow (make -C ../nmp-central-ai up) → http://l
 | M0 scaffold: dataset registry, loader, NDCG/recall, smoke, CI | done |
 | Research + plan (`.lavish/s00_vidore-v3-research-plan.html`) | for review |
 | Embedder plan (`.lavish/s03_embedders-and-finetune-plan.html`) | dropped (2026-10-24, the owner's call): no fine-tuning |
+| EVIE question-side fine-tuning (`.lavish/s07_evie-finetune-plan.html`) | reopened (2026-10-25, the owner's call) for the question side only: the page vectors stay as built, training drops every test gold page (304 of 702 train pairs), settings are chosen by report folds on train, and the gate is +2 NDCG@10 with a paired 95% interval above 0 before any fit or test run. **No gain** (run `20261025T122228Z_finance_en_cv`): on 141 held-out questions the best setting, the head at 1e-4 after one epoch, moved NDCG@10 by +0.003 [−0.008, +0.015], and the top 4 layers lost 0.01–0.05; so no encoder was fitted and test was not run |
 | M1 the viewer: FastAPI + React shell, Datasets & questions, Leaderboard | done |
 | M2 retrieval pipeline + RAG pipeline tab | done (reviewed 2026-10-09): BM25S + EVIE-4.5B (all 2,942 finance pages) → RRF → zerank-2, every stage scored against gold in the tab |
 | M3 retrieval scored + Runs | done (reviewed 2026-10-09). Split v3 (2026-10-11): 155 train / 154 test, v2's random 100 / 100 grown to 50/50 with seed 300 (`make split EXTEND=1`). On split v1 every text weight lowered NDCG@10 and the reranker did not beat visual alone, so the champion is fusion with text weight 0. Baseline on v3: **NDCG@10 74.7 train, 71.1 test** (text alone 51.9 / 48.4) |

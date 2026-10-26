@@ -115,6 +115,11 @@ def log_retrieval_run(doc: dict[str, Any], folder: Path) -> str:
                 "fused_k": doc["fused_k"],
                 "rrf_k": doc["rrf_k"],
                 "visual_model": doc["models"]["visual"],
+                **(
+                    {"visual_question": doc["models"]["visual_question"]["name"]}
+                    if doc["models"].get("visual_question")
+                    else {}
+                ),
                 "reranker": doc["models"]["reranker"],
                 "split_seed": doc["split_seed"],
                 "split_fingerprint": doc["split_fingerprint"],
@@ -286,6 +291,59 @@ def log_agent_run(doc: dict[str, Any], folder: Path) -> str:
         for k in ("calls", "input_tokens", "output_tokens", "cost_usd"):
             if k in t:
                 metrics[f"total.{k}"] = t[k]
+        mlflow.log_metrics(metrics)
+        mlflow.log_artifact(str(folder / "run.json"))
+        run_id: str = run.info.run_id
+    return run_id
+
+
+def log_tune_run(doc: dict[str, Any], folder: Path) -> str:
+    """One `kind=tune-cv` sweep (plan s07): the settings and the clean data as params, each
+    setting's best fold-pooled gain over EVIE as metrics; run.json as the artifact."""
+    preflight()
+    mlflow.set_tracking_uri(settings().mlflow_tracking_uri)
+    mlflow.set_experiment(EXPERIMENT)
+    with mlflow.start_run(run_name=doc["run_id"]) as run:
+        tags = required_tags(billing="none")
+        tags["git_sha"] = doc["code_sha"]
+        mlflow.set_tags(
+            {
+                **tags,
+                "kind": "tune-cv",
+                "dataset": doc["dataset"],
+                "split": doc["split"],
+                "final": "false",
+                "run_dir": f"runs/tune/{doc['run_id']}",
+                "gate": "passed" if (doc["best"] or {}).get("passes") else "not passed",
+            }
+        )
+        mlflow.log_params(
+            {
+                "model": doc["model"],
+                "base_revision": doc["base_revision"],
+                "settings": ",".join(s["name"] for s in doc["settings"]),
+                "epochs": doc["epochs"],
+                "batch": doc["batch"],
+                "tau": doc["tau"],
+                "seed": doc["seed"],
+                "gate": doc["gate"],
+                "folds": len(doc["folds"]),
+                "pairs_clean": doc["data"]["pairs_clean"],
+                "questions": doc["data"]["questions"],
+                "data_fingerprint": doc["data"]["fingerprint"],
+                "split_fingerprint": doc["split_fingerprint"],
+            }
+        )
+        metrics: dict[str, float] = {"base.ndcg_10": doc["base"]["ndcg_10"]}
+        for name, by_epoch in (doc["results"] or {}).items():
+            top = max(by_epoch.values(), key=lambda r: r["gain"])
+            metrics[f"{name}.gain"] = top["gain"]
+            metrics[f"{name}.lo"] = top["lo"]
+        best = doc["best"] or {}
+        if best:
+            metrics["best.gain"] = best["gain"]
+            metrics["best.lo"] = best["lo"]
+            metrics["best.epoch"] = best["epoch"]
         mlflow.log_metrics(metrics)
         mlflow.log_artifact(str(folder / "run.json"))
         run_id: str = run.info.run_id

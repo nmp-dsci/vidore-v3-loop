@@ -30,6 +30,7 @@ loop improves it, the same loop as tau2-loop and DABStep-loop.
 | Models (M5) | named by alias only (`haiku`, `sonnet`, `opus`, `fable`); the SDK's bundled CLI maps each to the newest model, `claude.resolve` reads the id back once per run and every call names it; a test refuses a model id in `src/`. Judge: Sonnet 5.5 at high (S1 matched Opus 5.5 on 95.8% of 310 verdicts, accuracy −0.3 pts; Haiku 5.5 matched 87.1%, −12.9 pts). Haiku 5.5 trailed Sonnet 5 as the answerer by 3.9 / 9.0 pts (S2), so answering, the agent and the judge all run Sonnet 5.5 at medium (the owner's call; S1 checked the judge at high) | the owner's call: always the latest model, cheapest first, escalate on a measured gap (`.lavish/s04`, `.lavish/s05`) |
 | Judge | the paper's three-level judge; only `Correct` counts as right (its binary label, App. I); a person's label on the Review tab overrules it in the audited score, and 40 labels calibrate it | a judge scoring against a wrong reference fails a correct system (2 of 5 hand checks were off) |
 | Audit | `data/audits/references.jsonl` (disputed / holds) and `judge_labels.jsonl`, append-only, latest wins; accuracy reported raw (the judge) and audited (disputed left out, labels applied) | s00 §8: a disputed failure never drives an optimiser edit |
+| Fine-tuning (s07) | EVIE's question side only (the head, or the top 4 layers + head), trained against the stored page vectors with every page in the softmax; every test gold page is left out of training as a positive and a negative; settings chosen by cross-validation by annual report; +2 NDCG@10 with a paired 95% interval above 0 before a fit or a test run; a tuned run's fingerprint carries the encoder's hash, so the test guard sees a new config; training scores picked patches in fp32 (MPS's `max` backward returned NaN now and then) | the owner's call (2026-10-25): cheap, local, no re-index; train and test share 218 gold pages, so only a clean set says retrieval improved. Outcome: the gate failed (best +0.003 NDCG@10, interval across 0), so EVIE ships as is |
 | Memory | one large model loaded at a time while building; the two (≈9 GB + ≈8 GB) only coexist in the server | a 32 GB machine killed parallel loads on 2026-10-01 |
 | Project colour | orange `--accent` (#A8440B light, #F2945A dark); `--ok` green carries "passed"; `--amber` retuned to olive (#6F5A00 / #CDB04A) for "partial" so it never reads as the accent | the owner's call; a recorded divergence from the site palette, as tau2-loop's red |
 
@@ -38,7 +39,7 @@ loop improves it, the same loop as tau2-loop and DABStep-loop.
 ```
 src/vidore_loop/
   config.py            paths + settings (the only reader of os.environ)
-  cli.py               `vidoreloop` — datasets, download, stats, smoke, split, eval, answer, runs
+  cli.py               `vidoreloop` — datasets, download, stats, smoke, split, eval, answer, agent, tune, runs
   data/registry.py     the 8 datasets, revisions, sizes
   data/loader.py       load a config at its revision into data/cache/
   eval/metrics.py      NDCG@k, recall@k over graded qrels
@@ -53,6 +54,7 @@ src/vidore_loop/
   retrieval/visual.py  channel B: EVIE-4.5B multi-vectors (128-d, fp16), MaxSim → …/visual/
   retrieval/fuse.py    stage C: weighted reciprocal rank fusion (K = 60) → top 50; WEIGHTS chosen on train
   retrieval/rerank.py  stage D: zerank-2 cross-encoder over the 50 → top 10
+  retrieval/tune.py    plan s07: EVIE's question side fine-tuned on clean train gold pages (pages frozen), report-fold CV and the gate → runs/tune/; tuned encoders → data/cache/models/
   retrieval/pipeline.py  compute(): every stage's ranking (shared by the tab and runs); run(): one question for the tab
   answer/claude.py     one sealed Agent SDK call on the subscription (no tools, allow-listed env, waits out a session limit)
   answer/generate.py   the paper's answer prompts; pages as image + OCR text; settings retrieved / oracle / none

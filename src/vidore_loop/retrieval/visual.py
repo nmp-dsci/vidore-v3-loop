@@ -264,21 +264,36 @@ def _load(key: str, model_key: str) -> tuple[Any, Any, list[int]]:
     return torch.from_numpy(padded).to(dev), torch.from_numpy(mask).to(dev), ids
 
 
-def search(key: str, query: str, k: int = 100, chunk: int = 256) -> list[tuple[int, float]]:
-    """Top k pages as (corpus_id, MaxSim score), best first, with the active model."""
+def maxsim(q: Any, docs: Any, mask: Any, chunk: int = 256) -> Any:
+    """Every page's MaxSim score for one question's vectors; differentiable in `q`."""
     import torch
+
+    scores = []
+    q = q.to(docs.dtype)
+    for i in range(0, docs.shape[0], chunk):
+        sim = torch.einsum("qd,ntd->nqt", q, docs[i : i + chunk]).float()
+        sim = sim.masked_fill(~mask[i : i + chunk, None, :], float("-inf"))
+        scores.append(sim.max(dim=2).values.sum(dim=1))
+    return torch.cat(scores)
+
+
+def search(
+    key: str, query: str, k: int = 100, chunk: int = 256, question_encoder: str | None = None
+) -> list[tuple[int, float]]:
+    """Top k pages as (corpus_id, MaxSim score), best first, with the active model; a
+    `question_encoder` (retrieval.tune) swaps in tuned question weights for the encode."""
+    import torch
+
+    from vidore_loop.retrieval import tune
 
     model_key = active(key)
     assert model_key, f"no visual index for {key}"
     docs, mask, ids = _load(key, model_key)
-    qv = model(model_key).encode_query([query], show_progress_bar=False)[0]
+    enc = model(model_key)
+    with tune.applied(enc, key, model_key, question_encoder):
+        qv = enc.encode_query([query], show_progress_bar=False)[0]
     q = torch.from_numpy(_cut(qv, MODELS[model_key].dim)).to(docs.device)
-    scores = []
     with torch.inference_mode():
-        for i in range(0, docs.shape[0], chunk):
-            sim = torch.einsum("qd,ntd->nqt", q, docs[i : i + chunk]).float()
-            sim = sim.masked_fill(~mask[i : i + chunk, None, :], float("-inf"))
-            scores.append(sim.max(dim=2).values.sum(dim=1))
-    all_scores = torch.cat(scores).cpu().numpy()
+        all_scores = maxsim(q, docs, mask, chunk).cpu().numpy()
     top = np.argsort(-all_scores)[:k]
     return [(ids[int(i)], float(all_scores[i])) for i in top]

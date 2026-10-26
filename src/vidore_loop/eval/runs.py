@@ -76,23 +76,30 @@ class RunConfig:
     weights: tuple[float, float] = fuse.WEIGHTS  # (text, visual)
     note: str = ""
     limit: int | None = None  # the first N questions of the split: a smoke run, never final
+    question_encoder: str | None = None  # a tuned question side of the visual model (tune.py)
 
     def label(self) -> str:
         w = "-".join(f"{x:g}" for x in self.weights)
         rr = f"d{self.rerank_depth}" if "reranked" in self.stages else "norr"
-        return f"w{w}_{rr}" + (f"_n{self.limit}" if self.limit else "")
+        q = f"_q{self.question_encoder}" if self.question_encoder else ""
+        return f"w{w}_{rr}{q}" + (f"_n{self.limit}" if self.limit else "")
 
     def models(self) -> dict[str, Any]:
         from vidore_loop.retrieval import rerank, visual
 
         mk = visual.active(self.dataset)
-        return {
+        out: dict[str, Any] = {
             "text": "bm25s (OCR markdown, document name prepended)",
             "visual": visual.MODELS[mk].model_id if mk else None,
             "visual_dim": visual.MODELS[mk].dim if mk else None,
             "reranker": rerank.MODEL_ID if "reranked" in self.stages else None,
             "reranker_max_tokens": rerank.MAX_TOKENS if "reranked" in self.stages else None,
         }
+        if self.question_encoder:  # only when set, so every earlier fingerprint still holds
+            from vidore_loop.retrieval import tune
+
+            out["visual_question"] = tune.describe(self.dataset, self.question_encoder)
+        return out
 
     def fingerprint(self) -> str:
         """Everything that changes a ranking; two runs with one fingerprint should agree."""
@@ -267,7 +274,13 @@ def score_question(cfg: RunConfig, qid: int, st: dict[str, Any]) -> dict[str, An
         raise KeyError(f"no English query {qid} in {cfg.dataset}")
     gold = {int(p["corpus_id"]): int(p["score"]) for p in q["pages"]}
     lists, out = pipeline.compute(
-        cfg.dataset, q["query"], cfg.stages, cfg.rerank_depth, cfg.weights, st
+        cfg.dataset,
+        q["query"],
+        cfg.stages,
+        cfg.rerank_depth,
+        cfg.weights,
+        st,
+        question_encoder=cfg.question_encoder,
     )
     stages: dict[str, Any] = {}
     for s in cfg.stages:

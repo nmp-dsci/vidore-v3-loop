@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EVIE Fine-Tuning Plan</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .fig svg{ width:100%; display:block; }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:15px; }
+  .fig text.s{ fill:var(--muted); font-size:13px; font-family:var(--mono); }
+  .fig text.h{ font-weight:600; }
+  .fig text.a{ fill:var(--accent); font-family:var(--mono); font-size:13px; }
+  .fig text.in{ font-family:var(--mono); font-size:13px; font-weight:600; }
+  .fig text.in.dark{ fill:var(--accent-ink); }
+  .fig .box{ fill:var(--panel); stroke:var(--line-3); stroke-width:1.5; }
+  .fig .box.acc{ fill:var(--accent-soft); stroke:var(--accent); }
+  .fig .box.band{ fill:var(--band); stroke:var(--line-2); stroke-dasharray:5 4; }
+  .fig .edge{ stroke:var(--line-3); stroke-width:1.5; fill:none; }
+  .fig .edge.acc{ stroke:var(--accent); stroke-width:2; }
+  .fig .edge.grad{ stroke:var(--accent); stroke-width:2; stroke-dasharray:7 5; fill:none; }
+  .fig .arrowhead{ fill:var(--line-3); } .fig .arrowhead.acc{ fill:var(--accent); }
+  .fig .b1{ fill:var(--accent); } .fig .b2{ fill:var(--accent); fill-opacity:.55; }
+  .fig .b3{ fill:var(--accent); fill-opacity:.3; } .fig .b4{ fill:var(--accent); fill-opacity:.13; }
+  .fig .seg rect{ stroke:var(--panel); stroke-width:2; }
+  .fig .seg:hover rect{ stroke:var(--ink); }
+  .fig .o-train{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  .fig .o-both{ fill:var(--amber-soft); stroke:var(--amber); stroke-width:1.5; }
+  .fig .o-test{ fill:var(--band); stroke:var(--line-3); stroke-width:1.5; }
+  .routes td, .routes th{ min-width:150px; }
+  .routes td:first-child, .routes th:first-child{ min-width:110px; }
+  .gate{ font-family:var(--mono); font-size:var(--t-2); color:var(--accent); display:block; margin-top:var(--s1); }
+  #code-step{ border:1px solid var(--line-2); border-radius:var(--r); overflow:hidden; margin-bottom:var(--s3); }
+  .codehead{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); margin:var(--s3) 0 var(--s1); }
+  .src li{ font-size:var(--t-1); } .src code, td code, .kv code{ overflow-wrap:anywhere; }
+  form.q .opt{ border-top:1px solid var(--line); padding-top:var(--s2); margin-top:var(--s2); }
+  form.q .opt:first-of-type{ border-top:0; margin-top:0; }
+  form.q fieldset{ border:0; padding:0; margin:0 0 var(--s4); min-width:0; }
+  form.q legend{ font-weight:600; margin-bottom:var(--s1); padding:0; }
+  .queued{ font-family:var(--mono); font-size:var(--t-2); color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <span class="eyebrow">vidore-v3-loop · branch evie-research · finance_en · plan</span>
+  <h1>Can EVIE learn from our gold pages? <em>Yes, on the question side</em></h1>
+  <p class="lede">You can fine-tune EVIE on each train question's gold pages. The cheap way trains only how EVIE reads questions and leaves the 2,942 stored page vectors alone, so it needs no 11-hour re-index and runs on this Mac. The catch is the data: there are 155 questions, and 115 of the 154 test questions share a gold page with them. So a gain on test could just mean the model memorised those pages, unless training leaves those pages out.</p>
+  <div class="hero-meta">
+    <span class="badge bad">result 25 Oct · no gain, gate failed</span>
+    <span class="badge warn">reopens the 24 Oct "no fine-tuning" call</span>
+    <span class="badge">timings measured on this Mac today (M1 Pro, 32 GB)</span>
+    <span class="badge">no Claude calls</span>
+  </div>
+  <div class="verdict">
+    <div class="stat accent"><div class="n">0.61 s</div><div class="l">one question-side training step, scored against every page (measured)</div></div>
+    <div class="stat"><div class="n">12 s</div><div class="l">one page-side step, so training the pages is out on this Mac</div></div>
+    <div class="stat"><div class="n">702</div><div class="l">(question, gold page) pairs on train: 193 full, 509 partial</div></div>
+    <div class="stat amber"><div class="n">218</div><div class="l">of the 471 train gold pages are also test gold pages</div></div>
+    <div class="stat"><div class="n">±2.25</div><div class="l">test NDCG standard error, so +2–3 is the smallest gain that shows</div></div>
+  </div>
+  <div class="callout red" style="margin-top:var(--s4)"><strong>Result (25 Oct, run <code>20261025T122228Z_finance_en_cv</code>):</strong> on 141 held-out train questions the best setting, the head at 1e-4 after one epoch, moved NDCG@10 by +0.003 [−0.008, +0.015], and training the top 4 layers lost 0.01–0.05, so no encoder was fitted, test was not run, and EVIE ships as is.</div>
+</header>
+
+<section id="answer">
+  <span class="eyebrow">1 · the short answer</span>
+  <h2>Possible, cheap and local, but the test can be fooled</h2>
+  <div class="cards">
+    <div class="card rec" id="c-possible">
+      <span class="badge ok">yes</span>
+      <h3>It can be done</h3>
+      <p class="small">Each train question comes with graded gold pages: those are the targets. The loss raises the gold pages' MaxSim scores and lowers every other page's. Sentence-transformers 6.1, already in our lock, ships a multi-vector trainer, and a plain PyTorch loop works too.</p>
+    </div>
+    <div class="card" id="c-cheap">
+      <span class="badge ok">cheap</span>
+      <h3>Train the question side only</h3>
+      <p class="small">EVIE uses one network for pages and questions. We keep the pages as they were indexed and let only a question copy learn. Each step then costs 0.61 s, and scoring a tuned model is the same 0.09 s search as today.</p>
+    </div>
+    <div class="card" id="c-catch">
+      <span class="badge warn">the catch</span>
+      <h3>Train and test share pages</h3>
+      <p class="small">115 of the 154 test questions have a gold page that some train question also has. A model taught to lift those pages would gain on test without retrieving any better. The clean fix is to train without any test gold page, which leaves 304 of the 702 pairs.</p>
+    </div>
+  </div>
+</section>
+
+<section id="room">
+  <span class="eyebrow">2 · what there is to learn from</span>
+  <h2>The full pages are mostly found already; the room is in partial pages</h2>
+  <p class="sub">Where EVIE ranks each of the 702 train (question, gold page) pairs today. Data from the champion train run (visual stage, top 100 stored per question).</p>
+  <figure class="fig" id="fig-ranks">
+    <svg viewBox="0 0 960 180" role="img" aria-labelledby="ranksT">
+      <title id="ranksT">Train gold pages by EVIE rank: full pages 76 at rank 1, 99 at 2–10, 16 at 11–100, 2 beyond; partial pages 40, 195, 186, 88</title>
+      <g id="r-legend">
+        <rect x="170" y="8" width="14" height="14" rx="3" class="b1"/><text x="190" y="20" class="s">rank 1</text>
+        <rect x="262" y="8" width="14" height="14" rx="3" class="b2"/><text x="282" y="20" class="s">2–10</text>
+        <rect x="340" y="8" width="14" height="14" rx="3" class="b3"/><text x="360" y="20" class="s">11–100</text>
+        <rect x="430" y="8" width="14" height="14" rx="3" class="b4"/><text x="450" y="20" class="s">beyond 100</text>
+      </g>
+      <text x="16" y="68" class="h">full · 193</text>
+      <g id="r-full">
+        <g class="seg"><title>full pages at rank 1: 76</title><rect x="170" y="46" width="115" height="34" rx="4" class="b1"/></g>
+        <g class="seg"><title>full pages at ranks 2–10: 99</title><rect x="287" y="46" width="150" height="34" class="b2"/></g>
+        <g class="seg"><title>full pages at ranks 11–100: 16</title><rect x="439" y="46" width="24" height="34" class="b3"/></g>
+        <g class="seg"><title>full pages beyond rank 100: 2</title><rect x="465" y="46" width="4" height="34" rx="2" class="b4"/></g>
+        <text x="227" y="68" text-anchor="middle" class="in dark">76</text>
+        <text x="362" y="68" text-anchor="middle" class="in">99</text>
+        <text x="451" y="68" text-anchor="middle" class="in">16</text>
+        <text x="486" y="68" class="s">175 of 193 already in the top 10</text>
+      </g>
+      <text x="16" y="124" class="h">partial · 509</text>
+      <g id="r-part">
+        <g class="seg"><title>partial pages at rank 1: 40</title><rect x="170" y="102" width="60" height="34" rx="4" class="b1"/></g>
+        <g class="seg"><title>partial pages at ranks 2–10: 195</title><rect x="232" y="102" width="295" height="34" class="b2"/></g>
+        <g class="seg"><title>partial pages at ranks 11–100: 186</title><rect x="529" y="102" width="281" height="34" class="b3"/></g>
+        <g class="seg"><title>partial pages beyond rank 100: 88</title><rect x="812" y="102" width="133" height="34" rx="4" class="b4"/></g>
+        <text x="200" y="124" text-anchor="middle" class="in dark">40</text>
+        <text x="380" y="124" text-anchor="middle" class="in">195</text>
+        <text x="670" y="124" text-anchor="middle" class="in">186</text>
+        <text x="879" y="124" text-anchor="middle" class="in">88</text>
+      </g>
+      <text x="170" y="166" class="s">274 of 509 partial pages sit below rank 10: that is where training could move NDCG</text>
+    </svg>
+    <figcaption>152 of the 155 train questions already have some gold page in EVIE's top 10. What's missing is mostly the supporting pages that annotators marked "partial". Bars are to one scale, and hovering shows each count.</figcaption>
+  </figure>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>train gold pairs</th><th>rank 1</th><th>2–10</th><th>11–100</th><th>beyond 100</th><th>total</th></tr></thead>
+      <tbody>
+        <tr><td>full (grade 2)</td><td class="n">76</td><td class="n">99</td><td class="n">16</td><td class="n">2</td><td class="n">193</td></tr>
+        <tr><td>partial (grade 1)</td><td class="n">40</td><td class="n">195</td><td class="n">186</td><td class="n">88</td><td class="n">509</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="step">
+  <span class="eyebrow">3 · how one training step works</span>
+  <h2>The question copy learns; the stored pages never move</h2>
+  <figure class="fig" id="fig-step">
+    <svg viewBox="0 0 960 300" role="img" aria-labelledby="stepT">
+      <title id="stepT">A train question goes through a trainable question copy of EVIE to 33 vectors, MaxSim against the frozen stored page vectors gives 2,942 scores, the loss lifts gold pages, and the gradient flows back to the question side only</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
+        <marker id="aha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead acc"/></marker>
+      </defs>
+      <g id="s-q"><title>A train question with its graded gold pages</title>
+        <rect x="16" y="44" width="170" height="62" rx="8" class="box"/>
+        <text x="30" y="70" class="h">train question</text><text x="30" y="92" class="s">gold pages known</text></g>
+      <g id="s-enc"><title>A copy of EVIE used only for questions; its last layers and head learn</title>
+        <rect x="226" y="36" width="210" height="78" rx="8" class="box acc"/>
+        <text x="242" y="62" class="h">EVIE · question copy</text><text x="242" y="84" class="a">last 4 layers + head</text><text x="242" y="104" class="s">446M of 4,545M learn</text></g>
+      <g id="s-vec"><title>33 question vectors of 128 numbers</title>
+        <rect x="476" y="44" width="120" height="62" rx="8" class="box"/>
+        <text x="490" y="70" class="h">33 vectors</text><text x="490" y="92" class="s">× 128</text></g>
+      <g id="s-max"><title>The same MaxSim as search(), over every page</title>
+        <rect x="636" y="44" width="150" height="62" rx="8" class="box"/>
+        <text x="650" y="70" class="h">MaxSim</text><text x="650" y="92" class="s">2,942 scores</text></g>
+      <g id="s-loss"><title>Softmax over all pages: gold pages up, the rest down</title>
+        <rect x="826" y="44" width="128" height="62" rx="8" class="box acc"/>
+        <text x="838" y="70" class="h">loss</text><text x="838" y="92" class="s">gold ↑ rest ↓</text></g>
+      <g id="s-pages"><title>The index as built in October: frozen, no gradient, no re-encode</title>
+        <rect x="600" y="170" width="222" height="84" rx="8" class="box band"/>
+        <text x="616" y="196" class="h">stored page vectors</text><text x="616" y="218" class="s">2,942 pages · 767 MB</text><text x="616" y="238" class="s">frozen · no re-index</text></g>
+      <path d="M186,75 H222" class="edge" marker-end="url(#ah)"/>
+      <path d="M436,75 H472" class="edge" marker-end="url(#ah)"/>
+      <path d="M596,75 H632" class="edge" marker-end="url(#ah)"/>
+      <path d="M786,75 H822" class="edge" marker-end="url(#ah)"/>
+      <path d="M711,170 V110" class="edge" marker-end="url(#ah)"/>
+      <path id="s-grad" d="M930,106 V284 H331 V118" class="edge grad" marker-end="url(#aha)"/>
+      <text x="350" y="276" class="a">gradient: question side only · 0.61 s a step</text>
+    </svg>
+    <figcaption>Because the pages stay as indexed, every page in the corpus can be a negative in every step, so no negative mining is needed. Scoring the tuned model is just today's search with a different question encoder.</figcaption>
+  </figure>
+
+  <div class="split" style="margin-top:var(--s4)">
+    <div class="card">
+      <h3>Measured today: one probe, nothing saved</h3>
+      <dl class="kv">
+        <dt>grad path</dt><dd>matches <code>encode_query</code> (cosine ≥ 0.9999 per vector, 33 × 128)</dd>
+        <dt>question step</dt><dd>0.61 s steady (2.31 s first): forward, MaxSim over 2,942 pages, backward</dd>
+        <dt>what learned</dt><dd>last 4 of 32 language layers + the output head: 446M of 4,545M parameters</dd>
+        <dt>GPU memory</dt><dd>11.4 GB (13.6 GB after a page step), on 32 GB</dd>
+        <dt>page step</dt><dd>11.5–12.7 s for one page (1,019 tokens), with the same 4 layers learning</dd>
+        <dt>model load</dt><dd>26.1 s, once</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>What that means</h3>
+      <ul class="tight small">
+        <li>An epoch over 155 questions takes ≈ 1.6 min. A 6-fold check of one setting at 5 epochs takes ≈ 40 min (est. from the step).</li>
+        <li>Adam's state for 446M parameters adds ≈ 3.6 GB (est.), which still fits.</li>
+        <li>Pages learning too means ≥ 2.3 h an epoch for the 702 positives alone, plus an 11.2 h re-index before every score. That route is for a rented GPU or nowhere.</li>
+        <li>The tuned part is ≈ 0.9 GB in bf16. It goes in <code>data/cache/</code>, which is never committed.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:var(--s5)" id="why-not-reembed">Why not re-embed the pages instead?</h3>
+  <p class="small">Re-embedding with the same model changes nothing, because the vectors come out identical. It only helps after the page side has been trained, which is route F3. So the real choice is between these two:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th class="rec">question side only (F0, F1) <span class="badge rec">first</span></th><th>both sides, then re-embed (F3)</th></tr></thead>
+      <tbody>
+        <tr><td class="k">what changes</td><td class="rec">what a question looks for; pages stay as indexed</td><td>how every page is represented, and the question side too</td></tr>
+        <tr><td class="k">ceiling</td><td class="rec">lower: it can't fix a page whose vectors miss the evidence, which may be why 88 partial gold pages sit beyond rank 100</td><td>higher: pages can learn what counts as relevant here</td></tr>
+        <tr><td class="k">one setting, 6 folds</td><td class="rec">Mac ≈ 40 min (est. from 0.61 s measured)</td><td>Mac ≈ 80–90 h: ≈ 2–4 h of training plus an 11.2 h re-index per fold (est. from 12 s a page)</td></tr>
+        <tr><td class="k">rented GPU</td><td class="rec">not needed</td><td>≈ $20–30 a setting (7 re-indexes at s03's ≈ $2.5–3); I'd ask first</td></tr>
+        <tr><td class="k">data it wants</td><td class="rec">fits 304 clean pairs: few parameters, fixed targets</td><td>more than 304 pairs; this is where F2's ≈ 4,800 synthetic pairs come in</td></tr>
+        <tr><td class="k">leak</td><td class="rec">medium; the clean set removes it</td><td>highest: the tuned model re-encodes the test gold pages, so the clean set is a must</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small"><b>My view:</b> the page side has the higher ceiling, but it isn't the best <i>first</i> step with 304 clean pairs. Start with the question side: about 40 minutes per check on the Mac and $0, which tests whether these labels carry signal. If it clears the gate, the page side (F3, with F2's synthetic questions, on a rented GPU) is the next ask. A null result on the question side won't rule the page side out, but it would make that spend harder to justify.</p>
+
+  <div class="codehead">sketch · the loss, from today's probe (not in the repo)</div>
+  <div id="code-step"></div>
+</section>
+
+<section id="routes">
+  <span class="eyebrow">4 · the routes</span>
+  <h2>Four ways to train, cheapest first</h2>
+  <p class="sub">F0 and F1 are the recommended pair. They share one harness and run in the same sweep, so F0 is the low-capacity baseline that F1 must beat.</p>
+  <div class="tablewrap">
+    <table class="routes">
+      <thead><tr><th></th><th class="rec">F0 · question head <span class="badge rec">rec</span></th><th class="rec">F1 · question layers <span class="badge rec">rec</span></th><th>F2 · more questions from Claude</th><th>F3 · both sides</th></tr></thead>
+      <tbody>
+        <tr><td class="k">what learns</td><td class="rec">a question-only copy of EVIE's output head (2,560 → 128): 328K numbers</td><td class="rec">the last 4 layers + head for questions (446M), or a LoRA adapter</td><td>F0/F1, fed ≈ 4,800 extra (question, page) pairs</td><td>the whole model, pages included (LoRA)</td></tr>
+        <tr><td class="k">re-index</td><td class="rec">none</td><td class="rec">none</td><td>none</td><td>all 2,942 pages after every run: 11.2 h here</td></tr>
+        <tr><td class="k">where · time</td><td class="rec">Mac · ≈ 20 min a setting, 6 folds (est.)</td><td class="rec">Mac · ≈ 40 min a setting (est. from 0.61 s measured)</td><td>Mac + subscription · ≈ 2,400 Claude calls, hours</td><td>rented GPU · ≈ $2.5–3 a re-index (s03's estimate), ≈ 7 re-indexes</td></tr>
+        <tr><td class="k">cost</td><td class="rec">$0</td><td class="rec">$0</td><td>$0 cash, subscription limits (S5 hit one); I'd ask first</td><td>≈ $20–30 GPU (est.); I'd ask first</td></tr>
+        <tr><td class="k">new deps</td><td class="rec">none</td><td class="rec">none for last layers; <code>peft</code> for LoRA</td><td>none</td><td><code>peft</code> + a GPU host</td></tr>
+        <tr><td class="k">leak risk</td><td class="rec">low: too few numbers to memorise pages</td><td class="rec">medium: can learn "lift these pages"</td><td>none, if test gold pages get no questions</td><td>highest: pages can memorise the 471 train gold pages</td></tr>
+        <tr><td class="k">answers</td><td class="rec">is there signal in 155 questions?</td><td class="rec">how much a real fine-tune adds</td><td>does more (synthetic) data help?</td><td>can pages learn too?</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">F2 follows s03's B3: Claude writes about 2 questions for each of the 2,410 pages that no test question cites. F3 stays parked unless F1 shows a clear gain.</p>
+</section>
+
+<section id="leak">
+  <span class="eyebrow">5 · the catch</span>
+  <h2>Train and test share 218 gold pages</h2>
+  <figure class="fig" id="fig-overlap">
+    <svg viewBox="0 0 960 125" role="img" aria-labelledby="ovT">
+      <title id="ovT">785 pages are gold for some question: 253 for train only, 218 for both, 314 for test only</title>
+      <path d="M420,34 V28 H944 V34" class="edge"/><text x="682" y="20" text-anchor="middle" class="s">test questions' gold pages · 532</text>
+      <text x="16" y="65" class="h">785 gold pages</text>
+      <g id="ov-train"><title>gold only for train questions: 253</title><rect x="170" y="40" width="248" height="40" rx="4" class="o-train"/><text x="294" y="65" text-anchor="middle">253 train only</text></g>
+      <g id="ov-both"><title>gold for both a train and a test question: 218</title><rect x="420" y="40" width="214" height="40" class="o-both"/><text x="527" y="65" text-anchor="middle">218 in both</text></g>
+      <g id="ov-test"><title>gold only for test questions: 314</title><rect x="636" y="40" width="308" height="40" rx="4" class="o-test"/><text x="790" y="65" text-anchor="middle">314 test only</text></g>
+      <path d="M170,86 V92 H634 V86" class="edge"/><text x="402" y="112" text-anchor="middle" class="s">train questions' gold pages · 471</text>
+    </svg>
+    <figcaption>The other 2,157 pages of the corpus are gold for no question. Scale: one bar of 785 pages.</figcaption>
+  </figure>
+
+  <div class="cards" style="margin-top:var(--s4)">
+    <div class="stat amber"><div class="n">115 / 154</div><div class="l">test questions with a gold page some train question has; EVIE scores 66.7 on them today</div></div>
+    <div class="stat"><div class="n">39</div><div class="l">test questions with only unseen gold pages; EVIE scores 84.0 on them</div></div>
+    <div class="stat amber"><div class="n">81 / 155</div><div class="l">train questions linked into one cluster by shared pages, so random cross-validation folds leak too</div></div>
+  </div>
+
+  <h3 style="margin-top:var(--s5)">Three guards that keep the number honest</h3>
+  <div class="steps">
+    <div class="step" id="g-clean"><b>Train without any test gold page</b>Drop the 218 shared pages as positives and as negatives, so the model never gets a gradient from a test gold page. That leaves 304 of 702 pairs (80 full) from 105 of 155 questions; 50 train questions have only shared gold pages and drop out.<span class="tag">test then stays clean on all 154 questions</span></div>
+    <div class="step" id="g-cv"><b>Cross-validate by report, not by question</b>Six folds, one annual report each, built from the 141 single-report train questions: Bank of America 46, Citigroup 39, JPMorgan 18, Morgan Stanley 16, Goldman Sachs 15, Wells Fargo 7. A fold trains on the other five reports' questions and never sees the held-out report's pages, not even as negatives.<span class="tag">measures better retrieval, not page memory</span></div>
+    <div class="step" id="g-test"><b>Test once, in slices, on its own leaderboard row</b>One <code>--final</code> run, reported on all 154 questions plus the 115 and 39 slices (standard errors 2.25, 2.68 and 3.34; a paired bootstrap is tighter). The row is marked "adapted on train" and never ranked with the board's zero-shot models.<span class="tag">the existing test guard already refuses a repeat config</span></div>
+  </div>
+</section>
+
+<section id="plan">
+  <span class="eyebrow">6 · the plan, if you say go</span>
+  <h2>Four steps, with a stop after each check</h2>
+  <div class="steps">
+    <div class="step" id="p1"><b>Harness</b>Add <code>src/vidore_loop/retrieval/tune.py</code> and a <code>vidoreloop tune</code> command: the loss above, report folds, early stopping and MLflow runs on the central server. <code>visual.search</code> gains an optional tuned question encoder, whose hash joins the config fingerprint so the test guard sees a new config. Unit tests use a tiny fixture index, not EVIE.<span class="tag">Mac · $0 · no new dependency</span></div>
+    <div class="step" id="p2"><b>F0 and F1 on train, by report</b>Sweep ≤ 4 settings (learning rate, epochs, layers learning), F0 as the baseline. Score each fold's held-out questions against EVIE zero-shot on the same questions.<span class="gate">gate: ≥ +2 NDCG points across folds, with a paired 95% interval above 0, or we stop and record "no gain"</span><span class="tag">Mac · ≈ 3 h in all (est.) · $0</span></div>
+    <div class="step" id="p3"><b>Retrain on clean train, test once</b>Retrain the winning setting on the 304 clean pairs, then run test once with <code>--final</code>, reported in the three slices.<span class="tag">Mac · ≈ 15 min (est.) · $0</span></div>
+    <div class="step" id="p4"><b>Then, only if it pays</b>Answers are re-run on the new top 10, reusing the answer cache wherever the top 5 is unchanged. F2 or F3 come back to you as a separate ask.<span class="tag">your call, with costs</span></div>
+  </div>
+  <div class="callout warn" style="margin-top:var(--s4)">
+    <p><b>My expectation, not a measurement:</b> a small gain at best, about 0 to +3 points on report folds. Tencent already trained EVIE on far more data than 105–155 questions, and a question-side change can only re-weight what a question looks for. It can't put information into a page vector that isn't there. The gate exists because tuning on this little data can just as easily make EVIE worse.</p>
+  </div>
+</section>
+
+<section id="risks">
+  <span class="eyebrow">7 · risks</span>
+  <h2>What could go wrong</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>id</th><th>risk</th><th>guard</th></tr></thead>
+      <tbody>
+        <tr id="r1"><td class="k">R1</td><td>Shared pages inflate the test score.</td><td>Clean training set; report folds; the 115/39 slices.</td></tr>
+        <tr id="r2"><td class="k">R2</td><td>155 questions overfit, and the tuned EVIE does worse.</td><td>Early stopping on folds, a low learning rate, and the +2 gate. F0 is the low-capacity check.</td></tr>
+        <tr id="r3"><td class="k">R3</td><td>Report folds are uneven (7 to 46 questions), and 14 multi-report questions sit out.</td><td>Average per question, not per fold; show each fold.</td></tr>
+        <tr id="r4"><td class="k">R4</td><td>The question copy drifts from the pages' encoder.</td><td>The pages stay fixed by design, and every score is checked against the stored index. The base model stays untouched for any future re-index.</td></tr>
+        <tr id="r5"><td class="k">R5</td><td>Mac memory: EVIE (9 GB) plus Adam plus the index.</td><td>Measured 11.4 GB plus ≈ 3.6 GB est. for Adam; nothing else large is loaded.</td></tr>
+        <tr id="r6"><td class="k">R6</td><td>The result stops being comparable to the board.</td><td>Its own row, "adapted on train".</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="decide">
+  <span class="eyebrow">8 · your call</span>
+  <h2>Go, scope, or keep the 24 Oct call</h2>
+  <p class="sub">Nothing runs until you queue an answer. The recommended choices are preselected.</p>
+  <form class="q" data-lavish-question="evie-finetune" onsubmit="event.preventDefault(); const f=event.currentTarget, d=new FormData(f); const a={ go:d.get('go'), data:d.get('data'), part:d.get('part'), note:(d.get('note')||'').trim() }; window.lavish.queuePrompt('EVIE fine-tuning decision (s07): ' + a.go + '. Final training data: ' + a.data + '. F1 trainable part: ' + a.part + '.' + (a.note ? ' Also: ' + a.note : '') + ' Train only; test once with --final at the end; ask before any Claude calls, downloads or GPU spend.', { tag:'choice', text:'Fine-tune: ' + a.go, element:f, data:{ question:'evie-finetune', ...a } }); f.querySelector('.queued').textContent='queued: ' + a.go;">
+    <fieldset>
+      <legend>Q1 · go ahead?</legend>
+      <div class="opt"><label><input type="radio" name="go" value="Go: F0 + F1 on train by report folds, stop at the gate" checked><span>Go: F0 + F1 on train, stop at the gate <span class="badge rec">rec</span><span class="d">Steps 1–3 above; Mac only, about 3 h, $0</span></span></label></div>
+      <div class="opt"><label><input type="radio" name="go" value="F0 only, as a signal check"><span>F0 only, as a signal check<span class="d">Under an hour; tells us if 155 questions carry anything</span></span></label></div>
+      <div class="opt"><label><input type="radio" name="go" value="Go, and plan F2 (synthetic questions) to follow"><span>Go, and plan F2 after<span class="d">F2's Claude calls still need your yes before they start</span></span></label></div>
+      <div class="opt"><label><input type="radio" name="go" value="Not now: keep the 24 Oct no-fine-tuning call"><span>Not now: keep the 24 Oct call<span class="d">Nothing changes; this page stays as the record</span></span></label></div>
+    </fieldset>
+    <fieldset>
+      <legend>Q2 · what the final model trains on</legend>
+      <div class="opt"><label><input type="radio" name="data" value="clean: 304 pairs, no test gold page" checked><span>Clean: 304 pairs, no test gold page <span class="badge rec">rec</span><span class="d">The test number then means better retrieval</span></span></label></div>
+      <div class="opt"><label><input type="radio" name="data" value="all 702 pairs, report the 115/39 slices"><span>All 702 pairs, report slices<span class="d">More data; only the 39-question slice is clean</span></span></label></div>
+    </fieldset>
+    <fieldset>
+      <legend>Q3 · F1's trainable part</legend>
+      <div class="opt"><label><input type="radio" name="part" value="last layers + head, no new dependency" checked><span>Last layers + head <span class="badge rec">rec</span><span class="d">Plain PyTorch, as in today's probe</span></span></label></div>
+      <div class="opt"><label><input type="radio" name="part" value="LoRA via peft (adds a dependency)"><span>LoRA via <code>peft</code><span class="d">A small adapter, but a new dependency</span></span></label></div>
+    </fieldset>
+    <label><span style="width:100%">Anything else<textarea name="note" rows="2" placeholder="e.g. also try training only the 10 padding-token outputs"></textarea></span></label>
+    <div class="row"><button type="submit">Queue my answers</button><span class="queued"></span></div>
+  </form>
+</section>
+
+<section id="sources">
+  <span class="eyebrow">sources</span>
+  <h2>Where each number comes from</h2>
+  <ul class="src">
+    <li>Gold ranks, pairs, sharing and slices: the M3 runs <code>…081553Z_w0-1_norr_train</code> and <code>…081741Z_w0-1_norr_test</code> (<code>queries.jsonl</code>, visual stage top 100), with <code>data/splits/finance_en.json</code> and the page index for report names</li>
+    <li>Step timings and memory: a local probe today that loads EVIE, checks the gradient path against <code>encode_query</code>, and runs 4 question steps and 2 page steps on question 198. Nothing was saved and no weights were written.</li>
+    <li>Re-index time: <code>data/cache/index/finance_en/visual/evie/stats.json</code> (40,481 s)</li>
+    <li>Rented-GPU re-index estimate, F2's page count, the 24 Oct decision: plan s03 (<code>.lavish/s03_embedders-and-finetune-plan.html</code>)</li>
+    <li>Trainer support: <code>sentence_transformers/multi_vector_encoder/</code> (trainer, MNRL losses) in the locked 6.1.0</li>
+  </ul>
+</section>
+
+</main>
+<script type="module">
+  import { File } from "https://esm.sh/@pierre/diffs@1.2.10?bundle";
+  const dark = document.documentElement.dataset.theme === 'dark' ||
+    (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const options = { theme: { light: "github-light", dark: "github-dark" }, themeType: dark ? "dark" : "light", overflow: "wrap" };
+  const step = `def step(question: str, gold: dict[int, int], keep: torch.Tensor, opt) -> float:
+    """One question-side step. The stored pages are fixed; only the question copy learns."""
+    qv = query_vectors(question)                  # 33 x 128, with gradients
+    s = maxsim_all(qv, docs, mask) / tau          # 2,942 scores: the same MaxSim as search()
+    s = s.masked_fill(~keep, float("-inf"))       # keep: no test gold page, no held-out report
+    pos = torch.tensor([row[c] for c in gold])    # this question's gold pages ...
+    w = torch.tensor([float(g) for g in gold.values()]).log()  # ... full (2) counts twice partial (1)
+    loss = -(torch.logsumexp(s[pos] + w, 0) - torch.logsumexp(s, 0))
+    loss.backward()
+    opt.step()
+    opt.zero_grad()
+    return float(loss)
+`;
+  new File(options).render({ containerWrapper: document.querySelector("#code-step"), file: { name: "sketch: retrieval/tune.py", contents: step } });
+</script>
+</body>
+</html>

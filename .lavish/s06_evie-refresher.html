@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EVIE Retrieval Refresher</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout only — every colour, size and space comes from house.css */
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s3); }
+  .fig svg{ width:100%; display:block; }
+  .fig text{ fill:var(--ink); font-family:var(--sans); font-size:15px; }
+  .fig text.s{ fill:var(--muted); font-size:13px; font-family:var(--mono); }
+  .fig text.h{ font-weight:600; }
+  .fig text.a{ fill:var(--accent); font-family:var(--mono); font-size:13px; }
+  .fig .box{ fill:var(--panel); stroke:var(--line-3); stroke-width:1.5; }
+  .fig .box.acc{ fill:var(--accent-soft); stroke:var(--accent); }
+  .fig .box.band{ fill:var(--band); stroke:var(--line-2); }
+  .fig .cell{ fill:var(--band); stroke:var(--line-2); stroke-width:1; }
+  .fig .cell.hit{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:2; }
+  .fig .tokq{ fill:var(--panel); stroke:var(--accent); stroke-width:1.5; }
+  .fig .edge{ stroke:var(--line-3); stroke-width:1.5; fill:none; }
+  .fig .edge.acc{ stroke:var(--accent); stroke-width:2; }
+  .fig .lane{ fill:var(--band); stroke:none; }
+  .fig .arrowhead{ fill:var(--line-3); }
+  .fig .arrowhead.acc{ fill:var(--accent); }
+  .walk{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:var(--s5); align-items:start; }
+  @media (max-width:900px){ .walk{ grid-template-columns:minmax(0,1fr); } }
+  .pagefig{ background:var(--panel); border:1px solid var(--line-2); border-radius:var(--r); padding:var(--s2); }
+  .pagefig svg{ width:100%; display:block; border-radius:var(--r-sm); }
+  .pagefig .heat{ fill:var(--amber); }
+  .pagefig .pick{ fill:none; stroke:var(--red); stroke-width:5; }
+  .pagefig .pick.soft{ stroke:var(--accent); stroke-width:3; }
+  .toks{ display:flex; flex-wrap:wrap; gap:var(--s1); margin:var(--s2) 0 var(--s3); }
+  .tok{ font-family:var(--mono); font-size:var(--t-2); font-weight:400; background:var(--panel); color:var(--ink-2);
+        border:1px solid var(--line-3); border-radius:var(--r-sm); padding:2px var(--s2); display:inline-flex;
+        flex-direction:column; align-items:center; line-height:1.25; min-width:2.4em; }
+  .tok small{ color:var(--muted); font-size:0.72rem; }
+  .tok.pad{ border-style:dashed; }
+  .tok[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .tok[aria-pressed="true"] small{ color:var(--accent-ink); }
+  .readout{ font-family:var(--mono); font-size:var(--t-1); color:var(--ink); background:var(--band);
+            border:1px solid var(--line); border-radius:var(--r-sm); padding:var(--s2) var(--s3); min-height:2.6em; }
+  .ctl{ display:flex; flex-wrap:wrap; gap:var(--s3); align-items:center; font-size:var(--t-1); margin:var(--s2) 0; }
+  .ctl label{ display:inline-flex; gap:var(--s1); align-items:center; cursor:pointer; }
+  .ctl input{ accent-color:var(--accent); }
+  .bar svg{ width:100%; display:block; }
+  .bar .w{ fill:var(--accent); } .bar .p{ fill:var(--line-3); }
+  .bar text{ fill:var(--muted); font-family:var(--mono); font-size:12px; }
+  td .gold{ color:var(--accent); font-weight:600; }
+  td code, .kv code{ overflow-wrap:anywhere; }
+  #code-search, #code-cut{ border:1px solid var(--line-2); border-radius:var(--r); overflow:hidden; margin-bottom:var(--s3); }
+  .codehead{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); margin:var(--s3) 0 var(--s1); }
+  .src li{ font-size:var(--t-1); } .src code{ overflow-wrap:anywhere; }
+  form.q .opt{ border-top:1px solid var(--line); padding-top:var(--s2); margin-top:var(--s2); }
+  form.q .opt:first-of-type{ border-top:0; margin-top:0; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <span class="eyebrow">vidore-v3-loop · branch evie-research · finance_en · refresher</span>
+  <h1>How <em>EVIE</em> finds the page</h1>
+  <p class="lede">EVIE turns every page image into about a thousand small vectors and every question into a few dozen, then scores a page by how well each question piece finds its best match on the page. This page walks through where the model came from, how we indexed the 2,942 finance pages once, and what happens in the 2.5 seconds after a question arrives.</p>
+  <div class="hero-meta">
+    <span class="badge info">explainer · nothing changed</span>
+    <span class="badge">numbers measured on this Mac, 2026-10-25</span>
+    <span class="badge">no Claude calls</span>
+  </div>
+  <div class="verdict">
+    <div class="stat accent"><div class="n">2,942</div><div class="l">finance pages indexed, every one</div></div>
+    <div class="stat"><div class="n">1,019</div><div class="l">vectors per page, 128 numbers each</div></div>
+    <div class="stat"><div class="n">767 MB</div><div class="l">the whole index, in half precision</div></div>
+    <div class="stat"><div class="n">0.09 s</div><div class="l">to score a question against all pages</div></div>
+    <div class="stat"><div class="n">71.1</div><div class="l">NDCG@10 on test (74.7 train)</div></div>
+  </div>
+</header>
+
+<section id="idea">
+  <span class="eyebrow">1 · the idea</span>
+  <h2>One vector per patch, not one per page</h2>
+  <p class="sub">Most embedders squeeze a page into one point. EVIE is a <b>late-interaction</b> (ColBERT-style) model: it keeps a vector for every 32×32-pixel patch of the page and every token of the question, and compares them only at search time.</p>
+  <figure class="fig" id="fig-maxsim">
+    <svg viewBox="0 0 960 330" role="img" aria-labelledby="fig1t">
+      <title id="fig1t">MaxSim: each question token picks its best patch, the picks are summed</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead acc"/></marker>
+      </defs>
+      <text x="20" y="28" class="h">Question → 33 vectors</text>
+      <g id="f1-q">
+        <rect x="20" y="48" width="120" height="34" rx="6" class="tokq"/><text x="80" y="70" text-anchor="middle">Bank</text>
+        <rect x="20" y="92" width="120" height="34" rx="6" class="tokq"/><text x="80" y="114" text-anchor="middle">$ 4 . 2</text>
+        <rect x="20" y="136" width="120" height="34" rx="6" class="tokq"/><text x="80" y="158" text-anchor="middle">charge</text>
+        <rect x="20" y="180" width="120" height="34" rx="6" class="tokq"/><text x="80" y="202" text-anchor="middle">2 0 2 4</text>
+        <text x="80" y="240" text-anchor="middle" class="s">… 29 more, incl.</text>
+        <text x="80" y="258" text-anchor="middle" class="s">10 padding tokens</text>
+      </g>
+      <text x="330" y="28" class="h">Page → 1,019 vectors</text>
+      <g id="f1-page">
+        <rect x="330" y="44" width="250" height="250" rx="6" class="box band"/>
+        <g id="f1-cells"></g>
+        <text x="455" y="316" text-anchor="middle" class="s">1,008 patches (28 × 36) + 11 template tokens</text>
+      </g>
+      <g id="f1-edges">
+        <path d="M140,65 C230,65 250,258 336,258" class="edge acc" marker-end="url(#ah)"/>
+        <path d="M140,109 C260,109 380,74 495,74" class="edge acc" marker-end="url(#ah)"/>
+        <path d="M140,153 C240,153 300,212 389,212" class="edge acc" marker-end="url(#ah)"/>
+        <path d="M140,197 C260,197 420,40 548,66" class="edge acc" marker-end="url(#ah)"/>
+      </g>
+      <text x="640" y="28" class="h">Page score = Σ best match</text>
+      <g id="f1-sum">
+        <text x="640" y="70" class="a">Bank      → 0.89</text>
+        <text x="640" y="114" class="a">$ 4 . 2   → 0.81 to 0.86</text>
+        <text x="640" y="158" class="a">charge    → 0.97</text>
+        <text x="640" y="202" class="a">2 0 2 4   → 0.81 to 0.96</text>
+        <text x="640" y="246" class="s">… one best match per token</text>
+        <line x1="640" y1="262" x2="930" y2="262" class="edge"/>
+        <text x="640" y="290" class="h">27.09 for the right page</text>
+        <text x="640" y="312" class="s">(cosines, so at most 33)</text>
+      </g>
+    </svg>
+    <figcaption>Every question token is compared with every page vector (a 33 × 1,019 grid of cosines); each token keeps only its best match, and the page's score is the sum. A page wins by having <i>some</i> patch for every part of the question.</figcaption>
+  </figure>
+</section>
+
+<section id="hf">
+  <span class="eyebrow">2 · what came from Hugging Face</span>
+  <h2>A 4.5B model, a library to run it, and the pinned dataset</h2>
+  <p class="sub">We trained nothing. Everything below was downloaded and used as published.</p>
+  <div class="cards">
+    <div class="card" id="hf-model">
+      <h3>The model · <code>tencent/EVIE-4.5B</code></h3>
+      <ul>
+        <li>8.5 GB of weights, Apache-2.0, snapshot <code>498388f</code></li>
+        <li>Built on Qwen3.5-4B: a vision encoder plus a language model</li>
+        <li>A 2,048-wide output head, then normalise, then keep every token</li>
+        <li>A template: pages get “Describe the image.”, questions get 10 padding tokens</li>
+      </ul>
+    </div>
+    <div class="card" id="hf-training">
+      <h3>How Tencent made it (from its card)</h3>
+      <ul>
+        <li>An 8B teacher (EVIE-8B, on Qwen3.5-9B) trained first</li>
+        <li>The 4.5B student distilled from it (their “ARD” recipe)</li>
+        <li>One head trained so its first 64…2,048 numbers each work alone</li>
+        <li>ViDoRe V3 mean 66.0; finance_en 70.0 in their protocol, 72.3 on MTEB's English board</li>
+      </ul>
+    </div>
+    <div class="card" id="hf-lib">
+      <h3>The runner · sentence-transformers 6.1</h3>
+      <ul>
+        <li><code>MultiVectorEncoder</code> loads the model's four modules</li>
+        <li><code>encode_document</code> for pages, <code>encode_query</code> for questions</li>
+        <li>transformers 5.17 and torch 2.14 on the Mac's GPU (MPS), bfloat16</li>
+      </ul>
+    </div>
+    <div class="card" id="hf-data">
+      <h3>The data · <code>vidore/vidore_v3_finance_en</code></h3>
+      <ul>
+        <li>Pinned at revision <code>7f432c1</code></li>
+        <li>2,942 page images from 6 financial reports, with OCR text</li>
+        <li>309 English questions and their graded gold pages</li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="fig" id="fig-inside" style="margin-top:var(--s4)">
+    <div class="fig-title">Inside EVIE: a page image becomes 1,019 vectors</div>
+    <svg viewBox="0 0 960 420" role="img" aria-labelledby="fig2t">
+      <title id="fig2t">The path from a page image to 1,019 vectors of 128 numbers</title>
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+      <g id="f2-row1">
+        <rect x="10" y="20" width="170" height="92" rx="8" class="box"/>
+        <text x="95" y="48" text-anchor="middle" class="h">Page image</text>
+        <text x="95" y="72" text-anchor="middle" class="s">1,236 × 1,600 px</text>
+        <text x="95" y="92" text-anchor="middle" class="s">(viewer's JPEG)</text>
+        <path d="M180,66 L218,66" class="edge" marker-end="url(#ah2)"/>
+        <rect x="220" y="20" width="170" height="92" rx="8" class="box"/>
+        <text x="305" y="48" text-anchor="middle" class="h">Resize</text>
+        <text x="305" y="72" text-anchor="middle" class="s">≤ 1,048,576 px</text>
+        <text x="305" y="92" text-anchor="middle" class="s">→ 896 × 1,152</text>
+        <path d="M390,66 L428,66" class="edge" marker-end="url(#ah2)"/>
+        <rect x="430" y="20" width="250" height="92" rx="8" class="box acc"/>
+        <text x="555" y="48" text-anchor="middle" class="h">Vision encoder</text>
+        <text x="555" y="72" text-anchor="middle" class="s">16-px patches, 24 layers</text>
+        <text x="555" y="92" text-anchor="middle" class="s">2×2 merge → one per 32 px</text>
+        <path d="M680,66 L718,66" class="edge" marker-end="url(#ah2)"/>
+        <rect x="720" y="20" width="230" height="92" rx="8" class="box"/>
+        <text x="835" y="48" text-anchor="middle" class="h">1,008 visual tokens</text>
+        <text x="835" y="72" text-anchor="middle" class="s">a 28 × 36 grid</text>
+        <text x="835" y="92" text-anchor="middle" class="s">+ 11 template tokens</text>
+      </g>
+      <path d="M835,112 C835,160 120,150 120,196" class="edge" marker-end="url(#ah2)"/>
+      <g id="f2-row2">
+        <rect x="10" y="200" width="290" height="100" rx="8" class="box acc"/>
+        <text x="155" y="228" text-anchor="middle" class="h">Qwen3.5 language model</text>
+        <text x="155" y="252" text-anchor="middle" class="s">32 layers (3 linear : 1 full attn)</text>
+        <text x="155" y="272" text-anchor="middle" class="s">run both ways, not left-to-right</text>
+        <text x="155" y="290" text-anchor="middle" class="s">→ 2,560 numbers a token</text>
+        <path d="M300,250 L338,250" class="edge" marker-end="url(#ah2)"/>
+        <rect x="340" y="200" width="190" height="100" rx="8" class="box"/>
+        <text x="435" y="228" text-anchor="middle" class="h">Output head</text>
+        <text x="435" y="252" text-anchor="middle" class="s">linear 2,560 → 2,048</text>
+        <text x="435" y="272" text-anchor="middle" class="s">then normalise</text>
+        <path d="M530,250 L568,250" class="edge" marker-end="url(#ah2)"/>
+        <rect x="570" y="200" width="380" height="100" rx="8" class="box acc"/>
+        <text x="760" y="228" text-anchor="middle" class="h">Our cut: first 128, renormalised</text>
+        <text x="760" y="252" text-anchor="middle" class="s">the head is trained so a prefix works alone</text>
+        <text x="760" y="272" text-anchor="middle" class="s">stored as float16: 256 bytes a vector</text>
+        <text x="760" y="290" text-anchor="middle" class="s">visual._cut()</text>
+      </g>
+      <g id="f2-query">
+        <rect x="10" y="340" width="940" height="64" rx="8" class="box band"/>
+        <text x="30" y="368" class="h">A question takes the same road without the vision encoder:</text>
+        <text x="30" y="392" class="s">text + 10 × &lt;|endoftext|&gt; → tokenizer (33 tokens here) → the same language model and head → 33 × 128</text>
+      </g>
+    </svg>
+    <figcaption>Each page vector describes one 32×32-pixel square of the resized page, in the context of the whole page: the language model reads all the patches together before the head turns each into a vector. The 11 template tokens (“&lt;|im_start|&gt;user …Describe the image.”) are kept and scored too.</figcaption>
+  </figure>
+</section>
+
+<section id="index">
+  <span class="eyebrow">3 · applying it to the dataset (once)</span>
+  <h2>Indexing 2,942 pages took 11.2 hours on this Mac</h2>
+  <p class="sub">The index was built over several nights between 1 and 8 October with <code>make index-visual-overnight DATASET=finance_en</code>, which calls <code>visual.build</code>.</p>
+  <div class="split">
+    <div class="steps">
+      <div class="step"><b>Take the pages in corpus-id order, 50 at a time</b>Each batch of 50 becomes one file, <code>part_00000.npz</code> … <code>part_02900.npz</code> (59 parts), so a stopped run loses at most one part and a rerun skips finished parts.</div>
+      <div class="step"><b>Encode two images at a time</b><code>encode_document</code> returns 1,019 × 2,048 per page; <code>_cut</code> keeps the first 128 numbers, renormalises and stores float16.</div>
+      <div class="step"><b>Save ids, lengths and vectors</b>Each part holds the page ids, how many vectors each page has (always 1,019 here, since every page has the same shape) and the vectors themselves; <code>stats.json</code> keeps the totals.</div>
+      <div class="step"><b>Stop cleanly if memory runs low</b>Below 15% free memory the build stops at a part boundary; the same command resumes it.</div>
+    </div>
+    <div class="card">
+      <h3>The finished index</h3>
+      <dl class="kv">
+        <dt>where</dt><dd><code>data/cache/index/finance_en/visual/evie/</code> (never committed)</dd>
+        <dt>pages</dt><dd>2,942 of 2,942 · complete</dd>
+        <dt>vectors</dt><dd>2,942 × 1,019 = 3.0 million, each 128 × float16</dd>
+        <dt>size</dt><dd>767 MB (732 MiB on disk)</dd>
+        <dt>encode time</dt><dd>40,481 s ≈ 11.2 h · 13.8 s a page</dd>
+        <dt>device</dt><dd>the Mac's GPU (MPS)</dd>
+        <dt>why slow</dt><dd>Qwen3.5's fast linear-attention kernels exist only for NVIDIA GPUs, so the Mac runs the slow reference code</dd>
+        <dt>not used</dt><dd>EVIE's HAC compression (32 vectors a page); 2,942 pages don't need it</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section id="query">
+  <span class="eyebrow">4 · question time</span>
+  <h2>One real question, start to finish</h2>
+  <p class="sub">Train question 198: <b>“Did Bank of America report a $4.2B rise in net charge-offs in 2024?”</b> Its one gold page is Bank of America's 2024 report, page 61 (corpus id 2900). Timings are from this Mac.</p>
+
+  <figure class="fig" id="fig-lanes">
+    <svg viewBox="0 0 960 200" role="img" aria-labelledby="fig3t">
+      <title id="fig3t">What runs once per process and what runs per question</title>
+      <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+      <rect x="0" y="6" width="960" height="78" rx="8" class="lane"/>
+      <text x="16" y="30" class="s">ONCE PER PROCESS</text>
+      <g id="f3-once">
+        <rect x="200" y="20" width="300" height="52" rx="6" class="box"/><text x="350" y="44" text-anchor="middle" class="h">Load EVIE onto the GPU</text><text x="350" y="62" text-anchor="middle" class="s">25.6 s</text>
+        <rect x="520" y="20" width="420" height="52" rx="6" class="box"/><text x="730" y="44" text-anchor="middle" class="h">Load the 59 parts into one padded tensor</text><text x="730" y="62" text-anchor="middle" class="s">0.8 s · 2,942 × 1,019 × 128 on the GPU</text>
+      </g>
+      <rect x="0" y="104" width="960" height="90" rx="8" class="lane"/>
+      <text x="16" y="128" class="s">EVERY QUESTION</text>
+      <g id="f3-each">
+        <rect x="16" y="138" width="200" height="48" rx="6" class="box acc"/><text x="116" y="160" text-anchor="middle" class="h">Encode the question</text><text x="116" y="178" text-anchor="middle" class="s">2.4 s · 33 × 128</text>
+        <path d="M216,162 L244,162" class="edge" marker-end="url(#ah3)"/>
+        <rect x="246" y="138" width="240" height="48" rx="6" class="box acc"/><text x="366" y="160" text-anchor="middle" class="h">MaxSim with every page</text><text x="366" y="178" text-anchor="middle" class="s">0.09 s · 256 pages a chunk</text>
+        <path d="M486,162 L514,162" class="edge" marker-end="url(#ah3)"/>
+        <rect x="516" y="138" width="190" height="48" rx="6" class="box"/><text x="611" y="160" text-anchor="middle" class="h">Sort, keep 100</text><text x="611" y="178" text-anchor="middle" class="s">CHANNEL_K</text>
+        <path d="M706,162 L734,162" class="edge" marker-end="url(#ah3)"/>
+        <rect x="736" y="138" width="208" height="48" rx="6" class="box"/><text x="840" y="160" text-anchor="middle" class="h">Fuse → top 50 → top 10</text><text x="840" y="178" text-anchor="middle" class="s">text weight 0: order kept</text>
+      </g>
+    </svg>
+    <figcaption>Encoding the question dominates; comparing it with all 3 million page vectors takes under a tenth of a second. The text (BM25) channel still runs alongside, but its fusion weight is 0, so the fused top 10 is EVIE's own top 10.</figcaption>
+  </figure>
+
+  <div class="walk" style="margin-top:var(--s4)">
+    <div>
+      <div class="pagefig" id="page-heat">
+        <svg id="pagesvg" viewBox="0 0 1236 1600" role="img" aria-labelledby="pgt">
+          <title id="pgt">The gold page with each patch shaded by its best match to any question token</title>
+          <image href="assets/s06/q198_c2900.jpg" x="0" y="0" width="1236" height="1600"/>
+          <g id="heat"></g>
+          <g id="picks"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <label><input type="checkbox" id="showHeat" checked> shade patches by match strength</label>
+        <label><input type="checkbox" id="showAll" checked> outline every word's best patch</label>
+      </div>
+    </div>
+    <div>
+      <h3>The 33 question vectors, and the patch each one picked</h3>
+      <p class="small">Click a token to see its best patch on the page. Dashed tokens are the 10 padding tokens EVIE adds to every question.</p>
+      <div class="toks" id="toks" role="group" aria-label="Question tokens"></div>
+      <div class="readout" id="readout" role="status" aria-live="polite">Click a token.</div>
+      <h3 style="margin-top:var(--s4)">How the 27.09 adds up</h3>
+      <div class="bar" id="bar"></div>
+      <p class="small">Word tokens give 19.49, padding tokens 7.60. The runner-up page scores 26.05, so the gold page wins by about one point.</p>
+      <h3 style="margin-top:var(--s4)">The top 10 EVIE returned</h3>
+      <div class="tablewrap">
+        <table id="top10"><thead><tr><th>#</th><th>page</th><th>MaxSim</th><th>gold?</th></tr></thead><tbody></tbody></table>
+      </div>
+      <p class="small">All ten are from the right report; the gold page is #1, so NDCG@10 is 100 for this question. The same call is the agent's search tool.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <p><b>What the heat map shows:</b> “$ 4 . 2” landed on the “$4.2 billion” in the text, “Bank of America” on the page footer, “net charge-offs” on Table 20's heading and “2024” on the column headers. EVIE never read the OCR text; it matched pixels to words.</p>
+  </div>
+</section>
+
+<section id="code">
+  <span class="eyebrow">5 · the code</span>
+  <h2>The whole search is 18 lines</h2>
+  <p class="sub">From <code>src/vidore_loop/retrieval/visual.py</code>. The pipeline calls it with k = 100 (<code>pipeline.py:104</code>), and the agent's search tool goes through the same path (<code>agent.champion_search</code>).</p>
+  <div class="codehead">visual.py · lines 267–284 · search()</div>
+  <div id="code-search"></div>
+  <div class="codehead">visual.py · lines 108–114 · _cut(), used at index time and question time</div>
+  <div id="code-cut"></div>
+</section>
+
+<section id="score">
+  <span class="eyebrow">6 · how well it does</span>
+  <h2>EVIE alone is our champion retriever</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>finance_en, NDCG@10</th><th>train 155</th><th>test 154</th><th>all 309</th></tr></thead>
+      <tbody>
+        <tr><td>Our EVIE index (the champion, fusion text weight 0, no reranker)</td><td class="n">74.7</td><td class="n">71.1</td><td class="n">72.9</td></tr>
+        <tr><td>EVIE-4.5B on MTEB's English board (their run)</td><td class="n">—</td><td class="n">—</td><td class="n">72.3</td></tr>
+        <tr><td>EVIE-4.5B in its own card's protocol</td><td class="n">—</td><td class="n">—</td><td class="n">70.0</td></tr>
+        <tr><td>Board best pipeline (NeMo agentic with Opus 4.5)</td><td class="n">—</td><td class="n">—</td><td class="n">75.9</td></tr>
+        <tr><td>BM25 text alone, for contrast</td><td class="n">51.9</td><td class="n">48.4</td><td class="n">50.2</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Our 72.9 on all 309 lands within a point of MTEB's 72.3, which says the index reproduces the published model. Every text weight above 0 lowered train NDCG in M3, which is why fusion passes EVIE through untouched.</p>
+</section>
+
+<section id="notes">
+  <span class="eyebrow">7 · things worth knowing</span>
+  <h2>Six details that matter for any change</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>detail</th><th>evidence</th><th>what it means</th></tr></thead>
+      <tbody>
+        <tr id="n-pin"><td><b>The model isn't pinned</b></td><td><code>visual.MODELS</code> names no revision; our snapshot is <code>498388f</code>, MTEB's file lists <code>8aecfa9</code></td><td>Datasets are pinned, the model is not; a re-download could change the index</td></tr>
+        <tr id="n-dim"><td><b>We keep 128 of 2,048 numbers</b></td><td>The card: V3 65.3 at 128 vs 66.0 at 2,048</td><td>Wider vectors may add under a point, but the index stored only 128, so any change means re-encoding (11 h here)</td></tr>
+        <tr id="n-res"><td><b>Pages are shrunk</b></td><td>1,236 × 1,600 becomes 896 × 1,152; one vector per 32 × 32 px</td><td>Small table print shares a vector with its neighbours</td></tr>
+        <tr id="n-pad"><td><b>Padding carries 28% of the score</b></td><td>10 padding tokens gave 7.60 of 27.09 here</td><td>By design (query expansion); shorter questions lean on them more</td></tr>
+        <tr id="n-tmpl"><td><b>Template tokens are scored</b></td><td>“Did” matched <code>&lt;|im_start|&gt;</code> at 0.97; 11 per page</td><td>Every page offers the same 11 easy matches, which adds a near-constant to every score</td></tr>
+        <tr id="n-short"><td><b>Wording changes the vectors</b></td><td>The agent's keyword queries scored 3.8 / 4.1 NDCG lower (S5)</td><td>EVIE was trained on full questions; give it the question as written</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="next">
+  <span class="eyebrow">8 · what this branch could research</span>
+  <h2>Pick what to explore; nothing runs until you do</h2>
+  <p class="sub">All of these would be measured on train only, with test touched once at the end. The first two cost nothing but minutes on this Mac.</p>
+  <form class="q" data-lavish-question="evie-research" onsubmit="event.preventDefault(); const f=event.currentTarget; const items=[...f.querySelectorAll('input[name=items]:checked')].map(i=>({id:i.value,label:i.dataset.label})); const other=f.querySelector('textarea').value.trim(); if(items.length||other){ window.lavish.queuePrompt('Plan the selected EVIE research items on the evie-research branch (train only), one by one with cost and expected effect, and account for every submitted ID.' + (other ? ' Also: ' + other : ''), { tag:'tracked-batch', text:'EVIE research: ' + (items.map(i=>i.id).join(', ') || 'other'), element:f, data:{ items, other } }); f.querySelector('.queued').textContent='queued: ' + (items.map(i=>i.id).join(', ') || 'note'); }">
+    <h3>Research options</h3>
+    <div class="opt"><label><input type="checkbox" name="items" value="E1" data-label="Pin EVIE's model revision"><span><b>E1 · Pin the model revision</b><span class="d">Record snapshot 498388f in <code>visual.MODELS</code>; no compute.</span></span></label></div>
+    <div class="opt"><label><input type="checkbox" name="items" value="E2" data-label="Score without template and padding tokens"><span><b>E2 · Scoring variants at question time</b><span class="d">Drop the 11 template tokens, or the 10 padding tokens, from MaxSim; no rebuild, minutes on train.</span></span></label></div>
+    <div class="opt"><label><input type="checkbox" name="items" value="E3" data-label="Wider vectors (256 or 512)"><span><b>E3 · Wider vectors (256 or 512)</b><span class="d">Re-encode all pages (≈11 h here, or a rented GPU); index 1.5–3 GB; the card suggests +0.4 to +0.6.</span></span></label></div>
+    <div class="opt"><label><input type="checkbox" name="items" value="E4" data-label="Higher page resolution"><span><b>E4 · Higher page resolution</b><span class="d">Raise the 1-megapixel cap so small print gets its own vectors; re-encode, slower; effect unknown.</span></span></label></div>
+    <div class="opt"><label><input type="checkbox" name="items" value="E5" data-label="EVIE-8B"><span><b>E5 · EVIE-8B</b><span class="d">72.3 → 73.7 on MTEB's finance board; ≈17 GB download (I'd ask first), likely about twice the encode time.</span></span></label></div>
+    <label style="margin-top:var(--s2)"><span style="width:100%">Anything else to look into<textarea rows="2" placeholder="e.g. explain the patch heat map for a question EVIE gets wrong"></textarea></span></label>
+    <div class="row"><button type="submit">Queue my picks</button><span class="queued"></span></div>
+  </form>
+</section>
+
+<section id="sources">
+  <span class="eyebrow">sources</span>
+  <h2>Where each number comes from</h2>
+  <ul class="src">
+    <li>Index facts: <code>data/cache/index/finance_en/visual/evie/stats.json</code> and the 59 <code>part_*.npz</code> files (dates from their timestamps)</li>
+    <li>Model pieces: the downloaded snapshot's <code>modules.json</code>, <code>config.json</code>, <code>1_Dense/config.json</code>, <code>processor_config.json</code>, <code>additional_chat_templates/sentence_transformers.jinja</code></li>
+    <li>Training story and card scores: the model card (README) in the same snapshot, arXiv 2610.11553</li>
+    <li>The walk-through: a local run of <code>visual.search</code> on question 198 today, checked against the function's own output; the patch layout rebuilt with EVIE's processor (1,019 tokens = 1,008 patches + 11 template)</li>
+    <li>Scores: M3 runs <code>…081553Z_w0-1_norr_train</code> and <code>…081741Z_w0-1_norr_test</code>; MTEB figure and board rows from the Leaderboard tab</li>
+  </ul>
+</section>
+
+</main>
+
+<script id="walk" type="application/json">{"grid":[36,28],"heat":[[0.202,0.189,0.041,0.036,0.16,0.059,0.955,0.0,0.638,0.0,0.174,0.059,0.074,0.117,0.244,0.147,0.717,0.081,0.017,0.056,0.328,0.358,0.914,0.347,0.0,0.348,0.212,0.118],[0.269,0.02,0.078,0.015,0.0,0.199,0.006,0.0,0.053,0.034,0.096,0.002,0.0,0.019,0.174,0.008,0.12,0.158,0.267,0.317,0.168,0.591,0.129,0.657,0.979,0.889,0.954,0.426],[0.353,0.0,0.021,0.077,0.036,0.081,0.167,0.136,0.0,0.207,0.038,0.063,0.12,0.143,0.167,0.018,0.397,0.388,0.137,0.09,0.116,0.098,0.18,0.317,0.22,0.459,0.327,0.041],[0.034,0.1,0.025,0.04,0.0,0.161,0.102,0.0,0.012,0.062,0.0,0.096,0.117,0.278,0.063,0.017,0.094,0.061,0.085,0.104,0.045,0.101,0.122,0.091,0.065,0.099,0.105,0.937],[0.145,0.0,0.069,0.122,0.122,0.024,0.066,0.039,0.0,0.0,0.058,0.0,0.156,0.133,0.923,0.459,0.831,0.479,0.601,0.764,0.871,0.785,0.975,0.99,0.529,0.619,0.422,0.252],[0.809,0.07,0.0,0.0,0.0,0.077,0.12,0.0,0.157,0.011,0.05,0.167,0.085,0.001,0.277,0.129,0.323,0.352,0.166,0.571,0.278,0.286,0.474,0.361,0.559,0.511,0.356,0.511],[0.093,0.082,0.087,0.102,0.096,0.098,0.152,0.095,0.181,0.095,0.074,0.143,0.09,0.165,0.422,0.199,0.444,0.211,0.369,0.319,0.263,0.092,0.166,0.262,0.221,0.494,0.276,0.794],[0.03,0.128,0.066,0.023,0.045,0.075,0.055,0.0,0.003,0.0,0.086,0.0,0.061,0.0,0.207,0.179,0.0,0.031,0.037,0.231,0.128,0.112,0.073,0.474,0.218,0.123,0.355,0.191],[0.0,0.018,0.0,0.21,0.024,0.0,0.0,0.029,0.045,0.0,0.0,0.122,0.0,0.004,0.02,0.018,0.359,0.16,0.242,0.156,0.209,0.087,0.45,0.188,0.175,0.063,0.147,0.367],[0.0,0.041,0.254,0.433,0.398,0.316,0.319,0.4,0.44,0.077,0.108,0.149,0.207,0.0,0.046,0.3,0.155,0.387,0.229,0.4,0.386,0.219,0.062,0.279,0.339,0.313,0.094,0.373],[0.019,0.031,0.029,0.018,0.189,0.025,0.184,0.323,0.285,0.284,0.437,0.555,0.187,0.108,0.136,0.054,0.17,0.368,0.124,0.332,0.118,0.465,0.116,0.14,0.078,0.164,0.256,0.026],[0.254,0.278,0.086,0.244,0.345,0.163,0.508,0.376,0.217,0.157,0.097,0.732,0.968,0.139,0.143,0.12,0.396,0.332,0.243,0.244,0.198,0.425,0.084,0.052,0.153,0.262,0.323,0.181],[0.094,0.095,0.218,0.039,0.151,0.047,0.017,0.16,0.13,0.082,0.262,0.945,0.138,0.188,0.072,0.173,0.965,0.289,0.394,0.376,0.254,0.219,0.972,0.132,0.163,0.08,0.19,0.093],[0.005,0.0,0.008,0.05,0.099,0.143,0.294,0.223,0.22,0.07,0.21,0.093,0.054,0.149,0.013,0.134,0.062,0.085,0.057,0.351,0.0,0.201,0.166,0.252,0.35,0.294,0.287,0.223],[0.142,0.05,0.084,0.074,0.234,0.262,0.237,0.167,0.155,0.161,0.032,0.256,0.113,0.338,0.313,0.21,0.392,0.347,0.273,0.72,0.289,0.306,0.328,0.229,0.097,0.174,0.293,0.096],[0.169,0.141,0.063,0.15,0.167,0.296,0.241,0.143,0.094,0.267,0.156,0.312,0.14,0.012,0.288,0.184,0.072,0.0,0.137,0.273,0.046,0.372,0.225,0.079,0.276,0.021,0.298,0.117],[0.107,0.017,0.032,0.036,0.029,0.326,0.301,0.313,0.128,0.147,0.018,0.341,0.057,0.056,0.851,0.22,0.083,0.02,0.232,0.237,0.078,0.262,0.192,0.179,0.228,0.012,0.347,0.266],[0.196,0.123,0.077,0.04,0.164,0.138,0.214,0.03,0.143,0.075,0.075,0.182,0.29,0.188,0.071,0.083,0.116,0.197,0.369,0.228,0.309,0.296,0.264,0.67,0.972,0.126,0.379,0.26],[0.131,0.176,0.219,0.223,0.318,0.12,0.141,0.207,0.174,0.059,0.124,0.167,0.575,0.392,0.241,0.252,0.093,0.292,0.209,0.248,0.258,0.356,0.092,0.096,0.187,0.254,0.231,0.176],[0.313,0.009,0.136,0.145,0.196,0.958,0.995,0.945,0.707,0.142,0.102,0.407,0.017,0.256,0.159,0.041,0.603,0.726,0.223,0.052,0.451,0.202,0.041,0.401,0.757,0.216,0.07,0.006],[0.121,0.127,0.151,0.151,0.524,0.182,0.944,1.0,0.986,0.948,0.541,0.108,0.131,0.562,0.661,0.374,0.072,0.545,0.948,0.99,0.846,0.156,0.802,0.883,0.808,0.433,0.297,0.312],[0.538,0.347,0.266,0.015,0.183,0.051,0.246,0.847,0.147,0.558,0.103,0.399,0.092,0.281,0.81,0.379,0.64,0.71,0.962,0.484,0.287,0.081,0.799,0.579,0.569,0.152,0.387,0.483],[0.368,0.0,0.0,0.0,0.0,0.314,0.149,0.065,0.239,0.251,0.587,0.124,0.141,0.215,0.201,0.19,0.749,0.604,0.277,0.243,0.109,0.544,0.194,0.17,0.677,0.149,0.174,0.089],[0.127,0.361,0.658,0.822,0.468,0.01,0.0,0.363,0.72,0.485,0.488,0.056,0.028,0.105,0.0,0.224,0.132,0.568,0.391,0.126,0.224,0.217,0.181,0.07,0.237,0.451,0.053,0.104],[0.2,0.148,0.732,0.12,0.578,0.228,0.925,0.925,0.164,0.137,0.246,0.256,0.154,0.17,0.201,0.131,0.748,0.125,0.156,0.259,0.242,0.148,0.439,0.712,0.057,0.717,0.467,0.832],[0.628,0.147,0.1,0.826,0.124,0.053,0.133,0.175,0.184,0.116,0.06,0.629,0.321,0.02,0.09,0.193,0.188,0.035,0.631,0.455,0.233,0.177,0.387,0.306,0.185,0.0,0.213,0.287],[0.3,0.006,0.91,0.855,0.717,0.211,0.191,0.341,0.096,0.257,0.601,0.083,0.336,0.345,0.317,0.295,0.074,0.048,0.183,0.2,0.235,0.166,0.119,0.253,0.128,0.18,0.27,0.058],[0.257,0.177,0.136,0.262,0.464,0.317,0.273,0.447,0.966,0.153,0.129,0.632,0.047,0.27,0.208,0.346,0.138,0.64,0.317,0.307,0.756,0.276,0.198,0.883,0.978,0.712,0.497,0.033],[0.222,0.005,0.075,0.005,0.121,0.089,0.152,0.085,0.264,0.34,0.231,0.659,0.296,0.168,0.105,0.289,0.23,0.313,0.294,0.563,0.472,0.423,0.165,0.478,0.327,0.75,0.689,0.392],[0.245,0.008,0.0,0.465,0.253,0.079,0.229,0.475,0.127,0.203,0.05,0.946,0.264,0.198,0.3,0.136,0.15,0.347,0.105,0.171,0.274,0.047,0.357,0.159,0.368,0.278,0.114,0.591],[0.338,0.275,0.271,0.182,0.142,0.127,0.149,0.124,0.119,0.229,0.225,0.528,0.46,0.548,0.493,0.242,0.761,0.407,0.936,0.82,0.293,0.023,0.345,0.946,0.265,0.163,0.597,0.291],[0.304,0.167,0.145,0.059,0.178,0.108,0.276,0.914,0.222,0.646,0.731,0.187,0.183,0.198,0.766,0.71,0.33,0.47,0.97,0.384,0.223,0.247,0.64,0.96,0.533,0.154,0.215,0.635],[0.074,0.0,0.008,0.036,0.039,0.182,0.113,0.174,0.343,0.739,0.07,0.593,0.041,0.0,0.147,0.096,0.202,0.193,0.604,0.209,0.36,0.734,0.409,0.17,0.784,0.641,0.225,0.057],[0.136,0.088,0.067,0.167,0.165,0.08,0.034,0.284,0.096,0.012,0.405,0.506,0.177,0.209,0.287,0.314,0.319,0.29,0.144,0.372,0.07,0.642,0.349,0.174,0.316,0.745,0.208,0.368],[0.25,0.108,0.224,0.063,0.178,0.291,0.183,0.239,0.261,0.544,0.049,0.0,0.133,0.158,0.453,0.437,0.392,0.147,0.178,0.4,0.337,0.83,0.279,0.281,0.192,0.887,0.226,0.112],[0.032,0.096,0.059,0.0,0.0,0.061,0.0,0.0,0.047,0.014,0.102,0.039,0.079,0.0,0.218,0.109,0.197,0.733,0.611,0.071,0.582,0.164,0.663,0.29,0.77,0.248,0.085,0.067]],"query_tokens":["Did","\u0120Bank","\u0120of","\u0120America","\u0120report","\u0120a","\u0120$","4",".","2","B","\u0120rise","\u0120in","\u0120net","\u0120charge","-offs","\u0120in","\u0120","2","0","2","4","?","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>","<|endoftext|>"],"token_best":[0.969,0.893,0.859,0.849,0.6,0.736,0.806,0.805,0.822,0.862,0.793,0.67,0.864,0.932,0.966,0.924,0.733,0.929,0.807,0.948,0.932,0.958,0.83,0.655,0.822,0.843,0.82,0.669,0.753,0.804,0.805,0.829,0.602],"token_cell":[null,[26,2],[26,2],[26,3],[4,16],[4,16],[4,20],[4,20],[4,20],[4,20],[4,21],[4,16],[1,25],[19,5],[20,7],[20,9],[21,22],[12,22],[26,2],[27,24],[4,22],[4,23],[4,16],[4,16],[26,2],[21,7],[26,2],[25,18],[5,0],[34,21],[24,7],[34,21],[25,18]],"top10":[{"rank":1,"corpus_id":2900,"score":27.086,"grade":2,"doc_id":"bank_of_america_2024","page":61},{"rank":2,"corpus_id":2903,"score":26.049,"grade":0,"doc_id":"bank_of_america_2024","page":64},{"rank":3,"corpus_id":2914,"score":25.902,"grade":0,"doc_id":"bank_of_america_2024","page":74},{"rank":4,"corpus_id":2907,"score":25.805,"grade":0,"doc_id":"bank_of_america_2024","page":68},{"rank":5,"corpus_id":2906,"score":25.721,"grade":0,"doc_id":"bank_of_america_2024","page":67},{"rank":6,"corpus_id":2902,"score":25.075,"grade":0,"doc_id":"bank_of_america_2024","page":63},{"rank":7,"corpus_id":2669,"score":24.842,"grade":0,"doc_id":"bank_of_america_2024","page":127},{"rank":8,"corpus_id":2861,"score":24.621,"grade":0,"doc_id":"bank_of_america_2024","page":30},{"rank":9,"corpus_id":2670,"score":24.516,"grade":0,"doc_id":"bank_of_america_2024","page":128},{"rank":10,"corpus_id":2915,"score":24.374,"grade":0,"doc_id":"bank_of_america_2024","page":75}]}</script>
+<script>
+(() => {
+  const d = JSON.parse(document.getElementById('walk').textContent);
+  const NS = 'http://www.w3.org/2000/svg';
+  const [gh, gw] = d.grid, W = 1236, H = 1600, cw = W / gw, ch = H / gh;
+  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+
+  // figure 1: a schematic patch grid with the four picked cells
+  const f1 = document.getElementById('f1-cells');
+  const picks1 = new Set(['4,0', '0,6', '3,2', '0,8']);
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 9; c++) {
+    const hit = picks1.has(r + ',' + c);
+    f1.appendChild(el('rect', { x: 340 + c * 26.5, y: 54 + r * 46, width: 22, height: 40, rx: 3, class: 'cell' + (hit ? ' hit' : '') }));
+  }
+
+  // the page heat map
+  const heat = document.getElementById('heat');
+  d.heat.forEach((row, r) => row.forEach((v, c) => {
+    if (v > 0.15) heat.appendChild(el('rect', { x: c * cw, y: r * ch, width: cw, height: ch, class: 'heat', 'fill-opacity': (0.55 * v * v).toFixed(3) }));
+  }));
+  const picks = document.getElementById('picks');
+  const label = t => t.startsWith('<|') ? 'pad' : t.replace(/Ġ/g, '␣');
+  const isPad = t => t === '<|endoftext|>';
+  const cellRect = (cell, cls) => el('rect', { x: cell[1] * cw, y: cell[0] * ch, width: cw, height: ch, class: cls });
+  function drawAll() {
+    picks.innerHTML = '';
+    if (!document.getElementById('showAll').checked) return;
+    d.query_tokens.forEach((t, i) => { const c = d.token_cell[i]; if (c && !isPad(t)) picks.appendChild(cellRect(c, 'pick soft')); });
+  }
+  const readout = document.getElementById('readout');
+  const toks = document.getElementById('toks');
+  d.query_tokens.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tok' + (isPad(t) ? ' pad' : '');
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<span>${label(t).replace(/</g, '&lt;')}</span><small>${d.token_best[i].toFixed(2)}</small>`;
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      toks.querySelectorAll('.tok').forEach(x => x.setAttribute('aria-pressed', 'false'));
+      drawAll();
+      if (!on) { readout.textContent = 'Click a token.'; return; }
+      b.setAttribute('aria-pressed', 'true');
+      const c = d.token_cell[i];
+      if (c) {
+        picks.appendChild(cellRect(c, 'pick'));
+        readout.textContent = `token ${i + 1} “${label(t)}” → patch row ${c[0] + 1}, column ${c[1] + 1} · cosine ${d.token_best[i].toFixed(3)}`;
+      } else {
+        readout.textContent = `token ${i + 1} “${label(t)}” → a template token (<|im_start|>), not a patch · cosine ${d.token_best[i].toFixed(3)}`;
+      }
+    });
+    toks.appendChild(b);
+  });
+  document.getElementById('showHeat').addEventListener('change', e => { heat.style.display = e.target.checked ? '' : 'none'; });
+  document.getElementById('showAll').addEventListener('change', drawAll);
+  drawAll();
+
+  // the score bar: 33 segments, width ∝ each token's best match, out of a maximum of 33
+  const bar = document.getElementById('bar');
+  const bw = 900, svg = el('svg', { viewBox: `0 0 ${bw} 46`, role: 'img', 'aria-label': 'Page score as the sum of 33 best matches' });
+  let x = 0; const unit = bw / 33;
+  d.token_best.forEach((v, i) => {
+    const w = v * unit;
+    const r = el('rect', { x: x, y: 4, width: Math.max(w - 1.5, 0.5), height: 20, class: isPad(d.query_tokens[i]) ? 'p' : 'w' });
+    const tt = el('title', {}); tt.textContent = `${label(d.query_tokens[i])}: ${v.toFixed(3)}`; r.appendChild(tt);
+    svg.appendChild(r); x += w;
+  });
+  const t1 = el('text', { x: 0, y: 42 }); t1.textContent = '0'; svg.appendChild(t1);
+  const t2 = el('text', { x: x, y: 42, 'text-anchor': 'middle' }); t2.textContent = '27.09'; svg.appendChild(t2);
+  const t3 = el('text', { x: bw, y: 42, 'text-anchor': 'end' }); t3.textContent = 'max 33'; svg.appendChild(t3);
+  bar.appendChild(svg);
+
+  // top 10
+  const tb = document.querySelector('#top10 tbody');
+  d.top10.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="n">${t.rank}</td><td>${t.doc_id.replace(/_/g, ' ')} p.${t.page} <span class="tag">${t.corpus_id}</span></td><td class="n">${t.score.toFixed(2)}</td><td>${t.grade ? '<span class="gold">● gold</span>' : '—'}</td>`;
+    tb.appendChild(tr);
+  });
+})();
+</script>
+<script type="module">
+  import { File } from "https://esm.sh/@pierre/diffs@1.2.10?bundle";
+  const dark = document.documentElement.dataset.theme === 'dark' ||
+    (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const options = { theme: { light: "github-light", dark: "github-dark" }, themeType: dark ? "dark" : "light", overflow: "wrap" };
+  const search = `def search(key: str, query: str, k: int = 100, chunk: int = 256) -> list[tuple[int, float]]:
+    """Top k pages as (corpus_id, MaxSim score), best first, with the active model."""
+    import torch
+
+    model_key = active(key)
+    assert model_key, f"no visual index for {key}"
+    docs, mask, ids = _load(key, model_key)
+    qv = model(model_key).encode_query([query], show_progress_bar=False)[0]
+    q = torch.from_numpy(_cut(qv, MODELS[model_key].dim)).to(docs.device)
+    scores = []
+    with torch.inference_mode():
+        for i in range(0, docs.shape[0], chunk):
+            sim = torch.einsum("qd,ntd->nqt", q, docs[i : i + chunk]).float()
+            sim = sim.masked_fill(~mask[i : i + chunk, None, :], float("-inf"))
+            scores.append(sim.max(dim=2).values.sum(dim=1))
+    all_scores = torch.cat(scores).cpu().numpy()
+    top = np.argsort(-all_scores)[:k]
+    return [(ids[int(i)], float(all_scores[i])) for i in top]
+`;
+  const cut = `def _cut(vectors: Any, dim: int) -> np.ndarray:
+    """First \`dim\` dimensions, renormalised, as float16."""
+    v = np.asarray(
+        vectors.float().cpu().numpy() if hasattr(vectors, "cpu") else vectors, dtype=np.float32
+    )[:, :dim]
+    v /= np.linalg.norm(v, axis=1, keepdims=True) + 1e-12
+    return v.astype(np.float16)
+`;
+  new File(options).render({ containerWrapper: document.querySelector("#code-search"), file: { name: "src/vidore_loop/retrieval/visual.py", contents: search } });
+  new File(options).render({ containerWrapper: document.querySelector("#code-cut"), file: { name: "src/vidore_loop/retrieval/visual.py", contents: cut } });
+</script>
+</body>
+</html>
